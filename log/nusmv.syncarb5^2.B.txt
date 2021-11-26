@@ -1,0 +1,1350 @@
+============= Running test ===========
+inputs:  [i2, i4, i6, i8, i10]
+trans: And(v12' == And(Not(And(Not(v14), Not(v12))), i2),
+    v14' == v18,
+    v16' == And(Not(And(Not(v18), Not(v16))), i4),
+    v18' == v22,
+    v20' == And(Not(And(Not(v22), Not(v20))), i6),
+    v22' == v26,
+    v24' == And(Not(And(Not(v26), Not(v24))), i8),
+    v26' == Not(v30),
+    v28' == And(Not(And(v30, Not(v28))), i10),
+    v30' == Not(v14))
+self.inputs:  [i2, i4, i6, i8, i10]
+self.vars:  [v12, v14, v16, v18, v20, v22, v24, v26, v28, v30]
+seek for bad cube...
+Adding frame 1...
+New Frame 1:
+seek for bad cube...
+Adding frame 2...
+New Frame 2:
+seek for bad cube...
+get bad cube:
+And(Not(v18),
+    Not(v16),
+    Not(v20),
+    v24,
+    Not(v14),
+    v26,
+    v28,
+    Not(v30),
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+Adding frame 3...
+New Frame 3:
+seek for bad cube...
+get bad cube:
+And(v24,
+    v20,
+    Not(v16),
+    v26,
+    Not(v28),
+    v22,
+    Not(v30),
+    Not(v14),
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v24,
+    v20,
+    Not(v16),
+    v26,
+    Not(v28),
+    v22,
+    v30,
+    Not(v14),
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v24,
+    v20,
+    Not(v16),
+    v26,
+    v28,
+    v22,
+    v30,
+    Not(v14),
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+Adding frame 4...
+New Frame 4:
+seek for bad cube...
+get bad cube:
+And(v18, v16, v24, v26, Not(v28), v22, v30, v20, Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v18,
+    v16,
+    v20,
+    Not(v26),
+    Not(v28),
+    v22,
+    v30,
+    Not(v24),
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v18),
+    v20,
+    Not(v16),
+    v26,
+    Not(v28),
+    v22,
+    v30,
+    v24,
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v18),
+    v20,
+    v16,
+    v26,
+    Not(v28),
+    v22,
+    v30,
+    v24,
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v18,
+    v16,
+    v20,
+    Not(v24),
+    Not(v26),
+    v28,
+    v22,
+    v30,
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v18),
+    Not(v16),
+    v20,
+    v24,
+    v26,
+    v28,
+    v22,
+    v30,
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v18, v16, v20, v24, Not(v26), v28, v22, v30, Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v18), v24, v16, v20, v26, v28, v22, v30, Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v18,
+    v24,
+    v16,
+    v20,
+    Not(v26),
+    Not(v28),
+    v22,
+    v30,
+    Not(v12))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+Adding frame 5...
+New Frame 5:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    v22,
+    Not(v30),
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    Not(v26),
+    v28,
+    v14,
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    Not(v24),
+    Not(v16),
+    Not(v14),
+    v28,
+    Not(v26),
+    Not(v30),
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    v22,
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    v18,
+    Not(v24),
+    v16,
+    Not(v26),
+    Not(v28),
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v16,
+    v24,
+    Not(v14),
+    v28,
+    v22,
+    Not(v30),
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    Not(v12),
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    Not(v14),
+    Not(v30),
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v16),
+    v24,
+    v14,
+    Not(v28),
+    Not(v22),
+    v30,
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    v18,
+    v16,
+    Not(v24),
+    Not(v26),
+    v28,
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    Not(v16),
+    v24,
+    Not(v14),
+    v28,
+    v22,
+    Not(v30),
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    Not(v12),
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    v26,
+    Not(v28),
+    Not(v14),
+    v30,
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    Not(v26),
+    Not(v28),
+    Not(v22),
+    v30,
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    v18,
+    v16,
+    v24,
+    v14,
+    Not(v26),
+    Not(v28),
+    v30,
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    v14,
+    v28,
+    Not(v22),
+    v30,
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    Not(v12),
+    Not(v18),
+    v24,
+    v16,
+    v26,
+    Not(v14),
+    Not(v22),
+    Not(v30),
+    v28)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    v18,
+    v16,
+    v24,
+    v14,
+    v28,
+    Not(v26),
+    v30,
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v16,
+    v24,
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v16,
+    v24,
+    v14,
+    Not(v26),
+    Not(v22),
+    v30,
+    Not(v28))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    Not(v28),
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v16,
+    v24,
+    Not(v26),
+    v28,
+    Not(v22),
+    v30,
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v24),
+    Not(v16),
+    Not(v26),
+    v28,
+    Not(v22),
+    Not(v30),
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v16,
+    v24,
+    v26,
+    v28,
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v16),
+    v24,
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v16,
+    v24,
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    Not(v26),
+    Not(v28),
+    Not(v22),
+    v30,
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    Not(v14),
+    v30,
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    Not(v26),
+    Not(v28),
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    Not(v24),
+    Not(v16),
+    Not(v26),
+    v28,
+    Not(v22),
+    Not(v30),
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    Not(v26),
+    v28,
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    Not(v26),
+    v14,
+    v28,
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v16,
+    Not(v24),
+    v14,
+    Not(v26),
+    v28,
+    v30,
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v24,
+    v16,
+    Not(v26),
+    Not(v28),
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v24,
+    v16,
+    Not(v14),
+    v26,
+    Not(v22),
+    Not(v30),
+    v28)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    Not(v16),
+    v24,
+    Not(v14),
+    v28,
+    Not(v22),
+    Not(v30),
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v14,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v24,
+    Not(v18),
+    Not(v16),
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v16,
+    v24,
+    Not(v26),
+    v28,
+    v14,
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v16,
+    Not(v24),
+    v14,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    v18,
+    v16,
+    v24,
+    Not(v14),
+    v28,
+    v22,
+    v30,
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v16,
+    Not(v24),
+    v14,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    Not(v26),
+    v28,
+    Not(v22),
+    Not(v30),
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v18,
+    v24,
+    v16,
+    Not(v14),
+    v28,
+    v22,
+    v30,
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    v18,
+    v24,
+    v16,
+    Not(v26),
+    Not(v28),
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+Adding frame 6...
+New Frame 6:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v24),
+    Not(v16),
+    Not(v26),
+    v28,
+    Not(v22),
+    Not(v30),
+    v14)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v24),
+    v16,
+    Not(v26),
+    v28,
+    v14,
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    Not(v16),
+    v24,
+    v26,
+    Not(v28),
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v16,
+    v24,
+    Not(v14),
+    Not(v28),
+    v26,
+    v30,
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v16),
+    v24,
+    v14,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    v24,
+    Not(v18),
+    Not(v16),
+    v26,
+    v28,
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    Not(v12),
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    Not(v14),
+    Not(v22),
+    Not(v30),
+    v28)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    Not(v24),
+    Not(v16),
+    v14,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v14,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v26))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    Not(v14),
+    Not(v28),
+    v22,
+    v30,
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v24,
+    v16,
+    v26,
+    Not(v14),
+    v28,
+    v30,
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    Not(v16),
+    v26,
+    v28,
+    v22,
+    v30,
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    Not(v12),
+    Not(v18),
+    v24,
+    v16,
+    Not(v14),
+    v28,
+    v26,
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    Not(v16),
+    v24,
+    Not(v14),
+    v28,
+    Not(v22),
+    Not(v30),
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    Not(v12),
+    Not(v18),
+    v16,
+    v24,
+    v26,
+    v28,
+    Not(v22),
+    Not(v30),
+    Not(v14))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    v14,
+    Not(v26),
+    v28,
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    v26,
+    Not(v28),
+    Not(v14),
+    v30,
+    v22)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    Not(v24),
+    v16,
+    v14,
+    v28,
+    Not(v26),
+    Not(v30),
+    Not(v22))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    Not(v26),
+    v14,
+    Not(v22),
+    Not(v30),
+    v28)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    v24,
+    Not(v18),
+    Not(v14),
+    v28,
+    v26,
+    Not(v30),
+    Not(v22),
+    Not(v16))
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v16,
+    v24,
+    Not(v14),
+    v28,
+    v22,
+    v30,
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(v20,
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    v26,
+    Not(v14),
+    Not(v22),
+    Not(v30),
+    v28)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+get bad cube:
+And(Not(v20),
+    v12,
+    Not(v18),
+    v24,
+    v16,
+    Not(v14),
+    v28,
+    Not(v22),
+    Not(v30),
+    v26)
+recBlockCube now...
+recBlockCube Ok! F:
+seek for bad cube...
+Adding frame 7...
+Fond inductive invariant:
+And(Not(And(v18, v26)),
+    Not(And(Not(v18),
+            v20,
+            Not(v16),
+            v26,
+            Not(v28),
+            v22,
+            v30,
+            v24,
+            Not(v12))),
+    Not(And(Not(v18),
+            v20,
+            v16,
+            v26,
+            Not(v28),
+            v22,
+            v30,
+            v24,
+            Not(v12))),
+    Not(And(Not(v18),
+            Not(v16),
+            v20,
+            v24,
+            v26,
+            v28,
+            v22,
+            v30,
+            Not(v12))),
+    Not(And(Not(v18),
+            v24,
+            v16,
+            v20,
+            v26,
+            v28,
+            v22,
+            v30,
+            Not(v12))),
+    Not(And(v24,
+            v20,
+            Not(v16),
+            v26,
+            Not(v28),
+            v22,
+            v30,
+            Not(v14),
+            Not(v12))),
+    Not(And(v24,
+            v20,
+            Not(v16),
+            v26,
+            v28,
+            v22,
+            v30,
+            Not(v14),
+            Not(v12))),
+    Not(And(v22, v14)),
+    Not(And(Not(v20),
+            v12,
+            Not(v18),
+            v24,
+            Not(v16),
+            v26,
+            v28,
+            Not(v22),
+            Not(v30),
+            v14)),
+    Not(And(v18, Not(v30))),
+    Not(And(v20,
+            Not(v12),
+            Not(v18),
+            Not(v24),
+            Not(v16),
+            Not(v14),
+            v28,
+            Not(v26),
+            Not(v30),
+            v22)),
+    Not(And(v20,
+            Not(v12),
+            Not(v18),
+            v24,
+            Not(v16),
+            v26,
+            v28,
+            v22,
+            Not(v30),
+            Not(v14))),
+    Not(And(v20,
+            Not(v12),
+            v18,
+            Not(v24),
+            v16,
+            Not(v26),
+            Not(v28),
+            v22,
+            v30,
+            Not(v14))),
+    Not(And(v20,
+            Not(v12),
+            Not(v18),
+            v16,
+            v24,
+            Not(v14),
+            v28,
+            v22,
+            Not(v30),
+            v26)),
+    Not(And(Not(v20),
+            Not(v12),
+            Not(v18),
+            v24,
+            Not(v16),
+            v26,
+            v28,
+            Not(v14),
+            Not(v30),
+            v22)),
+    Not(And(v14, v26)),
+    Not(And(v20,
+            Not(v12),
+            v18,
+            v16,
+            Not(v24),
+            Not(v26),
+            v28,
+            v22,
+            v30,
+            Not(v14))),
+    Not(And(v22, Not(v30))),
+    Not(And(Not(v20),
+            Not(v12),
+            Not(v18),
+            v24,
+            Not(v16),
+            v26,
+            v28,
+            Not(v22),
+            Not(v30),
+            Not(v14))),
+    Not(And(v20,
+            v12,
+            Not(v18),
+            v24,
+            v16,
+            v26,
+            Not(v28),
+            Not(v14),
+            v30,
+            v22)),
+    Not(And(Not(v20),
+            v12,
+            v18,
+            v16,
+            Not(v24),
+            Not(v26),
+            Not(v28),
+            Not(v22),
+            v30,
+            v14)),
+    Not(And(Not(v20),
+            v12,
+            v18,
+            v16,
+            v24,
+            v14,
+            Not(v26),
+            Not(v28),
+            v30,
+            Not(v22))),
+    Not(And(Not(v20),
+            v12,
+            v18,
+            v16,
+            Not(v24),
+            v14,
+            v28,
+            Not(v22),
+            v30,
+            Not(v26))),
+    Not(And(Not(v20),
+            Not(v12),
+            Not(v18),
+            v24,
+            v16,
+            v26,
+            Not(v14),
+            Not(v22),
+            Not(v30),
+            v28)),
+    Not(And(Not(v20),
+            v12,
+            v18,
+            v16,
+            v24,
+            v14,
+            v28,
+            Not(v26),
+            v30,
+            Not(v22))),
+    Not(And(Not(v20),
+...
+TIME CONSUMING: 163seconds
+
+Process finished with exit code 0
