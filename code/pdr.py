@@ -2,6 +2,7 @@ from z3 import *
 import time
 import sys
 import numpy as np
+import copy
 
 #TODO: Using Z3 to check the 3 properties of init, trans, safe, inductive invariant
 
@@ -132,17 +133,17 @@ class PDR:
             else:
                 print("Adding frame " + str(len(self.frames)) + "...")
                 self.frames.append(tCube(len(self.frames)))
-                for index, fi in enumerate(self.frames):
+                for index, fi in enumerate(self.frames): #TODO: Solve the issue that here is quite slow!!
                     if index == len(self.frames) - 1:
                         break
                     print("F", index , 'size:' , len(fi.cubeLiterals))
                     for c in fi.cubeLiterals: # Pushing lemma = propagate clause
                         s = Solver()
-                        s.add(fi.cube())
+                        s.add(fi.cube())#TODO: Record which literal has been pushed, delete duplicated literals
                         s.add(self.trans.cube())
                         s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
                         if s.check() == unsat:
-                            self.frames[index + 1].add(c)
+                            self.frames[index + 1].add(c) #TODO: Modify here to append safety property
                     if self.checkForInduction(fi):
                         print("Fond inductive invariant:\n" + str(fi.cube()))
                         #print("Fond inductive invariant:\n")
@@ -173,9 +174,10 @@ class PDR:
                 s = self.MIC(s)
                 for i in range(1, s.t + 1):
                     self.frames[i].add(Not(s.cube())) #TODO: Try RL here
-            else:
+            else: #SAT condition
                 Q.append(z) #TODO: Add ternary simulation to generalize predecessor (Gneralize CTI)
         return None
+
 
     def recBlockCube_RL(self, s0: tCube):
         print("recBlockCube now...")
@@ -266,33 +268,60 @@ class PDR:
     def solveRelative(self, tcube):
         cubePrime = substitute(tcube.cube(), self.primeMap)
         s = Solver()
+        s.add(Not(tcube.cube()))
         s.add(self.frames[tcube.t - 1].cube())
         s.add(self.trans.cube())
-        s.add(Not(tcube.cube()))
         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
         if s.check() == sat:
             model = s.model()
             c = tCube(tcube.t - 1)
             c.addModel(self.lMap, model)  # c = sat_model
-            return c
+            #return c
+            generalized_p = self.generalize_predessor(c)
+            return generalized_p #TODO: Using z3 eval() to conduct tenary simulation
         return None
 
+    def generalize_predessor(self, tcube):
+        #check = tcube.cube()
+        tcube_cp = copy.deepcopy(tcube)
+        print("Begin to generalize predessor")
+        index_to_remove = []
+        for i in range(len(tcube_cp.cubeLiterals)):
+            print("Now begin to check the No.",i," of cex")
+            tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
+            cubePrime = substitute(tcube_cp.cube(), self.primeMap)
+            s = Solver()
+            s.add(Not(tcube_cp.cube()))
+            s.add(self.frames[tcube_cp.t - 1].cube())
+            s.add(self.trans.cube())
+            s.add(cubePrime)
+            if s.check() == sat:
+                print("found way to generalize the predessor!")
+                #print(check)
+                index_to_remove.append(i)
+                # print("Before:",tcube.cubeLiterals)
+                # tcube.cubeLiterals.pop(i)
+                # print("After:",tcube.cubeLiterals)
+
+        tcube.cubeLiterals = [tcube.cubeLiterals[i] for i in range(0, len(tcube.cubeLiterals), 1) if i not in index_to_remove]
+        return tcube
+
     def solveRelative_RL(self, tcube):
-        cubePrime = substitute(tcube.cube(), self.primeMap)
-        s = Solver()
-        s.add(self.frames[tcube.t - 1].cube())
-        s.add(self.trans.cube())
-        s.add(Not(tcube.cube()))
-        s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
-        if (s.check() != unsat):  # cube was not blocked, return new tcube containing the model
-            model = s.model()
-            # c = tCube(tcube.t - 1) #original verison
-            # c.addModel(self.lMap, model)  # c = sat_model, original verison
-            # return c #original verison
-            return tCube(model, self.lMap, tcube.t - 1), None
-        else:
-            res,h= self.RL(tcube)
-            return None, res
+            cubePrime = substitute(tcube.cube(), self.primeMap)
+            s = Solver()
+            s.add(self.frames[tcube.t - 1].cube())
+            s.add(self.trans.cube())
+            s.add(Not(tcube.cube()))
+            s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
+            if (s.check() != unsat):  # cube was not blocked, return new tcube containing the model
+                model = s.model()
+                # c = tCube(tcube.t - 1) #original verison
+                # c.addModel(self.lMap, model)  # c = sat_model, original verison
+                # return c #original verison
+                return tCube(model, self.lMap, tcube.t - 1), None
+            else:
+                res,h= self.RL(tcube)
+                return None, res
 
     def getBadCube(self):
         print("seek for bad cube...")
