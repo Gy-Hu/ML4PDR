@@ -131,35 +131,77 @@ class PDR:
                 # for i in self.frames:
                 #     print(i)
             else:
+                inv = self.checkForInduction(self.frames)
+                if inv != None:
+                    print("Found inductive invariant:", simplify(inv.cube()))
+                    return True
+                print("Did not find invariant, adding frame " + str(len(self.frames)) + "...")
+
+                # self.frames.append(tCube(len(self.frames))) #TODO: Optimize the way of adding frames
+                # self.frames[-1].add(True)
+
+                # tran = copy.deepcopy(self.trans)
+                # tran.t = len(self.frames)
+                # self.frames.append(tran)
+                #print("print the frame")
+
                 print("Adding frame " + str(len(self.frames)) + "...")
                 self.frames.append(tCube(len(self.frames)))
-                for index, fi in enumerate(self.frames): #TODO: Solve the issue that here is quite slow!!
-                    if index == len(self.frames) - 1:
-                        break
-                    print("F", index , 'size:' , len(fi.cubeLiterals))
-                    for c in fi.cubeLiterals: # Pushing lemma = propagate clause
-                        s = Solver()
-                        s.add(fi.cube())#TODO: Record which literal has been pushed, delete duplicated literals
-                        s.add(self.trans.cube())
-                        s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
-                        if s.check() == unsat:
-                            self.frames[index + 1].add(c) #TODO: Modify here to append safety property
-                    if self.checkForInduction(fi):
-                        print("Fond inductive invariant:\n" + str(fi.cube()))
-                        #print("Fond inductive invariant:\n")
-                        return True
+
+                print("Now print out the size of frames")
+                for index in range(len(self.frames)):
+                    print("F", index , 'size:' , len(self.frames[index].cubeLiterals))
+
+                fi = self.frames[-2]
+                for c in fi.cubeLiterals: # Pushing lemma = propagate clause
+                    s = Solver()
+                    s.add(fi.cube())
+                    s.add(self.trans.cube())
+                    s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
+                    if s.check() == unsat:
+                        self.frames[-1].add(c)
+
+                # for index, fi in enumerate(self.frames): #TODO: Solve the issue that here is quite slow!!
+                #     if index == len(self.frames) - 1:
+                #         break
+                #     print("F", index , 'size:' , len(fi.cubeLiterals))
+                #     for c in fi.cubeLiterals: # Pushing lemma = propagate clause
+                #         s = Solver()
+                #         s.add(fi.cube())#TODO: Record which literal has been pushed, delete duplicated literals
+                #         s.add(self.trans.cube())
+                #         s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
+                #         if s.check() == unsat:
+                #             self.frames[index + 1].add(c) #TODO: Modify here to append safety property
+
+                #     if self.checkForInduction(fi):
+                #         print("Fond inductive invariant:\n" + str(fi.cube()))
+                #         #print("Fond inductive invariant:\n")
+                #         return True
                 #print("New Frame " + str(len(self.frames) - 1) + ": ")
                 #print(self.frames[-1].cube())
 
+    # def checkForInduction(self, frame):
+    #     print("check for Induction now...")
+    #     s = Solver()
+    #     s.add(self.trans.cube())
+    #     s.add(frame.cube())
+    #     s.add(Not(substitute(frame.cube(), self.primeMap)))  # T and F[i] and Not(F[i])'
+    #     if s.check() == unsat:
+    #         return True
+    #     return False
+
     def checkForInduction(self, frame):
         #print("check for Induction now...")
-        s = Solver()
-        s.add(self.trans.cube())
-        s.add(frame.cube())
-        s.add(Not(substitute(frame.cube(), self.primeMap)))  # T and F[i] and Not(F[i])'
-        if s.check() == unsat:
-            return True
-        return False
+        for frame in self.frames:
+            s = Solver()
+            s.add(self.trans.cube())
+            s.add(frame.cube())
+            s.add(Not(substitute(frame.cube(), self.primeMap)))  # T and F[i] and Not(F[i])'
+            if s.check() == unsat:
+                return frame
+        return None
+            #     return True
+            # return False
 
     def recBlockCube(self, s0: tCube):
         print("recBlockCube now...")
@@ -287,7 +329,7 @@ class PDR:
         print("Begin to generalize predessor")
         index_to_remove = []
         for i in range(len(tcube_cp.cubeLiterals)):
-            print("Now begin to check the No.",i," of cex")
+            #print("Now begin to check the No.",i," of cex")
             tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
             cubePrime = substitute(tcube_cp.cube(), self.primeMap)
             s = Solver()
@@ -296,7 +338,7 @@ class PDR:
             s.add(self.trans.cube())
             s.add(cubePrime)
             if s.check() == sat:
-                print("found way to generalize the predessor!")
+                #print("found way to generalize the predessor!")
                 #print(check)
                 index_to_remove.append(i)
                 # print("Before:",tcube.cubeLiterals)
@@ -332,7 +374,7 @@ class PDR:
             res = tCube(len(self.frames) - 1)
             res.addModel(self.lMap, s.model())  # res = sat_model
             print("get bad cube:")
-            print(res.cube()) # Print the result
+            #print(res.cube()) # Print the result
             return res
         else:
             return None
