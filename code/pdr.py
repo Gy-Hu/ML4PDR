@@ -3,6 +3,20 @@ import time
 import sys
 import numpy as np
 import copy
+from line_profiler import LineProfiler
+from functools import wraps
+
+# 查询接口中每行代码执行的时间
+def func_line_time(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        func_return = f(*args, **kwargs)
+        lp = LineProfiler()
+        lp_wrap = lp(f)
+        lp_wrap(*args, **kwargs)
+        lp.print_stats()
+        return func_return
+    return decorator
 
 #TODO: Using Z3 to check the 3 properties of init, trans, safe, inductive invariant
 
@@ -13,13 +27,40 @@ class tCube:
         self.t = t
         self.cubeLiterals = list()
 
+    def clone(self):
+        ret = tCube(self.t)
+        ret.cubeLiterals = self.cubeLiterals.copy()
+        return ret
+
+#TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中
-    def addModel(self, lMap, model):
+    def addModel(self, lMap, model, remove_input = True):
         no_primes = [l for l in model if str(l)[-1] != '\'']
-        no_input = [l for l in no_primes if str(l)[0] != 'i']
+        if remove_input:
+            no_input = [l for l in no_primes if str(l)[0] != 'i']
+        else:
+            no_input = no_primes
         # self.add(simplify(And([lMap[str(l)] == model[l] for l in no_input]))) # HZ:
         for l in no_input:
             self.add(lMap[str(l)] == model[l]) #TODO: Get model overhead is too high, using C API
+
+    def remove_input(self):
+        index_to_remove = set()
+        for idx, literal in enumerate(self.cubeLiterals):
+            children = literal.children()
+            assert(len(children) == 2)
+
+            if str(children[0]) in ['True', 'False']:
+                v = str(children[1])
+            elif str(children[1]) in ['True', 'False']:
+                v = str(children[0])
+            else:
+                assert(False)
+            assert (v[0] in ['i', 'v'])
+            if v[0] == 'i':
+                index_to_remove.add(idx)
+        self.cubeLiterals = [self.cubeLiterals[i] for i in range(len(self.cubeLiterals)) if i not in index_to_remove]
+
 
     # 扩增 CNF 式
     def addAnds(self, ms):
@@ -87,7 +128,7 @@ class tCube:
 
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -105,6 +146,7 @@ class PDR:
         self.post = post
         self.frames = list()
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
+        self.pv2next = pv2next
         # print("init:")
         # print(self.init.cube())
         # print("trans...")
@@ -146,12 +188,16 @@ class PDR:
                 #print("print the frame")
 
                 print("Adding frame " + str(len(self.frames)) + "...")
-                self.frames.append(tCube(len(self.frames)))
+                self.frames.append(tCube(len(self.frames))) #TODO: Append P, and get bad cube change to F[-1] /\ T /\ !P' (also can do generalization), check it is sat or not
+                # [init, P]
+                # init /\ bad   ?sat
+                # init /\T /\ bad'  ?sat
 
                 print("Now print out the size of frames")
                 for index in range(len(self.frames)):
                     print("F", index , 'size:' , len(self.frames[index].cubeLiterals))
 
+                #TODO: Try new way to pushing lemma (like picking >=2 clause at once to add in new frame)
                 fi = self.frames[-2]
                 for c in fi.cubeLiterals: # Pushing lemma = propagate clause
                     s = Solver()
@@ -203,8 +249,9 @@ class PDR:
             #     return True
             # return False
 
+    #TODO: 解决这边特殊case遇到safe判断成unsafe的问题
     def recBlockCube(self, s0: tCube):
-        print("recBlockCube now...")
+        print("recBlockCube now...") #TODO: Maybe there's a bug here when rec to F[0]? Find it! （考虑MIC的极端情况，或者generalized predecessor的极端情况）
         Q = [s0]
         while len(Q) > 0:
             s = Q[-1]
@@ -317,36 +364,56 @@ class PDR:
         if s.check() == sat:
             model = s.model()
             c = tCube(tcube.t - 1)
-            c.addModel(self.lMap, model)  # c = sat_model
+            c.addModel(self.lMap, model, remove_input=False)  # c = sat_model
             #return c
-            generalized_p = self.generalize_predessor(c)
+            print("original cube length: ", len(c.cubeLiterals))
+            generalized_p = self.generalize_predecessor(c, tcube)
+            print("generalized cube length: ", len(generalized_p.cubeLiterals))
+            # remove input
+            generalized_p.remove_input()
             return generalized_p #TODO: Using z3 eval() to conduct tenary simulation
         return None
-
-    def generalize_predessor(self, tcube):
+#TODO: Get bad cude should generalize as well!
+    def generalize_predecessor(self, prev_cube:tCube, next_cube):
         #check = tcube.cube()
-        tcube_cp = copy.deepcopy(tcube)
-        print("Begin to generalize predessor")
+        tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception wranning
+        #print("Begin to generalize predessor")
+        nextcube = substitute(substitute(next_cube.cube(), self.primeMap), list(self.pv2next.items()))
+
         index_to_remove = []
+
+        s = Solver()
+        s.add(prev_cube.cube())
+        s.check()
+        assert(str(s.model().eval(nextcube)) == 'True')
+
         for i in range(len(tcube_cp.cubeLiterals)):
             #print("Now begin to check the No.",i," of cex")
             tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
-            cubePrime = substitute(tcube_cp.cube(), self.primeMap)
             s = Solver()
-            s.add(Not(tcube_cp.cube()))
-            s.add(self.frames[tcube_cp.t - 1].cube())
-            s.add(self.trans.cube())
-            s.add(cubePrime)
-            if s.check() == sat:
-                #print("found way to generalize the predessor!")
-                #print(check)
+            s.add(tcube_cp.cube())
+            res = s.check()
+            assert (res == sat)
+            if str(s.model().eval(nextcube)) == 'True':
                 index_to_remove.append(i)
-                # print("Before:",tcube.cubeLiterals)
-                # tcube.cubeLiterals.pop(i)
-                # print("After:",tcube.cubeLiterals)
+            tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
 
-        tcube.cubeLiterals = [tcube.cubeLiterals[i] for i in range(0, len(tcube.cubeLiterals), 1) if i not in index_to_remove]
-        return tcube
+            # cubePrime = substitute(tcube_cp.cube(), self.primeMap)
+            # s = Solver()
+            # s.add(Not(tcube_cp.cube()))
+            # s.add(self.frames[tcube_cp.t - 1].cube())
+            # s.add(self.trans.cube())
+            # s.add(cubePrime)
+            # if s.check() == sat:
+            #     #print("found way to generalize the predessor!")
+            #     #print(check)
+            #     index_to_remove.append(i)
+            #     # print("Before:",tcube.cubeLiterals)
+            #     # tcube.cubeLiterals.pop(i)
+            #     # print("After:",tcube.cubeLiterals)
+
+        prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
+        return prev_cube
 
     def solveRelative_RL(self, tcube):
             cubePrime = substitute(tcube.cube(), self.primeMap)

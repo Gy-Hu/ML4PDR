@@ -150,6 +150,7 @@ class Model:
         self.trans = tCube()
         self.init = tCube()
         self.post = tCube()
+        self.pv2next = dict()
 
     def parse(self, fileName):
         '''
@@ -266,16 +267,21 @@ class Model:
         for it in l:
             if it.next == "1":
                 trans_items.append(pvs[it.var] == And(True))
+                self.pv2next[pvs[it.var]] = And(True)
             elif it.next == "0":
                 trans_items.append(pvs[it.var] == And(False))
+                self.pv2next[pvs[it.var]] = And(False)
             elif int(it.next) & 1 == 0:
                 v = it.next
                 if v in inp.keys():
                     trans_items.append(pvs[it.var] == inp[v])
+                    self.pv2next[pvs[it.var]] = inp[v]
                 elif v in vs.keys():
                     trans_items.append(pvs[it.var] == vs[v])
+                    self.pv2next[pvs[it.var]] = vs[v]
                 elif v in ands.keys():
                     trans_items.append(pvs[it.var] == ands[v])
+                    self.pv2next[pvs[it.var]] = ands[v]
                 else:
                     print("Error in transition relation")
                     exit(1)
@@ -283,10 +289,13 @@ class Model:
                 v = str(int(it.next) - 1)
                 if v in inp.keys():
                     trans_items.append(pvs[it.var] == Not(inp[v]))
+                    self.pv2next[pvs[it.var]] = Not(inp[v])
                 elif v in vs.keys():
                     trans_items.append(pvs[it.var] == Not(vs[v]))
+                    self.pv2next[pvs[it.var]] = Not(vs[v])
                 elif v in ands.keys():
                     trans_items.append(pvs[it.var] == Not(ands[v]))
+                    self.pv2next[pvs[it.var]] = Not(ands[v])
                 else:
                     print("Error in transition relation")
                     exit(1)
@@ -353,7 +362,7 @@ class Model:
         # print("postAdded")
         print("self.inputs: ",self.inputs)
         print("self.vars: ",self.vars)
-        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post
+        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next
 
 
 if __name__ == '__main__':
