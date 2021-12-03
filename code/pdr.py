@@ -3,7 +3,7 @@ import time
 import sys
 import numpy as np
 import copy
-from line_profiler import LineProfiler
+from queue import PriorityQueue
 from functools import wraps
 
 # 查询接口中每行代码执行的时间
@@ -21,11 +21,30 @@ def func_line_time(f):
 #TODO: Using Z3 to check the 3 properties of init, trans, safe, inductive invariant
 
 # conjunction of literals.
+class Frame:
+    def __init__(self, lemmas):
+        self.Lemma = lemmas
+        self.pushed = [False] * len(lemmas)
+
+    def cube(self):
+        return And(self.Lemma)
+
+    def add(self, clause, pushed = False):
+        self.Lemma.append(clause)
+        self.pushed.append(pushed)
+
+    def __repr__(self):
+        return str(sorted(self.Lemma, key=str))
+
+
 class tCube:
     # make a tcube object assosciated with frame t.
     def __init__(self, t=0):
         self.t = t
         self.cubeLiterals = list()
+
+    def __lt__(self, other):
+        return self.t < other.t
 
     def clone(self):
         ret = tCube(self.t)
@@ -34,7 +53,7 @@ class tCube:
 
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中
-    def addModel(self, lMap, model, remove_input = True):
+    def addModel(self, lMap, model, remove_input=True):
         no_primes = [l for l in model if str(l)[-1] != '\'']
         if remove_input:
             no_input = [l for l in no_primes if str(l)[0] != 'i']
@@ -99,34 +118,6 @@ class tCube:
     def __repr__(self):
         return str(self.t) + ": " + str(sorted(self.cubeLiterals, key=str))
 
-
-# class tClause:
-#     def __init__(self, t=0):
-#         self.t = t
-#         self.clauseLiterals = []
-#
-#     def defFromNotCube(self, c: tCube):
-#         for cube in c.cubeLiterals:
-#             self.clauseLiterals.append(Not(cube))
-#
-#     def clause(self):
-#         return simplify(Or(self.clauseLiterals))
-#
-#     def add(self, m):
-#         self.clauseLiterals.append(m)
-#
-#     def delete(self, i: int):
-#         res = tClause(self.t)
-#         for it in range(len(self.clauseLiterals)):
-#             if it == i:
-#                 continue
-#             res.add(self.clauseLiterals[it])
-#         return res
-#
-#     def __repr__(self):
-#         return str(self.t) + ": " + str(sorted(self.clauseLiterals, key=str))
-
-
 class PDR:
     def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next):
         '''
@@ -147,17 +138,32 @@ class PDR:
         self.frames = list()
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
         self.pv2next = pv2next
-        # print("init:")
-        # print(self.init.cube())
-        # print("trans...")
-        # print(self.trans.cube())
-        # print("post:")
-        # print(self.post.cube())
 
-    def run(self,agent):
+    def check_init(self):
+        s = Solver()
+        s.add(self.init.cube())
+        s.add(Not(self.post.cube()))
+        res1 = s.check()
+        if res1 == sat:
+            return False
+        s = Solver()
+        s.add(self.init.cube())
+        s.add(self.trans.cube())
+        s.add(substitute(Not(self.post.cube()), self.primeMap))
+        res2 = s.check()
+        if res2 == sat:
+            return False
+        return True
+
+    def run(self, agent):
+        if not self.check_init():
+            print("Found trace ending in bad state")
+            return False
+
         self.agent = agent
-        self.frames = list()
-        self.frames.append(self.init)
+        self.frames = list() # list for Frame
+        self.frames.append(Frame(lemmas=[self.init.cube()]))
+        self.frames.append(Frame(lemmas=[self.post.cube()]))
 
         while True:
             c = self.getBadCube()
@@ -166,12 +172,12 @@ class PDR:
                 trace = self.recBlockCube(c) #TODO: 找出spec3-and-env这个case为什么没有recBlock
                 if trace is not None:
                     print("Found trace ending in bad state:")
-                    for f in trace:
-                        print(f)
+                    while not trace.empty():
+                        idx, cube = trace.get()
+                        print(cube)
                     return False
                 print("recBlockCube Ok! F:")
-                # for i in self.frames:
-                #     print(i)
+
             else:
                 inv = self.checkForInduction(self.frames)
                 if inv != None:
@@ -179,62 +185,27 @@ class PDR:
                     return True
                 print("Did not find invariant, adding frame " + str(len(self.frames)) + "...")
 
-                # self.frames.append(tCube(len(self.frames))) #TODO: Optimize the way of adding frames
-                # self.frames[-1].add(True)
-
-                # tran = copy.deepcopy(self.trans)
-                # tran.t = len(self.frames)
-                # self.frames.append(tran)
-                #print("print the frame")
 
                 print("Adding frame " + str(len(self.frames)) + "...")
-                self.frames.append(tCube(len(self.frames))) #TODO: Append P, and get bad cube change to F[-1] /\ T /\ !P' (also can do generalization), check it is sat or not
+                self.frames.append(Frame(lemmas=[self.post.cube()]))
+
+                # TODO: Append P, and get bad cube change to F[-1] /\ T /\ !P' (also can do generalization), check it is sat or not
                 # [init, P]
                 # init /\ bad   ?sat
                 # init /\T /\ bad'  ?sat
 
+                #TODO: Try new way to pushing lemma (like picking >=2 clause at once to add in new frame)
+                for idx in range(1,len(self.frames)-1):
+                    self.pushLemma(idx)
+
                 print("Now print out the size of frames")
                 for index in range(len(self.frames)):
-                    print("F", index , 'size:' , len(self.frames[index].cubeLiterals))
+                    push_cnt = self.frames[index].pushed.count(True)
+                    print("F", index, 'size:', len(self.frames[index].Lemma), 'pushed: ', push_cnt)
+                    assert (len(self.frames[index].Lemma) == len(self.frames[index].pushed))
 
-                #TODO: Try new way to pushing lemma (like picking >=2 clause at once to add in new frame)
-                fi = self.frames[-2]
-                for c in fi.cubeLiterals: # Pushing lemma = propagate clause
-                    s = Solver()
-                    s.add(fi.cube())
-                    s.add(self.trans.cube())
-                    s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
-                    if s.check() == unsat:
-                        self.frames[-1].add(c)
 
-                # for index, fi in enumerate(self.frames): #TODO: Solve the issue that here is quite slow!!
-                #     if index == len(self.frames) - 1:
-                #         break
-                #     print("F", index , 'size:' , len(fi.cubeLiterals))
-                #     for c in fi.cubeLiterals: # Pushing lemma = propagate clause
-                #         s = Solver()
-                #         s.add(fi.cube())#TODO: Record which literal has been pushed, delete duplicated literals
-                #         s.add(self.trans.cube())
-                #         s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
-                #         if s.check() == unsat:
-                #             self.frames[index + 1].add(c) #TODO: Modify here to append safety property
 
-                #     if self.checkForInduction(fi):
-                #         print("Fond inductive invariant:\n" + str(fi.cube()))
-                #         #print("Fond inductive invariant:\n")
-                #         return True
-                #print("New Frame " + str(len(self.frames) - 1) + ": ")
-                #print(self.frames[-1].cube())
-
-    # def checkForInduction(self, frame):
-    #     print("check for Induction now...")
-    #     s = Solver()
-    #     s.add(self.trans.cube())
-    #     s.add(frame.cube())
-    #     s.add(Not(substitute(frame.cube(), self.primeMap)))  # T and F[i] and Not(F[i])'
-    #     if s.check() == unsat:
-    #         return True
-    #     return False
 
     def checkForInduction(self, frame):
         #print("check for Induction now...")
@@ -246,25 +217,66 @@ class PDR:
             if s.check() == unsat:
                 return frame
         return None
-            #     return True
-            # return False
+
+    def pushLemma(self, Fidx:int):
+        fi: Frame = self.frames[Fidx]
+        for lidx, c in enumerate(fi.Lemma):
+            if fi.pushed[lidx]:
+                continue
+            s = Solver()
+            s.add(fi.cube())
+            s.add(self.trans.cube())
+            s.add(Not(substitute(c, self.primeMap)))
+            if s.check() == unsat:
+                fi.pushed[lidx] = True
+                self.frames[Fidx + 1].add(c)
+
+    def frame_trivially_block(self, st: tCube):
+        Fidx = st.t
+        slv = Solver()
+        slv.add(self.frames[Fidx].cube())
+        slv.add(st.cube())
+        if slv.check() == unsat:
+            return True
+        return False
 
     #TODO: 解决这边特殊case遇到safe判断成unsafe的问题
     def recBlockCube(self, s0: tCube):
-        print("recBlockCube now...") #TODO: Maybe there's a bug here when rec to F[0]? Find it! （考虑MIC的极端情况，或者generalized predecessor的极端情况）
-        Q = [s0]
-        while len(Q) > 0:
-            s = Q[-1]
-            if s.t == 0: #TODO: enhance counter-example finding here (read ic3, pdr & friend)
+        Q = PriorityQueue()
+        print("recBlockCube now...")
+        Q.put((s0.t, s0))
+        prevFidx = None
+        while not Q.empty():
+            s = Q.get()[1]
+            if s.t == 0:
                 return Q
+
+            assert(prevFidx != 0)
+            if prevFidx is not None and prevFidx == s.t-1:
+                # local lemma push
+                self.pushLemma(prevFidx)
+            prevFidx = s.t
+            # check Frame trivially block
+            if self.frame_trivially_block(s):
+                continue
+
             z = self.solveRelative(s)
             if z is None:
-                Q.pop()
                 s = self.MIC(s)
                 for i in range(1, s.t + 1):
                     self.frames[i].add(Not(s.cube())) #TODO: Try RL here
+                # reQueue : see IC3 PDR Friends
+                Fmin = s.t+1
+                Fmax = len(self.frames)
+                for Fidx in range(Fmin, Fmax):
+                    s_copy = s.clone()
+                    s_copy.t = Fidx
+                    Q.put((Fidx, s_copy))
+
             else: #SAT condition
-                Q.append(z) #TODO: Add ternary simulation to generalize predecessor (Gneralize CTI)
+                assert(z.t == s.t-1)
+                Q.put((s.t, s))
+                Q.put((s.t-1, z))
         return None
 
 
@@ -325,6 +337,7 @@ class PDR:
                       substitute(q.cube(), self.primeMap)))  # Fi and not(q) and T and q'
             if unsat == s.check():
                 return True
+            # TODO: this is not the down process !!!
             # m = s.model()
             # q.addModel(self.lMap, m)
             # s.pop()
@@ -353,8 +366,16 @@ class PDR:
     #             return True
     #         m = s.model()
 
+    def _debug_c_is_predecessor(self, c, t, f, not_cp):
+        s = Solver()
+        s.add(c)
+        s.add(t)
+        s.add(f)
+        s.add(not_cp)
+        assert (s.check() == unsat)
+
     # tcube is bad state
-    def solveRelative(self, tcube):
+    def solveRelative(self, tcube) -> tCube:
         cubePrime = substitute(tcube.cube(), self.primeMap)
         s = Solver()
         s.add(Not(tcube.cube()))
@@ -366,26 +387,32 @@ class PDR:
             c = tCube(tcube.t - 1)
             c.addModel(self.lMap, model, remove_input=False)  # c = sat_model
             #return c
-            print("original cube length: ", len(c.cubeLiterals))
-            generalized_p = self.generalize_predecessor(c, tcube)
-            print("generalized cube length: ", len(generalized_p.cubeLiterals))
-            # remove input
+            print("original cube size: ", len(c.cubeLiterals))
+            # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
+            #self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
+            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())
+            print("generalized cube size: ", len(generalized_p.cubeLiterals))
+            #
+            # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
+            # self._debug_c_is_predecessor(generalized_p.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
             generalized_p.remove_input()
             return generalized_p #TODO: Using z3 eval() to conduct tenary simulation
         return None
+
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube):
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr):
         #check = tcube.cube()
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception wranning
         #print("Begin to generalize predessor")
-        nextcube = substitute(substitute(next_cube.cube(), self.primeMap), list(self.pv2next.items()))
+        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
 
         index_to_remove = []
 
-        s = Solver()
-        s.add(prev_cube.cube())
-        s.check()
-        assert(str(s.model().eval(nextcube)) == 'True')
+        #sanity check
+        #s = Solver()
+        #s.add(prev_cube.cube())
+        #s.check()
+        #assert(str(s.model().eval(nextcube)) == 'True')
 
         for i in range(len(tcube_cp.cubeLiterals)):
             #print("Now begin to check the No.",i," of cex")
@@ -397,20 +424,6 @@ class PDR:
             if str(s.model().eval(nextcube)) == 'True':
                 index_to_remove.append(i)
             tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
-
-            # cubePrime = substitute(tcube_cp.cube(), self.primeMap)
-            # s = Solver()
-            # s.add(Not(tcube_cp.cube()))
-            # s.add(self.frames[tcube_cp.t - 1].cube())
-            # s.add(self.trans.cube())
-            # s.add(cubePrime)
-            # if s.check() == sat:
-            #     #print("found way to generalize the predessor!")
-            #     #print(check)
-            #     index_to_remove.append(i)
-            #     # print("Before:",tcube.cubeLiterals)
-            #     # tcube.cubeLiterals.pop(i)
-            #     # print("After:",tcube.cubeLiterals)
 
         prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
         return prev_cube
@@ -434,15 +447,20 @@ class PDR:
 
     def getBadCube(self):
         print("seek for bad cube...")
-        model = And(Not(self.post.cube()), self.frames[-1].cube())  # F[k] and Not(p)
+
         s = Solver()
-        s.add(model)
+        s.add(substitute(Not(self.post.cube()), self.primeMap))
+        s.add(self.frames[-1].cube())
+        s.add(self.trans.cube())
+
         if s.check() == sat:
             res = tCube(len(self.frames) - 1)
-            res.addModel(self.lMap, s.model())  # res = sat_model
+            res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
             print("get bad cube:")
             #print(res.cube()) # Print the result
-            return res
+            new_model = self.generalize_predecessor(res, Not(self.post.cube()))
+            new_model.remove_input()
+            return new_model
         else:
             return None
 
@@ -459,7 +477,7 @@ class PDR:
             s = Solver()
             s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
             s.add(self.R[tcube.t - 1])
-            s.add(self.trans)
+            s.add(self.trans.cube())
             s.add(cubeprime)
             start = time.time()
             SAT = s.check();
@@ -497,7 +515,7 @@ class PDR:
             s = Solver()
             s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
             s.add(self.R[tcube.t - 1])
-            s.add(self.trans)
+            s.add(self.trans.cube())
             s.add(cubeprime)
             start = time.time()
             SAT = s.check();
