@@ -97,7 +97,35 @@ class tCube:
         # if len(t(g)[0]) == 0:
         #     self.cubeLiterals.append(True)
 
-    # 删除第 i 个元素，并返回 tCube
+    def true_size(self):
+        return len(self.cubeLiterals) - self.cubeLiterals.count(True)
+
+    def join(self,  model):
+        # first extract var,val from cubeLiteral
+        literal_idx_to_remove = set()
+        model = {str(var): model[var] for var in model}
+        for idx, literal in enumerate(self.cubeLiterals):
+            if literal is True:
+                continue
+            var, val = _extract(literal)
+            var = str(var)
+            assert(var[0] == 'v')
+            if var not in model:
+                literal_idx_to_remove.add(idx)
+                continue
+            val2 = model[var]
+            if str(val2) == str(val):
+                continue # will not remove
+            literal_idx_to_remove.add(idx)
+        for idx in literal_idx_to_remove:
+            self.cubeLiterals[idx] = True
+        return len(literal_idx_to_remove) != 0
+        # for each variable in cubeLiteral, check if it has negative literal in model
+        # if so, remove this literal
+        # return False if there is no removal (which should not happen)
+
+
+    # 删除第 i 个元素，并返回新的tCube
     def delete(self, i: int):
         res = tCube(self.t)
         for it, v in enumerate(self.cubeLiterals):
@@ -263,7 +291,8 @@ class PDR:
         Q.put((s0.t, s0))
         prevFidx = None
         while not Q.empty():
-            s = Q.get()[1]
+            print (Q.qsize())
+            s:tCube = Q.get()[1]
             if s.t == 0:
                 return Q
 
@@ -274,20 +303,28 @@ class PDR:
             prevFidx = s.t
             # check Frame trivially block
             if self.frame_trivially_block(s):
+                Fmin = s.t+1
+                Fmax = len(self.frames)
+                if Fmin < Fmax:
+                    s_copy = s.clone()
+                    s_copy.t = Fmin
+                    Q.put((Fmin, s_copy))
                 continue
 
             z = self.solveRelative(s)
             if z is None:
+                print ('MIC ', s.true_size(), end=' --> ')
                 s = self.MIC(s)
+                print (s.true_size())
                 for i in range(1, s.t + 1):
                     self.frames[i].add(Not(s.cube())) #TODO: Try RL here
                 # reQueue : see IC3 PDR Friends
                 Fmin = s.t+1
                 Fmax = len(self.frames)
-                for Fidx in range(Fmin, Fmax):
+                if Fmin < Fmax:
                     s_copy = s.clone()
-                    s_copy.t = Fidx
-                    Q.put((Fidx, s_copy))
+                    s_copy.t = Fmin
+                    Q.put((Fmin, s_copy))
 
             else: #SAT condition
                 assert(z.t == s.t-1)
@@ -322,7 +359,10 @@ class PDR:
 
     def MIC(self, q: tCube): #TODO: Check the algorithm is correct or not
         for i in range(len(q.cubeLiterals)):
+            if q.cubeLiterals[i] is True:
+                continue
             q1 = q.delete(i)
+            print(f'MIC try idx:{i}')
             if self.down(q1):
                 q = q1
         return q
@@ -340,24 +380,29 @@ class PDR:
 
     def down(self, q: tCube):
         while True:
+            print(q.true_size(),end=',')
             s = Solver()
             s.push()
             #s.add(And(self.frames[0].cube(), Not(q.cube())))
-            s.add(And(self.frames[0].cube(), (q.cube())))
+            s.add(self.frames[0].cube())
+            s.add(q.cube())
             #if unsat == s.check():
             if sat == s.check():
+                print('F')
                 return False
             s.pop()
             s.push()
             s.add(And(self.frames[q.t].cube(), Not(q.cube()), self.trans.cube(),
                       substitute(q.cube(), self.primeMap)))  # Fi and not(q) and T and q'
             if unsat == s.check():
+                print('T')
                 return True
             # TODO: this is not the down process !!!
-            # m = s.model()
-            # q.addModel(self.lMap, m)
-            # s.pop()
-            return False
+            m = s.model()
+            has_removed = q.join(m)
+            s.pop()
+            assert (has_removed)
+            #return False
 
     # def tcgMIC(self, q: tCube, d: int):
     #     for i in range(len(q.cubeLiterals)):
@@ -404,11 +449,11 @@ class PDR:
             c = tCube(tcube.t - 1)
             c.addModel(self.lMap, model, remove_input=False)  # c = sat_model
             #return c
-            print("original cube size: ", len(c.cubeLiterals))
+            print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
             #self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
             generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())
-            print("generalized cube size: ", len(generalized_p.cubeLiterals))
+            print(len(generalized_p.cubeLiterals))
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
             #self._debug_c_is_predecessor(generalized_p.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
