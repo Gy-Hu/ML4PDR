@@ -421,10 +421,10 @@ class PDR:
         return passed_single_q
 
     def MIC(self, q: tCube): #TODO: Check the algorithm is correct or not
-        passed_single_q_sz1 = self._test_MIC1(q)
-        passed_single_q_sz2 = []
-        if len(passed_single_q_sz1) == 0:
-            passed_single_q_sz2 = self._test_MIC2(q)
+        #passed_single_q_sz1 = self._test_MIC1(q)
+        #passed_single_q_sz2 = []
+        #if len(passed_single_q_sz1) == 0:
+        #    passed_single_q_sz2 = self._test_MIC2(q)
 
         sz = q.true_size()
         self.unsatcore_reduce(q, trans=self.trans.cube(), frame=self.frames[q.t-1].cube())
@@ -443,15 +443,15 @@ class PDR:
         # FIXME: below shows the choice of var is rather important
         # I think you may want to first run some experience to confirm
         # that if can achieve minimum, it will be rather useful
-        if q.true_size() > 1 and len(passed_single_q_sz1) != 0:
-            q = passed_single_q_sz1[0] # should be changed!
-            print ('Not optimal!!!')
-        if q.true_size() > 2 and len(passed_single_q_sz2) != 0:
-            for newq in passed_single_q_sz2:
-                if 'False' in str(newq):
-                    q = newq
-            # should be changed!
-            print ('Not optimal!!!')
+        # if q.true_size() > 1 and len(passed_single_q_sz1) != 0:
+        #     q = passed_single_q_sz1[0] # should be changed!
+        #     print ('Not optimal!!!')
+        # if q.true_size() > 2 and len(passed_single_q_sz2) != 0:
+        #     for newq in passed_single_q_sz2:
+        #         if 'False' in str(newq):
+        #             q = newq
+        #     # should be changed!
+        #     print ('Not optimal!!!')
         return q
         # i = 0
         # while True:
@@ -616,10 +616,10 @@ class PDR:
             s.add(tcube_cp.cube())
             res = s.check()
             assert (res == sat)
-            if str(s.model().eval(nextcube)) == 'True':
+            if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
                 index_to_remove.append(i)
                 # substitute its negative value into nextcube
-                v, val = _extract(prev_cube.cubeLiterals[i])
+                v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
                 nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
 
             tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
