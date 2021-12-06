@@ -4,22 +4,23 @@ import sys
 import numpy as np
 import copy
 from queue import PriorityQueue
+from line_profiler import LineProfiler
 from functools import wraps
 
 from bmc import BMC
 
 
 # 查询接口中每行代码执行的时间
-def func_line_time(f):
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        func_return = f(*args, **kwargs)
-        lp = LineProfiler()
-        lp_wrap = lp(f)
-        lp_wrap(*args, **kwargs)
-        lp.print_stats()
-        return func_return
-    return decorator
+# def func_line_time(f):
+#     @wraps(f)
+#     def decorator(*args, **kwargs):
+#         func_return = f(*args, **kwargs)
+#         lp = LineProfiler()
+#         lp_wrap = lp(f)
+#         lp_wrap(*args, **kwargs)
+#         lp.print_stats()
+#         return func_return
+#     return decorator
 
 #TODO: Using Z3 to check the 3 properties of init, trans, safe, inductive invariant
 
