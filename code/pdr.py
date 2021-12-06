@@ -599,8 +599,12 @@ class PDR:
         #check = tcube.cube()
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception warning
         #print("Begin to generalize predessor")
-        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
 
+        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
+        # try:
+        #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
+        # except Exception:
+        #     pass
         index_to_remove = []
 
         #sanity check
