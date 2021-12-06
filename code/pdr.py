@@ -33,6 +33,7 @@ class Frame:
     def cube(self):
         return And(self.Lemma)
 
+
     def add(self, clause, pushed=False):
         self.Lemma.append(clause)
         self.pushed.append(pushed)
@@ -146,6 +147,16 @@ class tCube:
 
     def cube(self): #导致速度变慢的罪魁祸首？
         return simplify(And(self.cubeLiterals))
+
+    def ternary_sim(self, index_of_x):
+        # first extract var,val from cubeLiteral
+        s = Solver()
+        for idx, literal in enumerate(self.cubeLiterals):
+            if idx !=index_of_x:
+                s
+                var = str(var)
+
+
     #
     # def cube(self):
     #     return And(*self.cubeLiterals)
@@ -219,10 +230,11 @@ class PDR:
         self.frames.append(Frame(lemmas=[self.post.cube()]))
 
         while True:
-            c = self.getBadCube()
+            c = self.getBadCube() # conduct generalize predecessor here
             if c is not None:
                 # print("get bad cube!")
-                trace = self.recBlockCube(c) #TODO: 找出spec3-and-env这个case为什么没有recBlock
+                trace = self.recBlockCube(c) # conduct generalize predecessor here (in solve relative process)
+                #TODO: 找出spec3-and-env这个case为什么没有recBlock
                 if trace is not None:
                     print("Found trace ending in bad state:")
                     self._debug_trace(trace)
@@ -307,6 +319,10 @@ class PDR:
 
     #TODO: 解决这边特殊case遇到safe判断成unsafe的问题
     def recBlockCube(self, s0: tCube):
+        '''
+        :param s0: CTI (counterexample to induction, represented as cube)
+        :return: Trace (cex, indicates that the system is unsafe) or None (successfully blocked)
+        '''
         Q = PriorityQueue()
         print("recBlockCube now...")
         Q.put((s0.t, s0))
@@ -505,7 +521,7 @@ class PDR:
                 return False
             s.pop()
             s.push()
-            s.add(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
+            s.add(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(), #TODO: Check here is t-1 or t
                       substitute(q.cube(), self.primeMap)))  # Fi-1 ! and not(q) and T and q'
             if unsat == s.check():
                 print('T')
@@ -570,22 +586,28 @@ class PDR:
         s.add(cubePrime)
         assert (s.check() == unsat)
 
+    # for tcube, check if cube is blocked by R[t-1] AND trans (check F[i−1]/\!s/\T/\s′ is sat or not)
     def solveRelative(self, tcube) -> tCube:
+        '''
+        :param tcube: CTI (counterexample to induction, represented as cube)
+        :return: None (relative solved! Begin to block bad state) or
+        predecessor to block (Begin to enter recblock() again)
+        '''
         cubePrime = substitute(tcube.cube(), self.primeMap)
         s = Solver()
         s.add(Not(tcube.cube()))
         s.add(self.frames[tcube.t - 1].cube())
         s.add(self.trans.cube())
         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
-        if s.check() == sat:
+        if s.check() == sat: # F[i-1] & !s & T & s' is sat!!
             model = s.model()
             c = tCube(tcube.t - 1)
-            c.addModel(self.lMap, model, remove_input=False)  # c = sat_model
+            c.addModel(self.lMap, model, remove_input=False)  # c = sat_model, get the partial model of c
             #return c
             print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
             self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
-            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())
+            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())  # c = get_predecessor(i-1, s')
             print(len(generalized_p.cubeLiterals))
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
@@ -594,12 +616,26 @@ class PDR:
             return generalized_p #TODO: Using z3 eval() to conduct tenary simulation
         return None
 
+    #(X ∧ 0 = 0), (X ∧ 1 = X), (X ∧ X = X), (¬X = X).
+    # def ternary_operation(self, ternary_candidate):
+    #     for
+    #     False = And(x,True)
+    #     x = And(x,True)
+    #     x = And(x,x)
+    #     x = Not(x)
+
 #TODO: Get bad cude should generalize as well!
     def generalize_predecessor(self, prev_cube:tCube, next_cube_expr):
+        '''
+        :param prev_cube: sat model of CTI (index = i-1)
+        :param next_cube_expr: CTI (index = i)
+        :return:
+        '''
         #check = tcube.cube()
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception warning
         #print("Begin to generalize predessor")
 
+        #replace the state as the next state (by trans) -> !P (s')
         nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # try:
         #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
@@ -613,18 +649,30 @@ class PDR:
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
 
+        #For loop in all previous cube
         for i in range(len(tcube_cp.cubeLiterals)):
             #print("Now begin to check the No.",i," of cex")
-            tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
+            tcube_cp.cubeLiterals[i] = Bool('x')
+            tcube_cp.ternary_sim(i)
+            #ternary_operation(tcube_cp.cubeLiterals)
+            #ternary_candidate = tcube_cp.cube()
+            #tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
             s = Solver()
             s.add(tcube_cp.cube())
-            res = s.check()
+            res = s.check() #check f(v1,v2,v3,v4...) is
+            #print("The checking result after fliping literal: ",res)
             assert (res == sat)
+            # check the new sat model can transit to the CTI (true means it still can reach CTI)
             if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
                 index_to_remove.append(i)
                 # substitute its negative value into nextcube
                 v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
                 nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+
+                # s = Solver()
+                # s.add()
+                # core = s.unsat_core()
+                # nextcube = core
 
             tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
 
@@ -656,14 +704,14 @@ class PDR:
         s.add(self.frames[-1].cube())
         s.add(self.trans.cube())
 
-        if s.check() == sat:
+        if s.check() == sat: #F[-1] /\ T /\ !P is sat! CTI (cex to induction) found!
             res = tCube(len(self.frames) - 1)
             res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
             # sanity check - why?
             self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True,
                                          substitute(self.post.cube(), self.primeMap))
-            new_model = self.generalize_predecessor(res, Not(self.post.cube()))
+            new_model = self.generalize_predecessor(res, Not(self.post.cube())) #new_model: predecessor of !P extracted from SAT witness
             print(len(new_model.cubeLiterals)) # Print the result
             self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True,
                                          substitute(self.post.cube(), self.primeMap))
