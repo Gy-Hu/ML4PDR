@@ -13,13 +13,13 @@ class BMC:
         self.primary_inputs = primary_inputs
         self.init = init
         self.trans = trans
-        self.literals = literals
+        self.literals = literals + primary_inputs
         self.items = self.primary_inputs + self.literals
         self.lMap = {str(l): l for l in self.items}
         self.post = post
         self.frames = list()
-        self.primes = primes
-        self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
+        self.primes = primes + [Bool(str(pi)+'\'') for pi in primary_inputs]
+        self.primeMap = [(self.literals[i], self.primes[i]) for i in range(len(self.literals))]
         self.pv2next = pv2next
         self.initprime = substitute(self.init.cube(), self.primeMap)
         self.vardict = dict()

@@ -2,6 +2,7 @@ import re
 from z3 import *
 
 from pdr import tCube
+from aigsim import AIG
 from solver import TCube
 
 #TODO: 似乎仅支持六个参数的aag，有无办法解决这个问题？
@@ -158,6 +159,17 @@ class Model:
         :return:
         '''
         i, l, o, a, b, c, annotations = read_in(fileName)
+        self.aiggraph_c = AIG()
+        self.aiggraph_c.register_latch(l)
+        self.aiggraph_c.register_ands(a)
+        self.aiggraph_c.register_input(i)
+
+
+        self.aiggraph_p = AIG()
+        self.aiggraph_p.register_latch(l)
+        self.aiggraph_p.register_ands(a)
+        self.aiggraph_p.register_input(i)
+        self.aiggraph_p.register_output(int(o[0]))
 
         ann_i = 0
         # input node
@@ -362,7 +374,9 @@ class Model:
         # print("postAdded")
         print("self.inputs: ",self.inputs)
         print("self.vars: ",self.vars)
-        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next
+        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next, \
+            self.aiggraph_c, self.aiggraph_p
+
 
 
 if __name__ == '__main__':

@@ -168,7 +168,7 @@ def _extract(literaleq):
     return v, val
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, aiggraph_c, aiggraph_p):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -180,17 +180,20 @@ class PDR:
         self.primary_inputs = primary_inputs
         self.init = init
         self.trans = trans
-        self.literals = literals
-        self.items = self.primary_inputs + self.literals
+        self.literals = literals + primary_inputs
+        self.items = self.literals
         self.lMap = {str(l): l for l in self.items}
         self.post = post
         self.frames = list()
-        self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
+        self.primes = primes + [Bool(str(pi)+'\'') for pi in primary_inputs]
+        self.primeMap = [(self.literals[i], self.primes[i]) for i in range(len(self.literals))]
         self.pv2next = pv2next
         self.initprime = substitute(self.init.cube(), self.primeMap)
         # for debugging purpose
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
                        init=init, trans=trans, post=post, pv2next=pv2next)
+        self.aiggraph_c = aiggraph_c
+        self.aiggraph_p = aiggraph_p
 
     def check_init(self):
         s = Solver()
@@ -550,14 +553,18 @@ class PDR:
                 print('C', idx, ':', str(c))
 
 
-    def _debug_c_is_predecessor(self, c, t, f, not_cp):
+    def _debug_c_is_predecessor(self, c, t, f, not_cp, ast = True):
         s = Solver()
         s.add(c)
         s.add(t)
         if f is not True:
             s.add(f)
         s.add(not_cp)
-        assert (s.check() == unsat)
+        if ast:
+            assert (s.check() == unsat)
+        if s.check() == sat:
+            self._debug_model = s.model()
+        return s.check()
 
     # tcube is bad state
 
@@ -585,7 +592,13 @@ class PDR:
             print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
             self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
-            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())
+            self.aiggraph_c.register_c(tcube)
+            self.aiggraph_c.populate_assignment(c)
+            if self.aiggraph_c.get_output() != 1:
+                self.aiggraph_c.backtrack()
+            assert (self.aiggraph_c.get_output() == 1)
+            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube(), aiggraph = self.aiggraph_c)
+            self.aiggraph_c.unregister_c()
             print(len(generalized_p.cubeLiterals))
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
@@ -595,12 +608,12 @@ class PDR:
         return None
 
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr):
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, aiggraph):
         #check = tcube.cube()
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception warning
         #print("Begin to generalize predessor")
 
-        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
+        #nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # try:
         #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # except Exception:
@@ -612,24 +625,44 @@ class PDR:
         #s.add(prev_cube.cube())
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
-
         for i in range(len(tcube_cp.cubeLiterals)):
-            #print("Now begin to check the No.",i," of cex")
-            tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
-            s = Solver()
-            s.add(tcube_cp.cube())
-            res = s.check()
-            assert (res == sat)
-            if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
-                index_to_remove.append(i)
-                # substitute its negative value into nextcube
-                v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
-                nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+            print ('i',i,':', end='')
+            var, val = _extract(prev_cube.cubeLiterals[i])
+            if str(var)[0] == 'i':
+                print ('input skipped')
+                continue
+            oldval = 1 if str(val) == 'True' else 0
+            aiggraph.set_Li(var, 2, debug=True) # set Li to X
+            if aiggraph.get_output() == 2:
+                aiggraph.set_Li(var, oldval)
+                print('Undo')
+            else:
+                assert(aiggraph.get_output() == 1)
+                tcube_cp.cubeLiterals[i] = True
+                print('Keep')
+            if aiggraph is self.aiggraph_p:
+                ret = self._debug_c_is_predecessor(tcube_cp.cube(), self.trans.cube(), True,
+                                                   substitute(self.post.cube(), self.primeMap), False)
+            else:
+                ret = self._debug_c_is_predecessor(tcube_cp.cube(), self.trans.cube(),
+                                                   self.frames[prev_cube.t].cube(),
+                                                   substitute(Not(next_cube_expr), self.primeMap), False)
+            if (ret == sat): # debug dump
+                with open("dump.txt", 'w') as fout:
+                    fout.write(f"{i}\n")
+                    fout.write(str(prev_cube) + "\n")
+                    fout.write('\n-------------\n')
+                    fout.write(str(tcube_cp) + "\n")
+                    fout.write('\n-------------\n')
+                    md = [str(v) + ":" + str( self._debug_model[v]) for v in self._debug_model]
+                    fout.write('\n'.join(sorted(md)))
+                    fout.write('\n-------------\n')
+                    fout.write(aiggraph.dump_eval())
+                assert False
 
-            tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
 
-        prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
-        return prev_cube
+        tcube_cp.remove_true()
+        return tcube_cp
 
     def solveRelative_RL(self, tcube):
             cubePrime = substitute(tcube.cube(), self.primeMap)
@@ -658,12 +691,21 @@ class PDR:
 
         if s.check() == sat:
             res = tCube(len(self.frames) - 1)
-            res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
+            model = s.model()
+            res.addModel(self.lMap, model, remove_input=False)  # res = sat_model
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
             # sanity check - why?
             self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True,
                                          substitute(self.post.cube(), self.primeMap))
-            new_model = self.generalize_predecessor(res, Not(self.post.cube()))
+            self.aiggraph_p.use_output()
+            self.aiggraph_p.populate_assignment_with_inputprime(model)
+            if self.aiggraph_p.get_output() != 1:
+                self.aiggraph_p.backtrack()
+            assert (self.aiggraph_p.get_output() == 1)
+            new_model = self.generalize_predecessor(res, Not(self.post.cube()), self.aiggraph_p)
+            self.aiggraph_p.unuse_output()
+
+
             print(len(new_model.cubeLiterals)) # Print the result
             self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True,
                                          substitute(self.post.cube(), self.primeMap))
