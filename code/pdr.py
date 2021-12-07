@@ -11,6 +11,7 @@ from bmc import BMC
 
 
 # 查询接口中每行代码执行的时间
+<<<<<<< HEAD
 # def func_line_time(f):
 #     @wraps(f)
 #     def decorator(*args, **kwargs):
@@ -21,6 +22,18 @@ from bmc import BMC
 #         lp.print_stats()
 #         return func_return
 #     return decorator
+=======
+def func_line_time(f): #TODO: Use this to find which part of the code has most overhead
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        func_return = f(*args, **kwargs)
+        lp = LineProfiler()
+        lp_wrap = lp(f)
+        lp_wrap(*args, **kwargs)
+        lp.print_stats()
+        return func_return
+    return decorator
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
 
 #TODO: Using Z3 to check the 3 properties of init, trans, safe, inductive invariant
 
@@ -53,7 +66,7 @@ class tCube:
 
     def clone(self):
         ret = tCube(self.t)
-        ret.cubeLiterals = self.cubeLiterals.copy()
+        ret.cubeLiterals = copy.deepcopy(self.cubeLiterals)
         return ret
 
     def remove_true(self):
@@ -100,10 +113,6 @@ class tCube:
         # g = Goal()
         # g.add(m) #TODO: Check 这边CNF会不会出现问题（试试arb-start那个case）
         # t = Tactic('tseitin-cnf')  # 转化得到该公式的 CNF 范式 #TODO:弄清楚这边转CNF如何转，能不能丢入Parafrost加速
-        # for c in t(g)[0]:
-        #     self.cubeLiterals.append(c)
-        # if len(t(g)[0]) == 0:
-        #     self.cubeLiterals.append(True)
 
     def true_size(self):
         return len(self.cubeLiterals) - self.cubeLiterals.count(True)
@@ -147,6 +156,7 @@ class tCube:
 
     def cube(self): #导致速度变慢的罪魁祸首？
         return simplify(And(self.cubeLiterals))
+<<<<<<< HEAD
 
     def ternary_sim(self, index_of_x):
         # first extract var,val from cubeLiteral
@@ -160,10 +170,13 @@ class tCube:
     #
     # def cube(self):
     #     return And(*self.cubeLiterals)
+=======
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
 
     def __repr__(self):
         return str(self.t) + ": " + str(sorted(self.cubeLiterals, key=str))
 
+<<<<<<< HEAD
 def _extract(literaleq):
     # we require the input looks like v==val
     children = literaleq.children()
@@ -177,6 +190,8 @@ def _extract(literaleq):
     else:
         assert(False)
     return v, val
+=======
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
 
 class PDR:
     def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp):
@@ -200,6 +215,7 @@ class PDR:
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
         self.inp_map = [(primary_inputs[i], primes_inp[i]) for i in range(len(primes_inp))]
         self.pv2next = pv2next
+<<<<<<< HEAD
         self.initprime = substitute(self.init.cube(), self.primeMap)
         # for debugging purpose
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
@@ -226,6 +242,10 @@ class PDR:
             print("Found trace ending in bad state")
             return False
 
+=======
+
+    def run(self,agent):
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
         self.agent = agent
         self.frames = list() # list for Frame
         self.frames.append(Frame(lemmas=[self.init.cube()]))
@@ -234,6 +254,9 @@ class PDR:
         while True:
             c = self.getBadCube() # conduct generalize predecessor here
             if c is not None:
+                if c == False:
+                    print("init state has met the bad state!!")
+                    return False
                 # print("get bad cube!")
                 trace = self.recBlockCube(c) # conduct generalize predecessor here (in solve relative process)
                 #TODO: 找出spec3-and-env这个case为什么没有recBlock
@@ -256,11 +279,23 @@ class PDR:
                     return True
                 print("Did not find invariant, adding frame " + str(len(self.frames)) + "...")
 
+<<<<<<< HEAD
+=======
+#TODO: Optimize the way of adding frames
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
 
+                #TODO: 先append P后propagate clause是对的吗
                 print("Adding frame " + str(len(self.frames)) + "...")
+<<<<<<< HEAD
                 self.frames.append(Frame(lemmas=[])) # property can be directly pushed here
 
                 # TODO: Append P, and get bad cube change to F[-1] /\ T /\ !P' (also can do generalization), check it is sat or not
+=======
+                P = copy.deepcopy(self.post)
+                P.t = len(self.frames)
+                self.frames.append(P)
+                #self.frames.append(tCube(len(self.frames))) #TODO: Append P, and get bad cube change to F[-1] /\ T /\ !P' (also can do generalization), check it is sat or not
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
                 # [init, P]
                 # init /\ bad   ?sat
                 # init /\T /\ bad'  ?sat
@@ -280,11 +315,30 @@ class PDR:
                     self._debug_print_frame(index, skip_pushed=True)
                 #input() # pause
 
+<<<<<<< HEAD
 
 
 
 
     def checkForInduction(self):
+=======
+                #TODO: Try new way to pushing lemma (like picking >=2 clause at once to add in new frame)
+                fi = self.frames[-2]
+                for c in fi.cubeLiterals: # Pushing lemma = propagate clause
+                    s = Solver()
+                    s.add(fi.cube())
+                    s.add(self.trans.cube())
+                    s.add(Not(substitute(c, self.primeMap)))  # F[i] and T and Not(c)'
+                    if s.check() == unsat:
+                        self.frames[-1].add(c)
+
+#TODO: Solve the issue that here is quite slow!!
+#TODO: Record which literal has been pushed, delete duplicated literals
+#TODO: Modify here to append safety property
+
+
+    def checkForInduction(self, frame):
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
         #print("check for Induction now...")
         # check Fi+1 => Fi ?
         Fi2 = self.frames[-2].cube()
@@ -471,17 +525,6 @@ class PDR:
         #     # should be changed!
         #     print ('Not optimal!!!')
         return q
-        # i = 0
-        # while True:
-        #     print(i)
-        #     if i < len(q.cubeLiterals) - 1:
-        #         i += 1
-        #     else:
-        #         break
-        #     q1 = q.delete(i)
-        #     if self.down(q1):
-        #         q = q1
-        # return q
 
     def unsatcore_reduce(self, q:  tCube, trans, frame):
         # (( not(q) /\ F /\ T ) \/ init' ) /\ q'   is unsat
@@ -535,6 +578,7 @@ class PDR:
             assert (has_removed)
             #return False
 
+<<<<<<< HEAD
     # def tcgMIC(self, q: tCube, d: int):
     #     for i in range(len(q.cubeLiterals)):
     #         q1 = q.delete(i)
@@ -577,6 +621,8 @@ class PDR:
         s.add(not_cp)
         assert (s.check() == unsat)
 
+=======
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
     # tcube is bad state
 
     def _check_MIC(self, st:tCube):
@@ -667,6 +713,7 @@ class PDR:
         for i in range(len(tcube_cp.cubeLiterals)):
             if 'p'+str(i) in core:
             #print("Now begin to check the No.",i," of cex")
+<<<<<<< HEAD
             #tcube_cp.cubeLiterals[i] = Bool('x')
             #tcube_cp.ternary_sim(i)
             #ternary_operation(tcube_cp.cubeLiterals)
@@ -685,6 +732,16 @@ class PDR:
                     nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
 
                 tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
+=======
+            tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
+            s = Solver()
+            s.add(tcube_cp.cube())
+            res = s.check()
+            assert (res == sat)
+            if str(s.model().eval(nextcube)) == 'True':
+                index_to_remove.append(i)
+            tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
 
         prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
         return prev_cube
@@ -707,7 +764,11 @@ class PDR:
                 return None, res
 
     def getBadCube(self):
+        # [init, P]
+        # init /\ bad   ?sat
+        # init /\T /\ bad'  ?sat
         print("seek for bad cube...")
+<<<<<<< HEAD
 
         s = Solver() #TODO: the input should also map to input'(prime)
         s.add(substitute(substitute(Not(self.post.cube()), self.primeMap),self.inp_map)) #TODO: Check the correctness here
@@ -727,6 +788,32 @@ class PDR:
                                          substitute(self.post.cube(), self.primeMap))
             new_model.remove_input()
             return new_model
+=======
+        if len(self.frames) == 1:
+            model_1 = And(Not(self.post.cube()), self.init.cube())
+            s_1 = Solver()
+            # init /\ bad   ?sat
+            s_1.add(model_1)
+            P_prime = copy.deepcopy(self.post)
+            # init /\T /\ bad'  ?sat
+            model_2 = And(self.init.cube(),self.trans.cube(),Not(substitute(substitute(P_prime.cube(), self.primeMap), list(self.pv2next.items()))))
+            s_2 = Solver()
+            s_2.add(model_2)
+            if s_1.check() == sat or s_2.check() == sat:
+                return False
+
+        # F[-1] /\ T /\ !P (s') ?sat
+        P_prime = copy.deepcopy(self.post) #TODO: 这边用Not(trans)似乎有加速？不知道这边是否可以做一些探索
+        model = And(self.trans.cube(), self.frames[-1].cube(), Not(substitute(substitute(P_prime.cube(), self.primeMap), list(self.pv2next.items()))))  # F[k] and Not(p)
+        s = Solver()
+        s.add(model)
+        if s.check() == sat:
+            res = tCube(len(self.frames) - 1)
+            res.addModel(self.lMap, s.model())  # res = sat_model #TODO: Try on generalization of bad cube here
+            print("get bad cube:")
+            #print(res.cube()) # Print the result
+            return res
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
         else:
             return None
 

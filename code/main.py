@@ -25,7 +25,6 @@ def run_with_limited_time(func, time):
         return False
     return True
 
-
 if __name__ == '__main__':
     #sys.stdout = open('file', 'w') #open this when we need the log
     help_info = "Usage: python main.py <file-name>.aag"
@@ -33,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('fileName', type=str, help='The name of the test to run', default=None, nargs='?')
     parser.add_argument('-m', type=int, help='the time limitation of one test to run', default=3600)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
+<<<<<<< HEAD
     args = parser.parse_args(['../dataset/hwmcc07_amba/spec1-and-env.aag','-c']) #When you need to run single file, setup this
     #TODO: Add abstract & craig interpolation?
     #args = parser.parse_args(['../dataset/hwmcc07_tip/ken.flash^12.C.aag', '-c']) #SAT, this case can cause memory exploration
@@ -40,6 +40,14 @@ if __name__ == '__main__':
     #args = parser.parse_args(['../dataset/hwmcc07_tip/texas.two_proc^5.E.aag', '-c']) #SAT
     #args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
     #args = parser.parse_args(['../dataset/hwmcc07_tip/eijk.S208o.S.aag', '-c'])
+=======
+    #TODO: Solve the bug on this case (safe -> unsafe)
+    #args = parser.parse_args(['../dataset/hwmcc07_amba/spec1-and-env.aag','-c']) #When you need to run single file, setup this
+    #args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
+    # TODO: Solve the issue on this case (cannot run in time)
+    args = parser.parse_args(['../dataset/hwmcc07_tip/eijk.S208o.S.aag', '-c'])
+    # TODO: Solve the bug on this case (weird inductive invariant)
+>>>>>>> 82305ea975d5d91b13848ee6a7dfcc833c866876
     #args = parser.parse_args(['../dataset/ILAng_pipeline/simple_pipe_verify_stall_ADD.aag', '-c'])
     #args = parser.parse_args(['../dataset/toy_experiment/counter_unsat.aag', '-c'])
     #args = parser.parse_args(['../dataset/toy_experiment/play.aag', '-c'])
