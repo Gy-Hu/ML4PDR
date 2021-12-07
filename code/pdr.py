@@ -215,7 +215,7 @@ class PDR:
         s = Solver()
         s.add(self.init.cube())
         s.add(self.trans.cube())
-        s.add(substitute(Not(self.post.cube()), self.primeMap))
+        s.add(substitute(substitute(Not(self.post.cube()), self.primeMap),self.inp_map))
         res2 = s.check()
         if res2 == sat:
             return False
@@ -305,7 +305,7 @@ class PDR:
             s = Solver()
             s.add(fi.cube())
             s.add(self.trans.cube())
-            s.add(Not(substitute(c, self.primeMap)))
+            s.add(substitute(Not(substitute(c, self.primeMap)),self.inp_map))
             if s.check() == unsat:
                 fi.pushed[lidx] = True
                 self.frames[Fidx + 1].add(c)
@@ -494,7 +494,7 @@ class PDR:
         plist = []
         for idx, literal in enumerate(q.cubeLiterals):
             p = 'p'+str(idx)
-            slv.assert_and_track(substitute(literal, self.primeMap), p)
+            slv.assert_and_track(substitute(substitute(literal, self.primeMap),self.inp_map), p)
             plist.append(p)
         res = slv.check()
         if res == sat:
@@ -524,7 +524,7 @@ class PDR:
             s.pop()
             s.push()
             s.add(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(), #TODO: Check here is t-1 or t
-                      substitute(q.cube(), self.primeMap)))  # Fi-1 ! and not(q) and T and q'
+                      substitute(substitute(q.cube(), self.primeMap),self.inp_map)))  # Fi-1 ! and not(q) and T and q'
             if unsat == s.check():
                 print('T')
                 return True
@@ -580,7 +580,7 @@ class PDR:
     # tcube is bad state
 
     def _check_MIC(self, st:tCube):
-        cubePrime = substitute(st.cube(), self.primeMap)
+        cubePrime = substitute(substitute(st.cube(), self.primeMap),self.inp_map)
         s = Solver()
         s.add(Not(st.cube()))
         s.add(self.frames[st.t - 1].cube())
@@ -595,7 +595,7 @@ class PDR:
         :return: None (relative solved! Begin to block bad state) or
         predecessor to block (Begin to enter recblock() again)
         '''
-        cubePrime = substitute(tcube.cube(), self.primeMap)
+        cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
         s = Solver()
         s.add(Not(tcube.cube()))
         s.add(self.frames[tcube.t - 1].cube())
@@ -638,7 +638,7 @@ class PDR:
         #print("Begin to generalize predessor")
 
         #replace the state as the next state (by trans) -> !P (s')
-        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items())) # s -> s'
+        nextcube = substitute(substitute(substitute(next_cube_expr, self.primeMap),self.inp_map), list(self.pv2next.items())) # s -> s'
         # try:
         #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # except Exception:
@@ -690,7 +690,7 @@ class PDR:
         return prev_cube
 
     def solveRelative_RL(self, tcube):
-            cubePrime = substitute(tcube.cube(), self.primeMap)
+            cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
             s = Solver()
             s.add(self.frames[tcube.t - 1].cube())
             s.add(self.trans.cube())
@@ -720,11 +720,11 @@ class PDR:
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
             # sanity check - why?
             self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True,
-                                         substitute(self.post.cube(), self.primeMap))
+                                         substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
             new_model = self.generalize_predecessor(res, Not(self.post.cube())) #new_model: predecessor of !P extracted from SAT witness
             print(len(new_model.cubeLiterals)) # Print the result
             self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True,
-                                         substitute(self.post.cube(), self.primeMap))
+                                         substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
             new_model.remove_input()
             return new_model
         else:
@@ -739,7 +739,7 @@ class PDR:
         for ti in range(STEPS):
             action = np.random.randint(STEPS) % len(cp)
             cp = np.delete(cp, action);
-            cubeprime = substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap)
+            cubeprime = substitute(substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap),self.inp_map)
             s = Solver()
             s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
             s.add(self.R[tcube.t - 1])
@@ -777,7 +777,7 @@ class PDR:
             # env.render()
             action = self.agent.act(state) % len(cp) # MLP return back the index of throwing literal
             cp = np.delete(cp, action);
-            cubeprime = substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap)
+            cubeprime = substitute(substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap),self.inp_map)
             s = Solver()
             s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
             s.add(self.R[tcube.t - 1])
@@ -856,7 +856,7 @@ class PDR:
             s2 = Solver()
             s2.add(Fi)
             s2.add(self.trans.cube())
-            s2.add(substitute(Not(Fiadd1), self.primeMap))
+            s2.add(substitute(substitute(Not(Fiadd1), self.primeMap),self.inp_map))
             assert( s2.check() == unsat)
 
 
