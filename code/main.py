@@ -24,7 +24,7 @@ def run_with_limited_time(func, time):
         p.terminate()
         return False
     return True
-
+#test
 
 if __name__ == '__main__':
     #sys.stdout = open('file', 'w') #open this when we need the log
