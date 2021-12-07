@@ -837,7 +837,7 @@ class PDR:
             prev_fidx += 1
         self.bmc.unroll()
         self.bmc.add(Not(self.post.cube()))
-        assert(self.bmc.check() == sat)
+        #assert(self.bmc.check() == sat)
 
 
     def _sanity_check_inv(self, inv):
@@ -858,9 +858,6 @@ class PDR:
             s2.add(self.trans.cube())
             s2.add(substitute(Not(Fiadd1), self.primeMap))
             assert( s2.check() == unsat)
-
-
-
 
 if __name__ == '__main__':
     pass
