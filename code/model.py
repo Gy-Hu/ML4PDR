@@ -147,6 +147,7 @@ class Model:
         self.inputs = []
         self.vars = []
         self.primed_vars = []
+        self.inp_prime = []
         self.trans = tCube()
         self.init = tCube()
         self.post = tCube()
@@ -172,7 +173,15 @@ class Model:
             inp[it] = Bool(name)
             self.inputs.append(inp[it])
 
+        # input'
+        pinp = dict()
+        self.inp_prime = list()
+        for it in i:
+            pinp[it] = Bool(str(inp[it]) + '\'')
+            self.inp_prime.append(pinp[it])
+
         print("inputs: ",self.inputs)
+
         # vars of latch
         vs = dict()
         self.vars = list()
@@ -362,7 +371,7 @@ class Model:
         # print("postAdded")
         print("self.inputs: ",self.inputs)
         print("self.vars: ",self.vars)
-        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next
+        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next, self.inp_prime
 
 
 if __name__ == '__main__':

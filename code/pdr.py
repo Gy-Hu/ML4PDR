@@ -179,7 +179,7 @@ def _extract(literaleq):
     return v, val
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -196,7 +196,9 @@ class PDR:
         self.lMap = {str(l): l for l in self.items}
         self.post = post
         self.frames = list()
+       # self.primaMap_new = [(literals[i], primes[i]) for i in range(len(literals))] #TODO: Map the input to input' (input prime)
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
+        self.inp_map = [(primary_inputs[i], primes_inp[i]) for i in range(len(primes_inp))]
         self.pv2next = pv2next
         self.initprime = substitute(self.init.cube(), self.primeMap)
         # for debugging purpose
@@ -627,8 +629,8 @@ class PDR:
 #TODO: Get bad cude should generalize as well!
     def generalize_predecessor(self, prev_cube:tCube, next_cube_expr):
         '''
-        :param prev_cube: sat model of CTI (index = i-1)
-        :param next_cube_expr: CTI (index = i)
+        :param prev_cube: sat model of CTI (v1 == xx , v2 == xx , v3 == xxx ...)
+        :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
         :return:
         '''
         #check = tcube.cube()
@@ -636,7 +638,7 @@ class PDR:
         #print("Begin to generalize predessor")
 
         #replace the state as the next state (by trans) -> !P (s')
-        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
+        nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items())) # s -> s'
         # try:
         #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # except Exception:
@@ -648,33 +650,41 @@ class PDR:
         #s.add(prev_cube.cube())
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
+        s = Solver()
+        for index, literals in enumerate(tcube_cp.cubeLiterals):
+            s.assert_and_track(literals,'p'+str(index))
+        s.add(Not(nextcube))
+        assert(s.check() == unsat)
+        core = s.unsat_core()
+        core = [str(core[i]) for i in range(0, len(core), 1)]
+        # cube_list = []
+        # for index, literals in enumerate(tcube_cp.cubeLiterals):
+        #     if index in core_list:
 
+
+        # tcube_cp.cubeLiterals = cube_list
         #For loop in all previous cube
         for i in range(len(tcube_cp.cubeLiterals)):
+            if 'p'+str(i) in core:
             #print("Now begin to check the No.",i," of cex")
-            tcube_cp.cubeLiterals[i] = Bool('x')
-            tcube_cp.ternary_sim(i)
+            #tcube_cp.cubeLiterals[i] = Bool('x')
+            #tcube_cp.ternary_sim(i)
             #ternary_operation(tcube_cp.cubeLiterals)
             #ternary_candidate = tcube_cp.cube()
-            #tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
-            s = Solver()
-            s.add(tcube_cp.cube())
-            res = s.check() #check f(v1,v2,v3,v4...) is
-            #print("The checking result after fliping literal: ",res)
-            assert (res == sat)
-            # check the new sat model can transit to the CTI (true means it still can reach CTI)
-            if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
-                index_to_remove.append(i)
-                # substitute its negative value into nextcube
-                v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
-                nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+                tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
+                s = Solver()
+                s.add(tcube_cp.cube()) #check if the miniterm (state) is sat or not
+                res = s.check() #check f(v1,v2,v3,v4...) is
+                #print("The checking result after fliping literal: ",res)
+                assert (res == sat)
+                # check the new sat model can transit to the CTI (true means it still can reach CTI)
+                if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
+                    index_to_remove.append(i)
+                    # substitute its negative value into nextcube
+                    v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
+                    nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
 
-                # s = Solver()
-                # s.add()
-                # core = s.unsat_core()
-                # nextcube = core
-
-            tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
+                tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
 
         prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
         return prev_cube
@@ -699,12 +709,12 @@ class PDR:
     def getBadCube(self):
         print("seek for bad cube...")
 
-        s = Solver()
-        s.add(substitute(Not(self.post.cube()), self.primeMap))
+        s = Solver() #TODO: the input should also map to input'(prime)
+        s.add(substitute(substitute(Not(self.post.cube()), self.primeMap),self.inp_map)) #TODO: Check the correctness here
         s.add(self.frames[-1].cube())
         s.add(self.trans.cube())
 
-        if s.check() == sat: #F[-1] /\ T /\ !P is sat! CTI (cex to induction) found!
+        if s.check() == sat: #F[-1] /\ T /\ !P(s') is sat! CTI (cex to induction) found!
             res = tCube(len(self.frames) - 1)
             res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
@@ -827,7 +837,7 @@ class PDR:
             prev_fidx += 1
         self.bmc.unroll()
         self.bmc.add(Not(self.post.cube()))
-        assert( self.bmc.check() == sat)
+        assert(self.bmc.check() == sat)
 
 
     def _sanity_check_inv(self, inv):
