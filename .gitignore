@@ -1,3 +1,4 @@
 ./log
 .idea
 test.ipynb
+./code/__pycache__
