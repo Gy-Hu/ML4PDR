@@ -61,12 +61,12 @@ class tCube:
 
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中
-    def addModel(self, lMap, model, remove_input=True):
-        no_primes = [l for l in model if str(l)[-1] != '\'']
+    def addModel(self, lMap, model, remove_input):
+        no_var_primes = [l for l in model if str(l)[0] == 'i' or str(l)[-1] != '\'']
         if remove_input:
-            no_input = [l for l in no_primes if str(l)[0] != 'i']
+            no_input = [l for l in no_var_primes if str(l)[0] != 'i']
         else:
-            no_input = no_primes
+            no_input = no_var_primes
         # self.add(simplify(And([lMap[str(l)] == model[l] for l in no_input]))) # HZ:
         for l in no_input:
             self.add(lMap[str(l)] == model[l]) #TODO: Get model overhead is too high, using C API
@@ -661,33 +661,38 @@ class PDR:
         # cube_list = []
         # for index, literals in enumerate(tcube_cp.cubeLiterals):
         #     if index in core_list:
+        for idx in range(tcube_cp.cubeLiterals):
+            if 'p'+str(idx) not in core:
+                tcube_cp.cubeLiterals[idx] = True
+        # for the time being, completely rely on unsat core reduce
 
         # tcube_cp.cubeLiterals = cube_list
         #For loop in all previous cube
-        for i in range(len(tcube_cp.cubeLiterals)):
-            if 'p'+str(i) in core:
-            #print("Now begin to check the No.",i," of cex")
-            #tcube_cp.cubeLiterals[i] = Bool('x')
-            #tcube_cp.ternary_sim(i)
-            #ternary_operation(tcube_cp.cubeLiterals)
-            #ternary_candidate = tcube_cp.cube()
-                tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
-                s = Solver()
-                s.add(tcube_cp.cube()) #check if the miniterm (state) is sat or not
-                res = s.check() #check f(v1,v2,v3,v4...) is
-                #print("The checking result after fliping literal: ",res)
-                assert (res == sat)
-                # check the new sat model can transit to the CTI (true means it still can reach CTI)
-                if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
-                    index_to_remove.append(i)
-                    # substitute its negative value into nextcube
-                    v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
-                    nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+        # for i in range(len(tcube_cp.cubeLiterals)):
+        #     if 'p'+str(i) in core:
+        #     #print("Now begin to check the No.",i," of cex")
+        #     #tcube_cp.cubeLiterals[i] = Bool('x')
+        #     #tcube_cp.ternary_sim(i)
+        #     #ternary_operation(tcube_cp.cubeLiterals)
+        #     #ternary_candidate = tcube_cp.cube()
+        #         tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
+        #         s = Solver()
+        #         s.add(tcube_cp.cube()) #check if the miniterm (state) is sat or not
+        #         res = s.check() #check f(v1,v2,v3,v4...) is
+        #         #print("The checking result after fliping literal: ",res)
+        #         assert (res == sat)
+        #         # check the new sat model can transit to the CTI (true means it still can reach CTI)
+        #         if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
+        #             index_to_remove.append(i)
+        #             # substitute its negative value into nextcube
+        #             v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
+        #             nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+        #
+        #         tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
 
-                tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
-
-        prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
-        return prev_cube
+        #prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
+        tcube_cp.remove_true()
+        return tcube_cp
 
     def solveRelative_RL(self, tcube):
             cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
