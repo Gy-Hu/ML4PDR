@@ -152,6 +152,7 @@ class Model:
         self.init = tCube()
         self.post = tCube()
         self.pv2next = dict()
+        self.inp_prime = []
 
     def parse(self, fileName):
         '''

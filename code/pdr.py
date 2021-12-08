@@ -199,11 +199,12 @@ class PDR:
        # self.primaMap_new = [(literals[i], primes[i]) for i in range(len(literals))] #TODO: Map the input to input' (input prime)
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
         self.inp_map = [(primary_inputs[i], primes_inp[i]) for i in range(len(primes_inp))]
+        #self.inp_prime = primes_inp
         self.pv2next = pv2next
         self.initprime = substitute(self.init.cube(), self.primeMap)
         # for debugging purpose
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
-                       init=init, trans=trans, post=post, pv2next=pv2next)
+                       init=init, trans=trans, post=post, pv2next=pv2next, primes_inp = primes_inp)
 
     def check_init(self):
         s = Solver()
@@ -347,7 +348,7 @@ class PDR:
                 #if Fmin < Fmax:
                 #    s_copy = s.clone()
                 #    s_copy.t = Fmin
-                #    Q.put((Fmin, s_copy))
+                #    Q.put((Fmin, s_copy)) #TODO: Open this will cause the problem in bmc check
                 continue
 
             z = self.solveRelative(s)
@@ -661,7 +662,6 @@ class PDR:
         # for index, literals in enumerate(tcube_cp.cubeLiterals):
         #     if index in core_list:
 
-
         # tcube_cp.cubeLiterals = cube_list
         #For loop in all previous cube
         for i in range(len(tcube_cp.cubeLiterals)):
@@ -719,12 +719,10 @@ class PDR:
             res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
             # sanity check - why?
-            self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True,
-                                         substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
+            self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True, substitute(substitute(self.post.cube(), self.primeMap),self.inp_map)) #TODO: Here has bug
             new_model = self.generalize_predecessor(res, Not(self.post.cube())) #new_model: predecessor of !P extracted from SAT witness
             print(len(new_model.cubeLiterals)) # Print the result
-            self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True,
-                                         substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
+            self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True, substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
             new_model.remove_input()
             return new_model
         else:
