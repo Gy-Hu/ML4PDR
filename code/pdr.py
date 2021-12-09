@@ -60,13 +60,13 @@ class tCube:
         self.cubeLiterals = [c for c in self.cubeLiterals if c is not True]
 
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
-    # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中
-    def addModel(self, lMap, model, remove_input):
-        no_var_primes = [l for l in model if str(l)[0] == 'i' or str(l)[-1] != '\'']
+    # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中 #TODO: lMap should incudes the v prime and i prime
+    def addModel(self, lMap, model, remove_input): # not remove input' when add model
+        no_var_primes = [l for l in model if str(l)[0] == 'i' or str(l)[-1] != '\''] # no_var_prime -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
         if remove_input:
-            no_input = [l for l in no_var_primes if str(l)[0] != 'i']
+            no_input = [l for l in no_var_primes if str(l)[0] != 'i'] # no_input -> v2, v4, v6
         else:
-            no_input = no_var_primes
+            no_input = no_var_primes # no_input -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
         # self.add(simplify(And([lMap[str(l)] == model[l] for l in no_input]))) # HZ:
         for l in no_input:
             self.add(lMap[str(l)] == model[l]) #TODO: Get model overhead is too high, using C API
@@ -192,7 +192,7 @@ class PDR:
         self.init = init
         self.trans = trans
         self.literals = literals
-        self.items = self.primary_inputs + self.literals
+        self.items = self.primary_inputs + self.literals + primes_inp + primes
         self.lMap = {str(l): l for l in self.items}
         self.post = post
         self.frames = list()
@@ -654,14 +654,15 @@ class PDR:
         s = Solver()
         for index, literals in enumerate(tcube_cp.cubeLiterals):
             s.assert_and_track(literals,'p'+str(index))
-        s.add(Not(nextcube))
+        s.add(Not(nextcube)) # -> ['p1','p2','p3']
         assert(s.check() == unsat)
         core = s.unsat_core()
-        core = [str(core[i]) for i in range(0, len(core), 1)]
+        core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
+
         # cube_list = []
         # for index, literals in enumerate(tcube_cp.cubeLiterals):
         #     if index in core_list:
-        for idx in range(tcube_cp.cubeLiterals):
+        for idx in range(len(tcube_cp.cubeLiterals)):
             if 'p'+str(idx) not in core:
                 tcube_cp.cubeLiterals[idx] = True
         # for the time being, completely rely on unsat core reduce
@@ -689,8 +690,8 @@ class PDR:
         #             nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
         #
         #         tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
-
-        #prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
+        #
+        # prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
         tcube_cp.remove_true()
         return tcube_cp
 
