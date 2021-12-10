@@ -6,7 +6,7 @@ import copy
 from queue import PriorityQueue
 from line_profiler import LineProfiler
 from functools import wraps
-
+import pandas as pd
 from bmc import BMC
 
 
@@ -205,6 +205,7 @@ class PDR:
         # for debugging purpose
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
                        init=init, trans=trans, post=post, pv2next=pv2next, primes_inp = primes_inp)
+        self.generaliztion_data = []
 
     def check_init(self):
         s = Solver()
@@ -223,6 +224,7 @@ class PDR:
         return True
 
     def run(self, agent):
+
         if not self.check_init():
             print("Found trace ending in bad state")
             return False
@@ -239,6 +241,8 @@ class PDR:
                 trace = self.recBlockCube(c) # conduct generalize predecessor here (in solve relative process)
                 #TODO: 找出spec3-and-env这个case为什么没有recBlock
                 if trace is not None:
+                    df = pd.DataFrame(self.generaliztion_data)
+                    #df.to_csv("../dataset/generalization/generalization_data.csv")
                     print("Found trace ending in bad state:")
                     self._debug_trace(trace)
                     while not trace.empty():
@@ -251,6 +255,9 @@ class PDR:
                 inv = self.checkForInduction()
                 if inv != None:
                     print("Found inductive invariant")
+                    df = pd.DataFrame(self.generaliztion_data)
+                    df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
+                    #df.to_csv("../dataset/generalization/generalization_data.csv")
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
 
@@ -634,12 +641,20 @@ class PDR:
         :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
         :return:
         '''
+        data = {}
+        data['previous cube'] = prev_cube
+
+
         #check = tcube.cube()
+
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception warning
+        ground_true = prev_cube.clone()
+        print("original size of !P (or CTI): ", len(tcube_cp.cubeLiterals))
         #print("Begin to generalize predessor")
 
         #replace the state as the next state (by trans) -> !P (s')
         nextcube = substitute(substitute(substitute(next_cube_expr, self.primeMap),self.inp_map), list(self.pv2next.items())) # s -> s'
+        data['nextcube'] = nextcube
         # try:
         #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # except Exception:
@@ -667,32 +682,62 @@ class PDR:
                 tcube_cp.cubeLiterals[idx] = True
         # for the time being, completely rely on unsat core reduce
 
+
+
         # tcube_cp.cubeLiterals = cube_list
         #For loop in all previous cube
-        # for i in range(len(tcube_cp.cubeLiterals)):
-        #     if 'p'+str(i) in core:
-        #     #print("Now begin to check the No.",i," of cex")
-        #     #tcube_cp.cubeLiterals[i] = Bool('x')
-        #     #tcube_cp.ternary_sim(i)
-        #     #ternary_operation(tcube_cp.cubeLiterals)
-        #     #ternary_candidate = tcube_cp.cube()
-        #         tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
-        #         s = Solver()
-        #         s.add(tcube_cp.cube()) #check if the miniterm (state) is sat or not
-        #         res = s.check() #check f(v1,v2,v3,v4...) is
-        #         #print("The checking result after fliping literal: ",res)
-        #         assert (res == sat)
-        #         # check the new sat model can transit to the CTI (true means it still can reach CTI)
-        #         if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
-        #             index_to_remove.append(i)
-        #             # substitute its negative value into nextcube
-        #             v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
-        #             nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
-        #
-        #         tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
-        #
+
+
+        for i in range(len(ground_true.cubeLiterals)):
+            #if 'p'+str(i) in core:
+            #print("Now begin to check the No.",i," of cex")
+            #tcube_cp.cubeLiterals[i] = Bool('x')
+            #tcube_cp.ternary_sim(i)
+            #ternary_operation(tcube_cp.cubeLiterals)
+            #ternary_candidate = tcube_cp.cube()
+            var, val = _extract(prev_cube.cubeLiterals[i])
+            data[str(var)] = 0 #TODO: Solve the issue that it contains float or int
+            assert (type(data[str(var)]) is int)
+            ground_true.cubeLiterals[i] = Not(ground_true.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
+            s = Solver()
+            s.add(ground_true.cube()) #check if the miniterm (state) is sat or not
+            res = s.check() #check f(v1,v2,v3,v4...) is
+            #print("The checking result after fliping literal: ",res)
+            assert (res == sat)
+            # check the new sat model can transit to the CTI (true means it still can reach CTI)
+            if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
+                index_to_remove.append(i)
+                # children = literal.children()
+                # assert (len(children) == 2)
+                #
+                # if str(children[0]) in ['True', 'False']:
+                #     v = str(children[1])
+                # elif str(children[1]) in ['True', 'False']:
+                #     v = str(children[0])
+                # else:
+                #     assert (False)
+                # assert (v[0] in ['i', 'v'])
+                # if v[0] == 'i':
+                #     index_to_remove.add(idx)
+                data[str(var)] = 1
+                assert (type(data[str(var)]) is int)
+                # substitute its negative value into nextcube
+                v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
+                #nextcube = simplify(And(substitute(nextcube, [(v, Not(val))])))
+                nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+
+            ground_true.cubeLiterals[i] = prev_cube.cubeLiterals[i]
+        #TODO: Compare the ground true and unsat core
+
         # prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
+        # tcube_cp.cubeLiterals = [tcube_cp.cubeLiterals[i] for i in range(0, len(tcube_cp.cubeLiterals), 1) if i not in index_to_remove]
+        # return tcube_cp
+
+        self.generaliztion_data.append(data)
+
         tcube_cp.remove_true()
+        print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
+        print("After generalization by dropping literal one by one : ", len(index_to_remove))
         return tcube_cp
 
     def solveRelative_RL(self, tcube):
