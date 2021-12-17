@@ -153,12 +153,14 @@ class Model:
         self.post = tCube()
         self.pv2next = dict()
         self.inp_prime = []
+        self.filename = ''
 
     def parse(self, fileName):
         '''
         :param fileName:
         :return:
         '''
+        self.filename = fileName
         i, l, o, a, b, c, annotations = read_in(fileName)
 
         ann_i = 0
@@ -178,7 +180,8 @@ class Model:
         pinp = dict()
         self.inp_prime = list()
         for it in i:
-            pinp[it] = Bool(str(inp[it]) + '\'')
+            #pinp[it] = Bool(str(inp[it]) + '\'') # v -> v'
+            pinp[it] = Bool(str(inp[it]) + '_prime') # v -> v_prime, change this, because we want generate .smt2 later
             self.inp_prime.append(pinp[it])
 
         print("inputs: ",self.inputs)
@@ -199,7 +202,8 @@ class Model:
         pvs = dict()
         self.primed_vars = list()
         for it in l:
-            pvs[it.var] = Bool(str(vs[it.var]) + '\'')
+            #pvs[it.var] = Bool(str(vs[it.var]) + '\'')
+            pvs[it.var] = Bool(str(vs[it.var]) + '_prime') # v -> v_prime, change this, because we want generate .smt2 later
             self.primed_vars.append(pvs[it.var])
 
         # and gate node => And(and1, and2)
@@ -372,7 +376,7 @@ class Model:
         # print("postAdded")
         print("self.inputs: ",self.inputs)
         print("self.vars: ",self.vars)
-        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next, self.inp_prime
+        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next, self.inp_prime, self.filename
 
 
 if __name__ == '__main__':

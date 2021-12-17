@@ -148,15 +148,13 @@ class tCube:
     def cube(self): #导致速度变慢的罪魁祸首？
         return simplify(And(self.cubeLiterals))
 
-    def ternary_sim(self, index_of_x):
-        # first extract var,val from cubeLiteral
-        s = Solver()
-        for idx, literal in enumerate(self.cubeLiterals):
-            if idx !=index_of_x:
-                s
-                var = str(var)
-
-
+    # def ternary_sim(self, index_of_x):
+    #     # first extract var,val from cubeLiteral
+    #     s = Solver()
+    #     for idx, literal in enumerate(self.cubeLiterals):
+    #         if idx !=index_of_x:
+    #             s
+    #             var = str(var)
     #
     # def cube(self):
     #     return And(*self.cubeLiterals)
@@ -179,7 +177,7 @@ def _extract(literaleq):
     return v, val
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -206,6 +204,7 @@ class PDR:
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
                        init=init, trans=trans, post=post, pv2next=pv2next, primes_inp = primes_inp)
         self.generaliztion_data = []
+        self.filename = filename
 
     def check_init(self):
         s = Solver()
@@ -242,7 +241,8 @@ class PDR:
                 #TODO: 找出spec3-and-env这个case为什么没有recBlock
                 if trace is not None:
                     df = pd.DataFrame(self.generaliztion_data)
-                    #df.to_csv("../dataset/generalization/generalization_data.csv")
+                    df = df.fillna(1)
+                    df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
                     print("Found trace ending in bad state:")
                     self._debug_trace(trace)
                     while not trace.empty():
@@ -256,8 +256,9 @@ class PDR:
                 if inv != None:
                     print("Found inductive invariant")
                     df = pd.DataFrame(self.generaliztion_data)
-                    df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
-                    #df.to_csv("../dataset/generalization/generalization_data.csv")
+                    df = df.fillna(1)
+                    #df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
+                    df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
 
@@ -642,7 +643,8 @@ class PDR:
         :return:
         '''
         data = {}
-        data['previous cube'] = prev_cube
+        #data['previous cube'] = str(prev_cube)
+        #data['previous cube'] = (prev_cube.cube()).sexpr()
 
 
         #check = tcube.cube()
@@ -654,7 +656,8 @@ class PDR:
 
         #replace the state as the next state (by trans) -> !P (s')
         nextcube = substitute(substitute(substitute(next_cube_expr, self.primeMap),self.inp_map), list(self.pv2next.items())) # s -> s'
-        data['nextcube'] = nextcube
+        #data['nextcube'] = str(nextcube)
+
         # try:
         #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
         # except Exception:
@@ -667,19 +670,30 @@ class PDR:
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
         s = Solver()
+        s_smt = Solver() #use to generate SMT-lib2 file
         for index, literals in enumerate(tcube_cp.cubeLiterals):
-            s.assert_and_track(literals,'p'+str(index))
-        s.add(Not(nextcube)) # -> ['p1','p2','p3']
-        assert(s.check() == unsat)
+            s_smt.add(literals)
+            s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+        s.add(Not(nextcube))
+        s_smt.add(Not(nextcube))
+        assert(s.check() == unsat and s_smt.check() == unsat)
         core = s.unsat_core()
         core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
 
+        filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data)) +'.smt2')
+        data['nextcube'] = filename.split('/')[-1]
+        with open(filename, mode='w') as f:
+            f.write(s_smt.to_smt2())
+        f.close()
         # cube_list = []
         # for index, literals in enumerate(tcube_cp.cubeLiterals):
         #     if index in core_list:
         for idx in range(len(tcube_cp.cubeLiterals)):
+            var, val = _extract(prev_cube.cubeLiterals[idx])
+            data[str(var)] = 0
             if 'p'+str(idx) not in core:
                 tcube_cp.cubeLiterals[idx] = True
+                data[str(var)] = 1
         # for the time being, completely rely on unsat core reduce
 
 
@@ -687,46 +701,39 @@ class PDR:
         # tcube_cp.cubeLiterals = cube_list
         #For loop in all previous cube
 
-
-        for i in range(len(ground_true.cubeLiterals)):
-            #if 'p'+str(i) in core:
-            #print("Now begin to check the No.",i," of cex")
-            #tcube_cp.cubeLiterals[i] = Bool('x')
-            #tcube_cp.ternary_sim(i)
-            #ternary_operation(tcube_cp.cubeLiterals)
-            #ternary_candidate = tcube_cp.cube()
-            var, val = _extract(prev_cube.cubeLiterals[i])
-            data[str(var)] = 0 #TODO: Solve the issue that it contains float or int
-            assert (type(data[str(var)]) is int)
-            ground_true.cubeLiterals[i] = Not(ground_true.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
-            s = Solver()
-            s.add(ground_true.cube()) #check if the miniterm (state) is sat or not
-            res = s.check() #check f(v1,v2,v3,v4...) is
-            #print("The checking result after fliping literal: ",res)
-            assert (res == sat)
-            # check the new sat model can transit to the CTI (true means it still can reach CTI)
-            if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
-                index_to_remove.append(i)
-                # children = literal.children()
-                # assert (len(children) == 2)
-                #
-                # if str(children[0]) in ['True', 'False']:
-                #     v = str(children[1])
-                # elif str(children[1]) in ['True', 'False']:
-                #     v = str(children[0])
-                # else:
-                #     assert (False)
-                # assert (v[0] in ['i', 'v'])
-                # if v[0] == 'i':
-                #     index_to_remove.add(idx)
-                data[str(var)] = 1
-                assert (type(data[str(var)]) is int)
-                # substitute its negative value into nextcube
-                v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
-                #nextcube = simplify(And(substitute(nextcube, [(v, Not(val))])))
-                nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
-
-            ground_true.cubeLiterals[i] = prev_cube.cubeLiterals[i]
+        # for i in range(len(ground_true.cubeLiterals)):
+        #     var, val = _extract(prev_cube.cubeLiterals[i])
+        #     data[str(var)] = 0 #TODO: Solve the issue that it contains float or int
+        #     assert (type(data[str(var)]) is int)
+        #     ground_true.cubeLiterals[i] = Not(ground_true.cubeLiterals[i]) # Flip the variable in f(v1,v2,v3,v4...)
+        #     s = Solver()
+        #     s.add(ground_true.cube()) #check if the miniterm (state) is sat or not
+        #     res = s.check() #check f(v1,v2,v3,v4...) is
+        #     #print("The checking result after fliping literal: ",res)
+        #     assert (res == sat)
+        #     # check the new sat model can transit to the CTI (true means it still can reach CTI)
+        #     if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
+        #         index_to_remove.append(i)
+        #         # children = literal.children()
+        #         # assert (len(children) == 2)
+        #         #
+        #         # if str(children[0]) in ['True', 'False']:
+        #         #     v = str(children[1])
+        #         # elif str(children[1]) in ['True', 'False']:
+        #         #     v = str(children[0])
+        #         # else:
+        #         #     assert (False)
+        #         # assert (v[0] in ['i', 'v'])
+        #         # if v[0] == 'i':
+        #         #     index_to_remove.add(idx)
+        #         data[str(var)] = 1
+        #         assert (type(data[str(var)]) is int)
+        #         # substitute its negative value into nextcube
+        #         v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
+        #         #nextcube = simplify(And(substitute(nextcube, [(v, Not(val))])))
+        #         nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
+        #
+        #     ground_true.cubeLiterals[i] = prev_cube.cubeLiterals[i]
         #TODO: Compare the ground true and unsat core
 
         # prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
@@ -736,8 +743,8 @@ class PDR:
         self.generaliztion_data.append(data)
 
         tcube_cp.remove_true()
-        print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
-        print("After generalization by dropping literal one by one : ", len(index_to_remove))
+        #print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
+        #print("After generalization by dropping literal one by one : ", len(index_to_remove))
         return tcube_cp
 
     def solveRelative_RL(self, tcube):
