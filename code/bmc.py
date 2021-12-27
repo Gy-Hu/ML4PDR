@@ -1,7 +1,7 @@
 from z3 import *
 
 class BMC:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -15,6 +15,7 @@ class BMC:
         self.trans = trans
         self.literals = literals + primary_inputs
         self.items = self.primary_inputs + self.literals
+        self.inp_prime = primes_inp
         self.lMap = {str(l): l for l in self.items}
         self.post = post
         self.frames = list()
@@ -22,7 +23,12 @@ class BMC:
         self.primeMap = [(self.literals[i], self.primes[i]) for i in range(len(self.literals))]
         self.pv2next = pv2next
         self.initprime = substitute(self.init.cube(), self.primeMap)
+        self.inp_map = [(primary_inputs[i], primes_inp[i]) for i in range(len(primes_inp))]
         self.vardict = dict()
+        #entend literals and prime
+        for item in self.inp_map:
+            literals.append(item[0])
+            primes.append(item[1])
 
     def vardef(self, n:str):
         if n in self.vardict:

@@ -2,7 +2,6 @@ import re
 from z3 import *
 
 from pdr import tCube
-from aigsim import AIG
 from solver import TCube
 
 #TODO: 似乎仅支持六个参数的aag，有无办法解决这个问题？
@@ -148,28 +147,21 @@ class Model:
         self.inputs = []
         self.vars = []
         self.primed_vars = []
+        self.inp_prime = []
         self.trans = tCube()
         self.init = tCube()
         self.post = tCube()
         self.pv2next = dict()
+        self.inp_prime = []
+        self.filename = ''
 
     def parse(self, fileName):
         '''
         :param fileName:
         :return:
         '''
+        self.filename = fileName
         i, l, o, a, b, c, annotations = read_in(fileName)
-        self.aiggraph_c = AIG()
-        self.aiggraph_c.register_latch(l)
-        self.aiggraph_c.register_ands(a)
-        self.aiggraph_c.register_input(i)
-
-
-        self.aiggraph_p = AIG()
-        self.aiggraph_p.register_latch(l)
-        self.aiggraph_p.register_ands(a)
-        self.aiggraph_p.register_input(i)
-        self.aiggraph_p.register_output(int(o[0]))
 
         ann_i = 0
         # input node
@@ -184,7 +176,16 @@ class Model:
             inp[it] = Bool(name)
             self.inputs.append(inp[it])
 
+        # input'
+        pinp = dict()
+        self.inp_prime = list()
+        for it in i:
+            #pinp[it] = Bool(str(inp[it]) + '\'') # v -> v'
+            pinp[it] = Bool(str(inp[it]) + '_prime') # v -> v_prime, change this, because we want generate .smt2 later
+            self.inp_prime.append(pinp[it])
+
         print("inputs: ",self.inputs)
+
         # vars of latch
         vs = dict()
         self.vars = list()
@@ -201,7 +202,8 @@ class Model:
         pvs = dict()
         self.primed_vars = list()
         for it in l:
-            pvs[it.var] = Bool(str(vs[it.var]) + '\'')
+            #pvs[it.var] = Bool(str(vs[it.var]) + '\'')
+            pvs[it.var] = Bool(str(vs[it.var]) + '_prime') # v -> v_prime, change this, because we want generate .smt2 later
             self.primed_vars.append(pvs[it.var])
 
         # and gate node => And(and1, and2)
@@ -374,9 +376,7 @@ class Model:
         # print("postAdded")
         print("self.inputs: ",self.inputs)
         print("self.vars: ",self.vars)
-        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next, \
-            self.aiggraph_c, self.aiggraph_p
-
+        return self.inputs, self.vars, self.primed_vars, self.init, self.trans, self.post, self.pv2next, self.inp_prime, self.filename
 
 
 if __name__ == '__main__':
