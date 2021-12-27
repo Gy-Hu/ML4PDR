@@ -8,6 +8,7 @@ from line_profiler import LineProfiler
 from functools import wraps
 # import pandas as pd
 from bmc import BMC
+import ternary_sim
 
 
 # 查询接口中每行代码执行的时间
@@ -62,7 +63,7 @@ class tCube:
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中 #TODO: lMap should incudes the v prime and i prime
     def addModel(self, lMap, model, remove_input): # not remove input' when add model
-        no_var_primes = [l for l in model if str(l)[0] == 'i' or str(l)[-1] != '\''] # no_var_prime -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
+        no_var_primes = [l for l in model if str(l)[0] == 'i' or not str(l).endswith('_prime')] # no_var_prime -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
         if remove_input:
             no_input = [l for l in no_var_primes if str(l)[0] != 'i'] # no_input -> v2, v4, v6
         else:
@@ -205,6 +206,10 @@ class PDR:
                        init=init, trans=trans, post=post, pv2next=pv2next, primes_inp = primes_inp)
         self.generaliztion_data = []
         self.filename = filename
+        # create a ternary simulator and buffer the update functions in advance
+        self.ternary_simulator = ternary_sim.AIGBuffer()
+        for _, updatefun in self.pv2next.items():
+            self.ternary_simulator.register_expr(updatefun)
 
     def check_init(self):
         s = Solver()
@@ -618,7 +623,7 @@ class PDR:
             print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
             self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
-            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())  # c = get_predecessor(i-1, s')
+            generalized_p = self.generalize_predecessor(c, next_cube_expr=tcube.cube(), prevF=self.frames[tcube.t-1].cube())  # c = get_predecessor(i-1, s')
             print(len(generalized_p.cubeLiterals))
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
@@ -636,7 +641,7 @@ class PDR:
     #     x = Not(x)
 
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr):
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, prevF):
         '''
         :param prev_cube: sat model of CTI (v1 == xx , v2 == xx , v3 == xxx ...)
         :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
@@ -656,35 +661,41 @@ class PDR:
         nextcube = substitute(substitute(substitute(next_cube_expr, self.primeMap),self.inp_map), list(self.pv2next.items())) # s -> s'
         #data['nextcube'] = str(nextcube)
 
-        # try:
-        #     nextcube = substitute(substitute(next_cube_expr, self.primeMap), list(self.pv2next.items()))
-        # except Exception:
-        #     pass
-        index_to_remove = []
+        s = Solver()
+        for index, literals in enumerate(tcube_cp.cubeLiterals):
+            s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+        s.add(prevF)
+        s.add(Not(nextcube))
+        assert (s.check() == unsat)
+        core = s.unsat_core()
+        core = [str(c) for c in core]
+        for index, literals in enumerate(tcube_cp.cubeLiterals):
+            if 'p'+str(index) not in core:
+                tcube_cp.cubeLiterals[index] = True
+        tcube_cp.remove_true()
+        # end of first stage removing (by unsat core)
 
-        #sanity check
-        #s = Solver()
-        #s.add(prev_cube.cube())
-        #s.check()
-        #assert(str(s.model().eval(nextcube)) == 'True')
+        # second stage removing (by ternary simulation)
+        simulator = self.ternary_simulator.clone()
+        simulator.register_expr(nextcube)
+        simulator.set_initial_var_assignment(dict([_extract(c) for c in tcube_cp.cubeLiterals]))
 
+        out = simulator.get_val(nextcube)
+        if out == ternary_sim._X: # this is likely because we already remove once according to the unsat core
+            return tcube_cp
+        assert out == ternary_sim._TRUE
         for i in range(len(tcube_cp.cubeLiterals)):
-            #print("Now begin to check the No.",i," of cex")
-            tcube_cp.cubeLiterals[i] = Not(tcube_cp.cubeLiterals[i])
-            s = Solver()
-            s.add(tcube_cp.cube())
-            res = s.check()
-            assert (res == sat)
-            if str(s.model().eval(nextcube)) == 'True': #TODO: use tenary simulation -> solve the memeory exploration issue
-                index_to_remove.append(i)
-                # substitute its negative value into nextcube
-                v, val = _extract(prev_cube.cubeLiterals[i]) #TODO: using unsat core to reduce the literals (as preprocess process), then use ternary simulation
-                nextcube = simplify(And(substitute(nextcube, [(v, Not(val))]), substitute(nextcube, [(v, val)])))
-
-            tcube_cp.cubeLiterals[i] = prev_cube.cubeLiterals[i]
-
-        prev_cube.cubeLiterals = [prev_cube.cubeLiterals[i] for i in range(0, len(prev_cube.cubeLiterals), 1) if i not in index_to_remove]
-        return prev_cube
+            v, val = _extract(tcube_cp.cubeLiterals[i])
+            simulator.set_Li(v, ternary_sim._X)
+            out = simulator.get_val(nextcube)
+            if out == ternary_sim._X:
+                simulator.set_Li(v, ternary_sim.encode(val)) # set to its old value
+                assert simulator.get_val(nextcube) == ternary_sim._TRUE
+            else:
+                assert simulator.get_val(nextcube) == ternary_sim._TRUE
+                tcube_cp.cubeLiterals[i] = True
+        tcube_cp.remove_true()
+        return tcube_cp
 
     def solveRelative_RL(self, tcube):
             cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
@@ -716,10 +727,10 @@ class PDR:
             res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
             # sanity check - why?
-            self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True, substitute(substitute(self.post.cube(), self.primeMap),self.inp_map)) #TODO: Here has bug
-            new_model = self.generalize_predecessor(res, Not(self.post.cube())) #new_model: predecessor of !P extracted from SAT witness
+            self._debug_c_is_predecessor(res.cube(), self.trans.cube(), self.frames[-1].cube(), substitute(substitute(self.post.cube(), self.primeMap),self.inp_map)) #TODO: Here has bug
+            new_model = self.generalize_predecessor(res, Not(self.post.cube()), self.frames[-1].cube() ) #new_model: predecessor of !P extracted from SAT witness
             print(len(new_model.cubeLiterals)) # Print the result
-            self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True, substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
+            self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), self.frames[-1].cube(), substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
             new_model.remove_input()
             return new_model
         else:

@@ -4,10 +4,19 @@ import z3
 OP_VAR=0
 OP_NOT=1
 OP_AND=2
+OP_CONST=3
+
 _TRUE=(0,1)
 _FALSE=(1,0)
 _X = (1,1)
 _BOT = (0,0)
+
+def encode(v):
+    if str(v) == 'True':
+        return _TRUE
+    if str(v) == 'False':
+        return _FALSE
+    assert False
 
 class AIGBuffer(object):
     @staticmethod
@@ -58,15 +67,18 @@ class AIGBuffer(object):
         children = expr.children()
         if len(children) == 0:
             # it is a variable
-            self.items[item_no] = (OP_VAR, [str(expr)])
-            self.vname_to_vid[str(expr)] = item_no
+            if str(expr) in ['True', 'False']:
+                self.items[item_no] = (OP_CONST, [str(expr)])
+            else:
+                self.items[item_no] = (OP_VAR, [str(expr)])
+                self.vname_to_vid[str(expr)] = item_no
         elif op == z3.Z3_OP_NOT:
             assert len(children) == 1
             child_item_num = self.register_expr(children[0])
             self.item_use_list[child_item_num] = self.item_use_list.get(child_item_num, []) + [item_no]
             self.items[item_no] = (OP_NOT, [child_item_num])
         elif op == z3.Z3_OP_AND:
-            assert len(children) >= 2
+            assert len(children) >= 1
             children_item_no = []
             for c in children:
                 child_item_num = self.register_expr(c)
@@ -115,33 +127,48 @@ class AIGBuffer(object):
             val = model[v]
             v_assignments[str(v)] = (_TRUE if str(val) == 'True' else _FALSE)
 
-        self.item_assignments = [0]*len(self.items)
-        for item_id in range(len(self.items)-1,-1,-1):
-            op, children = self.items[item_id]
-            if op == OP_VAR:
+        self.item_assignments = [None]*len(self.items)
+        idstack = list(range(len(self.items)))
+        while len(idstack) != 0:
+            nid = idstack[-1]
+            if self.item_assignments[nid] is not None:
+                del idstack[-1]
+                continue
+            op, children = self.items[nid]
+            if op == OP_CONST:
+                self.item_assignments[nid] = encode(children[0])
+                del idstack[-1]
+                continue
+            elif op == OP_VAR:
                 vname = children[0]
-                assert vname in v_assignments
-                self.item_assignments[item_id] = v_assignments[vname]
-            elif op == OP_NOT:
-                cnid = children[0]
-                assert cnid > item_id
-                self.item_assignments[item_id] = self._NOT(self.item_assignments[cnid])
-            elif op == OP_AND:
-                for cnid in children:
-                    assert cnid > item_id
-                cvals = [self.item_assignments[cnid] for cnid in children]
-                v = cvals[0]
-                for idx in range(1, len(cvals)):
-                    v = self._AND(v, cvals[idx])
-                self.item_assignments[item_id] = v
+                if vname in v_assignments:
+                    self.item_assignments[nid] = v_assignments[vname]
+                else:
+                    self.item_assignments[nid] = _X
+                del idstack[-1]
+                continue
+            # else op == OP_AND or OP_NOT
+            can_eval_parent = True
+            for c in children:
+                if self.item_assignments[c] is None:
+                    idstack.append(c)
+                    can_eval_parent = False
+                    break
+            if not can_eval_parent:
+                continue
+            self.item_assignments[nid] = self._compute(nid)
+            del idstack[-1]
+
 
     def _compute(self, nid):
         op, children = self.items[nid]
-        if op == OP_VAR:
+        if op == OP_CONST:
+            return encode(children[0])
+        elif op == OP_VAR:
             return self.item_assignments[nid]
         elif op == OP_NOT:
             cnid = children[0]
-            assert cnid > nid
+            # assert cnid > nid # may not hold
             return self._NOT(self.item_assignments[cnid])
         elif op == OP_AND:
             cvals = [self.item_assignments[cnid] for cnid in children]
@@ -197,7 +224,8 @@ def test0():
 def test():
     a = z3.Bool('a')
     b = z3.Bool('b')
-    expr = z3.Not(z3.And(z3.Not(a), z3.Not(b)))
+    expr = z3.Not(z3.And(z3.Not(a), z3.Not(b), z3.And(True)))
+    print (expr)
     slv = z3.Solver()
     slv.add(expr)
     assert slv.check() == z3.sat
