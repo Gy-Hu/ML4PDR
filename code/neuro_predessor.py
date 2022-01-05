@@ -5,27 +5,27 @@ from mlp import MLP
 
 
 class NeuroPredessor(nn.Module):
-    def __init__(self, args):
+    def __init__(self):
         super(NeuroPredessor, self).__init__()
-        self.args = args
+        self.dim = 128
 
         self.init_ts = torch.ones(1)
         self.init_ts.requires_grad = False
 
-        self.L_init = nn.Linear(1, args.dim)  # initialize a vector (1xd)
-        self.C_init = nn.Linear(1, args.dim)
+        self.L_init = nn.Linear(1, self.dim)  # initialize a vector (1xd)
+        self.C_init = nn.Linear(1, self.dim)
 
-        self.L_msg = MLP(self.args.dim, self.args.dim, self.args.dim)
-        self.C_msg = MLP(self.args.dim, self.args.dim, self.args.dim)
+        self.L_msg = MLP(self.dim, self.dim, self.dim)
+        self.C_msg = MLP(self.dim, self.dim, self.dim)
 
-        self.L_update = nn.LSTM(self.args.dim * 2, self.args.dim)
+        self.L_update = nn.LSTM(self.dim * 2, self.dim)
         # self.L_norm   = nn.LayerNorm(self.args.dim)
-        self.C_update = nn.LSTM(self.args.dim, self.args.dim)
+        self.C_update = nn.LSTM(self.dim, self.dim)
         # self.C_norm   = nn.LayerNorm(self.args.dim)
 
-        self.L_vote = MLP(self.args.dim, self.args.dim, 1)
+        self.L_vote = MLP(self.dim, self.dim, 1)
 
-        self.denom = torch.sqrt(torch.Tensor([self.args.dim]))
+        self.denom = torch.sqrt(torch.Tensor([self.dim]))
 
     # def flip(self, msg, n_vars):
     #     return torch.cat([msg[n_vars:2 * n_vars, :], msg[:n_vars, :]], dim=0)
@@ -50,8 +50,8 @@ class NeuroPredessor(nn.Module):
 
         # print(L_init.shape, C_init.shape)
 
-        L_state = (L_init, torch.zeros(1, n_lits, self.args.dim).cuda())
-        C_state = (C_init, torch.zeros(1, n_clauses, self.args.dim).cuda())
+        L_state = (L_init, torch.zeros(1, n_lits, self.dim).cuda())
+        C_state = (C_init, torch.zeros(1, n_clauses, self.dim).cuda())
         # -> this is the adjacency matrix of literals and clauses
         L_unpack = torch.sparse.FloatTensor(ts_L_unpack_indices, torch.ones(problem.n_cells), torch.Size(
             [n_lits, n_clauses])).to_dense().cuda()  # tensor.size = [2802,9188], (2n literals, clauses)
