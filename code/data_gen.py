@@ -79,8 +79,8 @@ class generate_graph:
             i = int(edge[0])
             j = int(edge[1])
             weight = edge[2]
-            A[i, j] = weight
-            A[j, i] = weight
+            A[i, j] = weight #TODO: Encode the initial assigned value of the literals
+            #A[j, i] = weight #TODO: modify here, encode the direction in the matrix
         self.adj_matrix = A
         df = pd.DataFrame(self.adj_matrix)
 
@@ -95,7 +95,7 @@ class generate_graph:
         #a = df.index.to_series().str.rsplit('_').str[0].sort_values()
         #df = df.reindex(index=a.index)
         df = df.reindex(natsorted(df.index), axis=0)
-        df = df.reindex(natsorted(df.columns,reverse=True), axis=1)
+        df = df.reindex(natsorted(df.columns), axis=1)
         df = df.reset_index()
         df = df.rename(columns={'index': 'old_index'})
         df = df[~df.old_index.str.contains("v_")]
