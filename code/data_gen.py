@@ -2,6 +2,7 @@ import z3
 import numpy as np
 import pandas as pd
 import re
+import pickle
 from natsort import natsorted
 
 class generate_graph:
@@ -78,7 +79,7 @@ class generate_graph:
         for edge in edges:
             i = int(edge[0])
             j = int(edge[1])
-            weight = edge[2]
+            weight = edge[2] #TODO: noted down the index of variable and node
             A[i, j] = weight #TODO: Encode the initial assigned value of the literals
             #A[j, i] = weight #TODO: modify here, encode the direction in the matrix
         self.adj_matrix = A
@@ -88,7 +89,7 @@ class generate_graph:
             ori = x
             for key, value in var_dict.items():
                 if key == x:
-                    return "v_"+str(value)
+                    return "n_"+str(value)
             return "m_"+str(ori)
 
         df.rename(index=map, columns=map, inplace=True)
@@ -109,16 +110,58 @@ class generate_graph:
                 var[value] = item
         return var
 
+#TODO: ask question "where to encode the true/false value assignment of the variable"
 
-# class problem:
-#     def __init__(self): # This class store the graph generated from generalized predessor (with serveral batches)
-#         # Should contain targets, which used for calculating loss
+class problem:
+    def __init__(self, filename): # This class store the graph generated from generalized predessor (with serveral batches)
+        # Should contain targets, which used for calculating loss
+        self.filename = filename
+        self.unpack_matrix = pd.read_pickle(filename[0])
+        self.db_gt = pd.read_csv(filename[1])
+        self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
+        self.db_gt = self.db_gt.rename(columns={'nextcube': 'filename_nextcube'})
+        self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
+        self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
+        self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
+        self.is_flexible = (self.db_gt.values.tolist()[0])[1:]
+        self.is_flexible = [int(x) for x in self.is_flexible]
+        self.adj_matrix = self.unpack_matrix.copy()
+        self.adj_matrix = self.adj_matrix.T.reset_index(drop=True).T
+        self.adj_matrix.drop(self.adj_matrix.columns[0], axis=1, inplace=True)
 
-if __name__ == '__main__':
+    def dump(self, dir):
+        dataset_filename = dir + "test.pkl"
+        with open(dataset_filename, 'wb') as f_dump:
+            pickle.dump(self, f_dump)
+
+def mk_adj_matrix():
     filename = "../dataset/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
     new_graph = generate_graph(filename)
     while len(new_graph.bfs_queue) != 0:
         new_graph.add()
     new_graph.print()
     new_graph.to_matrix()
-    print(new_graph.adj_matrix)
+    new_graph.adj_matrix.to_pickle("../dataset/generalize_adj_matrix/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+
+#TODO: Refine ground truth data with MUST tool
+def refine_GT():
+    filename = "../dataset/generalization/nusmv.syncarb5^2.B.csv"
+
+#TODO: ask question "how to set up the batch size"
+def dump(self, dir):
+    dataset_filename = dir
+    with open(dataset_filename, 'wb') as f_dump:
+        pickle.dump(batches, f_dump)
+
+#TODO: Generate validation file here
+def generate_val():
+    filename = "../dataset/generalization/nusmv.syncarb5^2.B.csv"
+
+#TODO: one time to generate all data -> generalized the file name with enumerate
+if __name__ == '__main__':
+    #mk_adj_matrix() # dump pkl with the adj_matrix -> should be refined later in problem class
+    #refine_GT() # refine the ground truth by MUST tool
+    filename4prb = ["../dataset/generalize_adj_matrix/nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv"]
+    prob = problem(filename4prb)
+    prob.dump("../dataset/train/")
+    #print(new_graph.adj_matrix)

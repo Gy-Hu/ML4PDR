@@ -8,11 +8,24 @@ import torch.nn as nn
 import torch.optim as optim
 
 from neuro_predessor import NeuroPredessor
+from data_gen import problem
+
+#TODO: setup the batch size, iteration and epoch
+'''
+dataset -> contains around 10000 cases
+batch -> one .smt2? (one time of generalized predecessor?) 
+iteration -> every .smt2
+epoch -> len(dataset)/batch -> 10000/1 maybe?
+'''
 
 if __name__ == "__main__":
-  train = pickle.load(f) #TODO: dump the data in data_gen.py
+  #TODO: refine the ground truth (which is the is_flexible[] list) with MUST here
+  data = "../dataset/train/test.pkl"
+  with open(os.path.join(data), 'rb') as f:
+    train = pickle.load(f)
+  #TODO: dump the data in data_gen.py
   net = NeuroPredessor()
-  net = net.cuda()
+  #net = net.cuda() #TODO: modify to accept both CPU and GPU version
 
   train, val = None, None
 
@@ -24,6 +37,7 @@ if __name__ == "__main__":
   start_epoch = 0
   end_epoch = 120
 
+  #one batch one iteration at first?
   for epoch in range(start_epoch, end_epoch):
 
     print('==> %d/%d epoch, previous best: %.3f' % (epoch+1, epochs, best_acc))
