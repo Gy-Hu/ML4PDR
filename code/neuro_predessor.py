@@ -13,16 +13,16 @@ class NeuroPredessor(nn.Module):
         self.init_ts.requires_grad = False
 
         #TODO: Using 2 separated nn.Linear to do literals embedding
-        self.var_init = nn.Linear(1,self.dim) # include v and m
-        self.node_init = nn.Linear(1, self.dim)  # initialize a 1xd vector
+        self.true_init = nn.Linear(1,self.dim) #for node return true
+        self.false_init = nn.Linear(1, self.dim) #for node return false
 
-        self.var_msg = MLP(self.dim, self.dim, self.dim)
-        self.node_msg = MLP(self.dim, self.dim, self.dim)
+        self.children_msg = MLP(self.dim, self.dim, self.dim) #for children to pass message
+        self.parent_msg = MLP(self.dim, self.dim, self.dim) #for parents to pass message
 
-        self.var_update = nn.LSTM(self.dim, self.dim)
-        self.node_update = nn.LSTM(self.dim, self.dim)
+        self.node_update = nn.LSTM(self.dim, self.dim) #update node (exclude variable)
+        self.var_update = nn.LSTM(self.dim, self.dim) #udpate variable and node
 
-        self.node_vote = MLP(self.dim, self.dim, 1)
+        self.var_vote = MLP(self.dim, self.dim, 1) #vote for variable and node
         self.denom = torch.sqrt(torch.Tensor([self.dim]))
 
     def forward(self, problem):
@@ -33,27 +33,42 @@ class NeuroPredessor(nn.Module):
                                           # torch.Size([n_var, n_node])).to_dense().cuda()
         unpack = problem.adj_matrix
         init_ts = self.init_ts.cuda()
-        var_init = self.var_init(init_ts).view(1, 1, -1) # encode true or false here
-        node_init = self.node_init(init_ts).view(1, 1, -1) # re-construct the dimension, size = [1, 1, 128]
-        var_init = var_init.repeat(1, n_var, 1)
-        node_init = node_init.repeat(1, n_node, 1)
 
-        var_state = (var_init, torch.zeros(1, n_var, self.dim).cuda()) # resize for LSTM
-        node_state = (node_init, torch.zeros(1, n_node, self.dim).cuda()) #resize for LSTM
+        # TODO: change the init part to true/false init
+
+        for ? in problem.?:
+            if ? is true:
+                xxx #<-assign true init tensor
+            else:
+                xxx #<-assign false init tensor
+
+        all_init = torch.cat(self.true_init, self.false_init)
+
+        # var_init = self.var_init(init_ts).view(1, 1, -1) # encode true or false here
+        # node_init = self.node_init(init_ts).view(1, 1, -1) # re-construct the dimension, size = [1, 1, 128]
+        # var_init = var_init.repeat(1, n_var, 1)
+        # node_init = node_init.repeat(1, n_node, 1)
+
+        var_state = (all_init[:], torch.zeros(1, n_var, self.dim).cuda()) # resize for LSTM, (ht, ct)
+        '''
+        var_state[:] -> all node includes input, input_prime, variable
+        var_state[?:] -> node exclude input, input_prime, variable
+        var_state[:?] -> input, input_prime, variable without m node
+        '''
+
         # adj_martix initialize here
 
         # message passing procedure
         #TODO: refine the n_rounds
         for _ in range(self.args.n_rounds): #TODO: Using LSTM to eliminate the error brought by symmetry
-            var_hidden = var_state[0].squeeze(0)  # initialize to zero
-            var_pre_msg = self.var_msg(var_hidden)
-            child_to_par_msg = torch.matmul(unpack.t(), var_pre_msg) #TODO: ask question "two embedding of m here"
-            _, node_state = self.var_update(child_to_par_msg.unsqueeze(0), node_state)  #TODO: replace node_state with the partial var_state
 
-            node_hidden = node_state[0].squeeze(0)
-            node_pre_msg = self.node_msg(node_hidden)
+            var_pre_msg = self.children_msg(var_state[:][0].squeeze(0))
+            child_to_par_msg = torch.matmul(unpack.t(), var_pre_msg) #TODO: ask question "two embedding of m here"
+            _, var_state[?:] = self.var_update(child_to_par_msg.unsqueeze(0), var_state[?:])  #TODO: replace node_state with the partial var_state
+
+            node_pre_msg = self.parent_msg(var_state[?:][0].squeeze(0))
             par_to_child_msg = torch.matmul(unpack, node_pre_msg)
-            _, var_state = self.node_update(par_to_child_msg[0].unsqueeze(0), var_state)
+            _, var_state[:] = self.node_update(par_to_child_msg[0].unsqueeze(0), var_state[:])
 
         logits = var_state[0].squeeze(0)
         #TODO: update here with the correct number

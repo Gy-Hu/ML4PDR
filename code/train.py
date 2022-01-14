@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from neuro_predessor import NeuroPredessor
+#from neuro_predessor import NeuroPredessor
 from data_gen import problem
 
 #TODO: setup the batch size, iteration and epoch

@@ -14,6 +14,8 @@ class generate_graph:
         self.relations = set()  # the edges
         self.edges = set()
         self.bfs_queue = [self.constraints[-1]]
+        self.all_node_var = {}
+        self.solver = z3.Solver()
 
     def getnid(self, node):
         if node in self.node2nid:
@@ -29,8 +31,8 @@ class generate_graph:
         del self.bfs_queue[0]
         children = n.children()
         self.bfs_queue += list(children)
-
         nnid = self.getnid(n)
+        self.calculate_node_value(n, nnid)  # calculate all node value ---> map to true/false
         op = n.decl().kind()
         if op == z3.Z3_OP_AND:
             opstr = 'AND'
@@ -63,6 +65,16 @@ class generate_graph:
         print('EDGE:')
         print(self.edges)
 
+    def calculate_var(self):
+        '''
+        :return: a dictionary of variable and its index
+        '''
+        var = {}
+        for item, value in self.node2nid.items():
+            if not(re.match('And', str(item)) or re.match('Not',str(item))):
+                var[value] = item
+        return var
+    #TODO: Add node value table
     def to_matrix(self):
         edges = list(self.edges)
         edges = [list(edges[i]) for i in range(0, len(edges), 1)]
@@ -74,8 +86,9 @@ class generate_graph:
             node.add(item[1])
             item.append(1)
         n_nodes = len(node)
-        n_nodes_var = len(node)
+        n_nodes_var = len(node) #TODO: refine here
         A = np.zeros((n_nodes_var, n_nodes))
+        df_2 = pd.DataFrame(self.all_node_var,index=[0]).T
         for edge in edges:
             i = int(edge[0])
             j = int(edge[1])
@@ -93,22 +106,31 @@ class generate_graph:
             return "m_"+str(ori)
 
         df.rename(index=map, columns=map, inplace=True)
+        df_2.rename(index=map, inplace=True)
+        df_2.columns = ['Value']
+        df_2 = df_2.reindex(natsorted(df_2.index), axis=0)
         #a = df.index.to_series().str.rsplit('_').str[0].sort_values()
         #df = df.reindex(index=a.index)
         df = df.reindex(natsorted(df.index), axis=0)
         df = df.reindex(natsorted(df.columns), axis=1)
         df = df.reset_index()
         df = df.rename(columns={'index': 'old_index'})
-        df = df[~df.old_index.str.contains("v_")]
+        df = df[~df.old_index.str.contains("n_")] #TODO: Refine here!!! remember to change here when change the index name of variable
         self.adj_matrix = df
+        self.all_node_vt = df_2
         #print(df)
 
-    def calculate_var(self):
-        var = {}
-        for item, value in self.node2nid.items():
-            if not(re.match('And', str(item)) or re.match('Not',str(item))):
-                var[value] = item
-        return var
+    def calculate_node_value(self, node, node_id):
+        '''
+        :return: the node value -> true or false
+        '''
+        self.solver.reset()
+        self.solver.add(self.constraints[:-1])
+        self.solver.add(node)
+        if self.solver.check() == z3.sat:
+            self.all_node_var[node_id] = 1 #-->sat so assign 1 as true
+        else:
+            self.all_node_var[node_id] = 0 #--> unsat so assign 0 as false
 
 #TODO: ask question "where to encode the true/false value assignment of the variable"
 
@@ -118,6 +140,7 @@ class problem:
         self.filename = filename
         self.unpack_matrix = pd.read_pickle(filename[0])
         self.db_gt = pd.read_csv(filename[1])
+        self.value_table = pd.read_pickle(filename[2])
         self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
         self.db_gt = self.db_gt.rename(columns={'nextcube': 'filename_nextcube'})
         self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
@@ -128,6 +151,9 @@ class problem:
         self.adj_matrix = self.unpack_matrix.copy()
         self.adj_matrix = self.adj_matrix.T.reset_index(drop=True).T
         self.adj_matrix.drop(self.adj_matrix.columns[0], axis=1, inplace=True)
+        # with open("../dataset/graph/" + filename[2], 'w') as p:
+        #     g = pickle.load(p)
+
 
     def dump(self, dir):
         dataset_filename = dir + "test.pkl"
@@ -141,7 +167,10 @@ def mk_adj_matrix():
         new_graph.add()
     new_graph.print()
     new_graph.to_matrix()
+    # with open("../dataset/graph/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'w') as p:
+    #     pickle.dump(new_graph, p)
     new_graph.adj_matrix.to_pickle("../dataset/generalize_adj_matrix/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+    new_graph.all_node_vt.to_pickle("../dataset/all_node_value_table/"+"vt_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
 
 #TODO: Refine ground truth data with MUST tool
 def refine_GT():
@@ -157,11 +186,12 @@ def dump(self, dir):
 def generate_val():
     filename = "../dataset/generalization/nusmv.syncarb5^2.B.csv"
 
+#TODO: Collect more data for training
 #TODO: one time to generate all data -> generalized the file name with enumerate
 if __name__ == '__main__':
-    #mk_adj_matrix() # dump pkl with the adj_matrix -> should be refined later in problem class
+    mk_adj_matrix() # dump pkl with the adj_matrix -> should be refined later in problem class
     #refine_GT() # refine the ground truth by MUST tool
-    filename4prb = ["../dataset/generalize_adj_matrix/nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv"]
+    filename4prb = ["../dataset/generalize_adj_matrix/nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv","../dataset/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl"]
     prob = problem(filename4prb)
     prob.dump("../dataset/train/")
     #print(new_graph.adj_matrix)
