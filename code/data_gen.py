@@ -139,26 +139,39 @@ class problem:
         # Should contain targets, which used for calculating loss
         self.filename = filename
         self.unpack_matrix = pd.read_pickle(filename[0])
-        self.db_gt = pd.read_csv(filename[1])
+        self.db_gt = pd.read_csv(filename[1]) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
         self.value_table = pd.read_pickle(filename[2])
         self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
         self.db_gt = self.db_gt.rename(columns={'nextcube': 'filename_nextcube'})
         self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
         self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
-        self.is_flexible = (self.db_gt.values.tolist()[0])[1:]
+        index2list = self.check(str(filename[0]))
+        self.is_flexible = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
         self.is_flexible = [int(x) for x in self.is_flexible]
         self.adj_matrix = self.unpack_matrix.copy()
         self.adj_matrix = self.adj_matrix.T.reset_index(drop=True).T
         self.adj_matrix.drop(self.adj_matrix.columns[0], axis=1, inplace=True)
+        with open(filename[3], 'rb') as f:
+            self.edges, self.relations, self.node_ref = pickle.load(f)
         # with open("../dataset/graph/" + filename[2], 'w') as p:
         #     g = pickle.load(p)
 
 
-    def dump(self, dir):
-        dataset_filename = dir + "test.pkl"
+    def dump(self, dir, filename):
+        dataset_filename = dir + (filename.split('/')[-1]).replace('adj_','')
         with open(dataset_filename, 'wb') as f_dump:
             pickle.dump(self, f_dump)
+
+    def check(self, val):
+        a = self.db_gt.index[self.db_gt['filename_nextcube'].str.contains(((val.split('/')[-1]).replace('.pkl', '.smt2')).replace('adj_',''),regex=False)]
+        if a.empty:
+            return 'not found'
+        elif len(a) > 1:
+            return a.tolist()
+        else:
+            # only one value - return scalar
+            return a.item()
 
 def mk_adj_matrix():
     filename = "../dataset/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
@@ -169,8 +182,14 @@ def mk_adj_matrix():
     new_graph.to_matrix()
     # with open("../dataset/graph/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'w') as p:
     #     pickle.dump(new_graph, p)
-    new_graph.adj_matrix.to_pickle("../dataset/generalize_adj_matrix/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
-    new_graph.all_node_vt.to_pickle("../dataset/all_node_value_table/"+"vt_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+    new_graph.adj_matrix.to_pickle("../dataset/tmp/generalize_adj_matrix/"+"adj_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+    new_graph.all_node_vt.to_pickle("../dataset/tmp/all_node_value_table/"+"vt_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+    node_ref = {}
+    for key,value in new_graph.node2nid.items():
+        node_ref[value] = key.sexpr()
+    with open("../dataset/tmp/edges_and_relation/"+"er_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'wb') as f:
+        pickle.dump((new_graph.edges, new_graph.relations, node_ref), f)
+
 
 #TODO: Refine ground truth data with MUST tool
 def refine_GT():
@@ -189,9 +208,9 @@ def generate_val():
 #TODO: Collect more data for training
 #TODO: one time to generate all data -> generalized the file name with enumerate
 if __name__ == '__main__':
-    mk_adj_matrix() # dump pkl with the adj_matrix -> should be refined later in problem class
+    #mk_adj_matrix() # dump pkl with the adj_matrix -> should be refined later in problem class
     #refine_GT() # refine the ground truth by MUST tool
-    filename4prb = ["../dataset/generalize_adj_matrix/nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv","../dataset/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl"]
+    filename4prb = ["../dataset/tmp/generalize_adj_matrix/adj_nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv","../dataset/tmp/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl","../dataset/tmp/edges_and_relation/er_nusmv.syncarb5^2.B_0.pkl"]
     prob = problem(filename4prb)
-    prob.dump("../dataset/train/")
+    prob.dump("../dataset/train/", filename4prb[0])
     #print(new_graph.adj_matrix)

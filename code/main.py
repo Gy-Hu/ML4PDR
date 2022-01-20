@@ -26,6 +26,7 @@ def run_with_limited_time(func, time):
     return True
 #test
 
+#TODO: add a switch to open "generate training set or not"
 if __name__ == '__main__':
     #sys.stdout = open('file', 'w') #open this when we need the log
     help_info = "Usage: python main.py <file-name>.aag"
