@@ -38,9 +38,9 @@ class NeuroPredessor(nn.Module):
 
         for ? in problem.?:
             if ? is true:
-                xxx #<-assign true init tensor
+                ? = self.true_init(init_ts).view(1, 1, -1) #<-assign true init tensor
             else:
-                xxx #<-assign false init tensor
+                ? = self.false_init(init_ts).view(1, 1, -1) #<-assign false init tensor
 
         all_init = torch.cat(self.true_init, self.false_init)
 
@@ -53,7 +53,7 @@ class NeuroPredessor(nn.Module):
         '''
         var_state[:] -> all node includes input, input_prime, variable
         var_state[?:] -> node exclude input, input_prime, variable
-        var_state[:?] -> input, input_prime, variable without m node
+        var_state[:?] -> only input, input_prime, variable (without m node)
         '''
 
         # adj_martix initialize here

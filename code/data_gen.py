@@ -4,6 +4,7 @@ import pandas as pd
 import re
 import pickle
 from natsort import natsorted
+import os
 
 class generate_graph:
     def __init__(self, filename):
@@ -173,8 +174,8 @@ class problem:
             # only one value - return scalar
             return a.item()
 
-def mk_adj_matrix():
-    filename = "../dataset/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
+def mk_adj_matrix(filename):
+    #filename = "../dataset/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
     new_graph = generate_graph(filename)
     while len(new_graph.bfs_queue) != 0:
         new_graph.add()
@@ -190,6 +191,13 @@ def mk_adj_matrix():
     with open("../dataset/tmp/edges_and_relation/"+"er_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'wb') as f:
         pickle.dump((new_graph.edges, new_graph.relations, node_ref), f)
 
+def walkFile(dir):
+    for root, _, files in os.walk(dir):
+        files = natsorted(files)
+        files = [os.path.join(root,f) for f in files]
+    return files
+        # for f in files:
+        #     print(f)
 
 #TODO: Refine ground truth data with MUST tool
 def refine_GT():
@@ -208,9 +216,37 @@ def generate_val():
 #TODO: Collect more data for training
 #TODO: one time to generate all data -> generalized the file name with enumerate
 if __name__ == '__main__':
-    #mk_adj_matrix() # dump pkl with the adj_matrix -> should be refined later in problem class
+    smt2_file_list = walkFile("../dataset/generalize_pre/")
+
+    for smt2_file in smt2_file_list[200:]:
+        mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
+
+    #FIXME: here still incomplete
     #refine_GT() # refine the ground truth by MUST tool
-    filename4prb = ["../dataset/tmp/generalize_adj_matrix/adj_nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv","../dataset/tmp/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl","../dataset/tmp/edges_and_relation/er_nusmv.syncarb5^2.B_0.pkl"]
-    prob = problem(filename4prb)
-    prob.dump("../dataset/train/", filename4prb[0])
+
+    adj_matrix_pkl_list = walkFile("../dataset/tmp/generalize_adj_matrix/")
+    GT_table_csv_list = walkFile("../dataset/generalization/")
+    vt_all_node_pkl_list = walkFile("../dataset/tmp/all_node_value_table/")
+    edge_and_relation_pkl_list = walkFile("../dataset/tmp/edges_and_relation/")
+
+    #TODO: Optimize the procedure of generate graph, for some smt2 file the graph generation is time consuming
+
+    zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))
+    raw_str_lst = []
+    for raw in GT_table_csv_list:
+        raw_str = (raw.split('/')[-1]).replace(".csv","")
+        if any(raw_str in s for s in adj_matrix_pkl_list):
+            raw_str_lst.append(raw_str)
+    matching = []
+    zipped_lst = list(map(lambda x: list(x), zipped))
+    for substr in raw_str_lst:
+        for item in zipped_lst:
+            if any(substr in str_ for str_ in item):
+                item.insert(1 , "../dataset/generalization/" + substr + ".csv")
+
+    matching = [s for s in zipped_lst if len(s)!=3]
+    # filename4prb = ["../dataset/tmp/generalize_adj_matrix/adj_nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv","../dataset/tmp/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl","../dataset/tmp/edges_and_relation/er_nusmv.syncarb5^2.B_0.pkl"]
+    for filename4prb in matching:
+        prob = problem(filename4prb)
+        prob.dump("../dataset/train/", filename4prb[0])
     #print(new_graph.adj_matrix)
