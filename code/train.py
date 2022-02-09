@@ -21,6 +21,7 @@ epoch -> len(dataset)/batch -> 10000/1 maybe?
 if __name__ == "__main__":
   #TODO: refine the ground truth (which is the is_flexible[] list) with MUST here
   data = "../dataset/train/nusmv.syncarb5^2.B_0.pkl"
+  #data = "../dataset/train/eijk.S208o.S_0.pkl"
   with open(os.path.join(data), 'rb') as f:
     train = pickle.load(f)
   #TODO: dump the data in data_gen.py

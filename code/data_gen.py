@@ -6,6 +6,7 @@ import pickle
 from natsort import natsorted
 import os
 
+#TODO: Trace the traversal level of this function and avoid duplicated run getnid -> maybe accelerate?
 class generate_graph:
     def __init__(self, filename):
         self.filename = filename
@@ -32,6 +33,11 @@ class generate_graph:
         del self.bfs_queue[0]
         children = n.children()
         self.bfs_queue += list(children)
+
+        #TODO: Check this lambda works well or not
+        remove_duplicated = lambda x: list(dict.fromkeys(x))
+        self.bfs_queue = remove_duplicated(self.bfs_queue)
+
         nnid = self.getnid(n)
         self.calculate_node_value(n, nnid)  # calculate all node value ---> map to true/false
         op = n.decl().kind()
@@ -218,7 +224,7 @@ def generate_val():
 if __name__ == '__main__':
     smt2_file_list = walkFile("../dataset/generalize_pre/")
 
-    for smt2_file in smt2_file_list[200:]:
+    for smt2_file in smt2_file_list[40:52]:
         mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
     #FIXME: here still incomplete
