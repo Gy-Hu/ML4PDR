@@ -82,8 +82,8 @@ class generate_graph:
         var = {}
         #TODO: optimize here by decl().kind()
         for item, value in self.node2nid.items():
-            op = item.decl().kind
-            if op != z3.Z3_OP_AND and op != z3.Z3_OP_NOT:
+            op = item.decl().kind()
+            if (op!= z3.Z3_OP_AND) and (op != z3.Z3_OP_NOT):
             #if not(re.match('And', str(item)) or re.match('Not',str(item))):
                 var[value] = item
         return var
@@ -245,7 +245,7 @@ def generate_val():
 if __name__ == '__main__':
     smt2_file_list = walkFile("../dataset/generalize_pre/")
 
-    for smt2_file in smt2_file_list[40:44]:
+    for smt2_file in smt2_file_list[40:42]:
         mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
     #FIXME: here still incomplete
