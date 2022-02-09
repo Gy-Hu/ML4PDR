@@ -18,6 +18,9 @@ class generate_graph:
         self.bfs_queue = [self.constraints[-1]]
         self.all_node_var = {}
         self.solver = z3.Solver()
+        self.solver_node_val = z3.Solver()
+        self.eval_node_val()
+        #self.model4NodeEvl = self.eval_node_val()
 
     def getnid(self, node):
         if node in self.node2nid:
@@ -77,10 +80,14 @@ class generate_graph:
         :return: a dictionary of variable and its index
         '''
         var = {}
+        #TODO: optimize here by decl().kind()
         for item, value in self.node2nid.items():
-            if not(re.match('And', str(item)) or re.match('Not',str(item))):
+            op = item.decl().kind
+            if op != z3.Z3_OP_AND and op != z3.Z3_OP_NOT:
+            #if not(re.match('And', str(item)) or re.match('Not',str(item))):
                 var[value] = item
         return var
+
     #TODO: Add node value table
     def to_matrix(self):
         edges = list(self.edges)
@@ -127,17 +134,31 @@ class generate_graph:
         self.all_node_vt = df_2
         #print(df)
 
+    def eval_node_val(self):
+        '''
+        :return: Return a model to evaluate node
+        '''
+        self.solver_node_val.reset()
+        self.solver_node_val.add(self.constraints[:-1])
+        self.solver_node_val.check()
+        self.model4evl = self.solver_node_val.model()
+
     def calculate_node_value(self, node, node_id):
         '''
         :return: the node value -> true or false
         '''
-        self.solver.reset()
-        self.solver.add(self.constraints[:-1])
-        self.solver.add(node)
-        if self.solver.check() == z3.sat:
-            self.all_node_var[node_id] = 1 #-->sat so assign 1 as true
+        # self.solver.reset()
+        # #TODO: use model.eval() to optimize
+        # self.solver.add(self.constraints[:-1])
+        # self.solver.add(node)
+        # if self.solver.check() == z3.sat:
+        #     self.all_node_var[node_id] = 1 #-->sat so assign 1 as true
+        # else:
+        #     self.all_node_var[node_id] = 0 #--> unsat so assign 0 as false
+        if self.model4evl.eval(node) == True:
+            self.all_node_var[node_id] = 1
         else:
-            self.all_node_var[node_id] = 0 #--> unsat so assign 0 as false
+            self.all_node_var[node_id] = 0
 
 #TODO: ask question "where to encode the true/false value assignment of the variable"
 
@@ -224,7 +245,7 @@ def generate_val():
 if __name__ == '__main__':
     smt2_file_list = walkFile("../dataset/generalize_pre/")
 
-    for smt2_file in smt2_file_list[40:52]:
+    for smt2_file in smt2_file_list[40:44]:
         mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
     #FIXME: here still incomplete
