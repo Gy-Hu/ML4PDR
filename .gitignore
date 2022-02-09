@@ -4,3 +4,4 @@ test.ipynb
 ./code/__pycache__
 ./dataset
 ./dataset/train
+./dataset/tmp
