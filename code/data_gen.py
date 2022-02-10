@@ -243,9 +243,11 @@ def generate_val():
 #TODO: Collect more data for training
 #TODO: one time to generate all data -> generalized the file name with enumerate
 if __name__ == '__main__':
+    #TODO: Add function to auto-skip the generated file
+    #TODO: Try aigfuzz or AIGGEN to generate aiger
     smt2_file_list = walkFile("../dataset/generalize_pre/")
 
-    for smt2_file in smt2_file_list[40:42]:
+    for smt2_file in smt2_file_list[42:52]:
         mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
     #FIXME: here still incomplete

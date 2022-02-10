@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import z3
 
 from mlp import MLP
 
@@ -22,6 +23,7 @@ class NeuroPredessor(nn.Module):
         self.node_update = nn.LSTM(self.dim, self.dim) #update node (exclude variable)
         self.var_update = nn.LSTM(self.dim, self.dim) #udpate variable and node
 
+        #FIXME: fix here (how to defind new vote?)
         self.var_vote = MLP(self.dim, self.dim, 1) #vote for variable and node
         self.denom = torch.sqrt(torch.Tensor([self.dim]))
 
@@ -35,12 +37,13 @@ class NeuroPredessor(nn.Module):
         init_ts = self.init_ts.cuda()
 
         # TODO: change the init part to true/false init
+        dict_vt = dict(zip(problem.value_table['index'], problem.value_table['Value']))
 
-        for ? in problem.?:
-            if ? is true:
-                ? = self.true_init(init_ts).view(1, 1, -1) #<-assign true init tensor
+        for unknown in problem.unknown:
+            if unknown is True:
+                unknown = self.true_init(init_ts).view(1, 1, -1) #<-assign true init tensor
             else:
-                ? = self.false_init(init_ts).view(1, 1, -1) #<-assign false init tensor
+                unknown = self.false_init(init_ts).view(1, 1, -1) #<-assign false init tensor
 
         all_init = torch.cat(self.true_init, self.false_init)
 
@@ -64,9 +67,9 @@ class NeuroPredessor(nn.Module):
 
             var_pre_msg = self.children_msg(var_state[:][0].squeeze(0))
             child_to_par_msg = torch.matmul(unpack.t(), var_pre_msg) #TODO: ask question "two embedding of m here"
-            _, var_state[?:] = self.var_update(child_to_par_msg.unsqueeze(0), var_state[?:])  #TODO: replace node_state with the partial var_state
+            _, var_state[unknown:] = self.var_update(child_to_par_msg.unsqueeze(0), var_state[unknown:])  #TODO: replace node_state with the partial var_state
 
-            node_pre_msg = self.parent_msg(var_state[?:][0].squeeze(0))
+            node_pre_msg = self.parent_msg(var_state[unknown:][0].squeeze(0))
             par_to_child_msg = torch.matmul(unpack, node_pre_msg)
             _, var_state[:] = self.node_update(par_to_child_msg[0].unsqueeze(0), var_state[:])
 
