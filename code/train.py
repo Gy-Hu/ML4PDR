@@ -8,7 +8,8 @@ import torch.nn as nn
 import torch.optim as optim
 from config import parser
 from neuro_predessor import NeuroPredessor
-from data_gen import problem
+from data_gen import problem, walkFile
+import pandas as pd
 
 #TODO: setup the batch size, iteration and epoch
 '''
@@ -18,12 +19,20 @@ iteration -> every .smt2
 epoch -> len(dataset)/batch -> 10000/1 maybe?
 '''
 
+def refine_data(problem):
+  df_empty = pd.DataFrame(columns=problem.unpack_matrix.columns, index=problem.unpack_matrix.index)
+  df_empty = df_empty.fillna(1)
+  df_empty = df_empty[df_empty.columns.drop(list(df_empty.filter(regex='m_')))]
+  df_empty.columns = df_empty.columns.str.replace(r'n_', '')
+  df_empty.drop(columns=['old_index'],inplace=True)
+  problem.db_gt = problem.db_gt.reindex(columns=problem.db_gt.columns | df_empty.columns)
+
 if __name__ == "__main__":
 
   args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '26', \
                             '--epochs', '5', \
                             '--gen_log', '/home/gary/coding_env/NeuroSAT/log/data_maker_sr3t10.log', \
-                            '--train-file', '../dataset/train/eijk.S208o.S_0.pkl'
+                            '--train-file', '../dataset/train/'
                             ])
 
 
@@ -34,16 +43,25 @@ if __name__ == "__main__":
   #data = "../dataset/tmp/generalize_adj_matrix/adj_ken.flash^12.C_5.pkl"
 
   # TODO: make val part works here
-  train = None
+  train = []
   # train, val = None, None
 
+
+
   if args.train_file is not None:
-    with open(args.train_file,'rb') as f:
-      train = pickle.load(f)
+    train_lst = walkFile(args.train_file)
+    for train_file in train_lst:
+      with open(train_file,'rb') as f:
+        train.append(pickle.load(f))
+
+  #FIXME: This part works strange
+
+  # for train_data in train:
+  #   refine_data(train_data)
 
   #TODO: dump the data in data_gen.py
-  net = NeuroPredessor()
-  #net = net.cuda() #TODO: modify to accept both CPU and GPU version
+  net = NeuroPredessor(args)
+  net = net.cuda() #TODO: modify to accept both CPU and GPU version
 
   # task_name = args.task_name + '_sr' + str(args.min_n) + 'to' + str(args.max_n) + '_ep' + str(
   #   args.epochs) + '_nr' + str(args.n_rounds) + '_d' + str(args.dim)
@@ -57,6 +75,16 @@ if __name__ == "__main__":
   best_acc = 0.0
   start_epoch = 0
   end_epoch = 120
+
+  if train is not None:
+    print('num of train batches: ', len(train), file=log_file, flush=True)
+
+  if args.restore is not None:
+    print('restoring from', args.restore, file=log_file, flush=True)
+    model = torch.load(args.restore)
+    start_epoch = model['epoch']
+    best_acc = model['acc']
+    net.load_state_dict(model['state_dict'])
 
   #one batch one iteration at first?
   for epoch in range(start_epoch, end_epoch):

@@ -201,6 +201,7 @@ class problem:
             # only one value - return scalar
             return a.item()
 
+#FIXME: Missing Prime Variable! -> huge bug, making NN's hidden layer cannot match the input data size
 def mk_adj_matrix(filename):
     #filename = "../dataset/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
     new_graph = generate_graph(filename)
