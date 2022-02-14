@@ -99,6 +99,7 @@ class generate_graph:
             node.add(item[0])
             node.add(item[1])
             item.append(1)
+        #FIXME: The n_node here has issue -> the result is wrong!
         n_nodes = len(node)
         n_nodes_var = len(node) #TODO: refine here
         A = np.zeros((n_nodes_var, n_nodes))
@@ -173,6 +174,7 @@ class problem:
         self.db_gt = self.db_gt.rename(columns={'nextcube': 'filename_nextcube'})
         self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
+        #FIXME: Here has problem, the value is not correct
         self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
         index2list = self.check(str(filename[0]))
         self.is_flexible = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
@@ -246,10 +248,10 @@ def generate_val():
 if __name__ == '__main__':
     #TODO: Add function to auto-skip the generated file
     #TODO: Try aigfuzz or AIGGEN to generate aiger
-    smt2_file_list = walkFile("../dataset/generalize_pre/")
-
-    for smt2_file in smt2_file_list[42:52]:
-        mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
+    # smt2_file_list = walkFile("../dataset/generalize_pre/")
+    #
+    # for smt2_file in smt2_file_list[:]:
+    #     mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
     #FIXME: here still incomplete
     #refine_GT() # refine the ground truth by MUST tool
