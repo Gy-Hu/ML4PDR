@@ -24,5 +24,5 @@ parser.add_argument('--data-dir', type=str, default='/home/gary/coding_env/ML4PD
 parser.add_argument('--restore', type=str, default=None, help='continue train from model')
 #
 parser.add_argument('--train-file', type=str, default=None, help='train file dir')
-# parser.add_argument('--val-file', type=str, default=None, help='val file dir')
+parser.add_argument('--val-file', type=str, default=None, help='val file dir')
 

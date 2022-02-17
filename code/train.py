@@ -67,10 +67,11 @@ def refine_target(problem):
 
 if __name__ == "__main__":
 
-  args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '26', \
-                            '--epochs', '5', \
+  args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '120', \
+                            '--epochs', '20', \
                             '--gen_log', '/home/gary/coding_env/NeuroSAT/log/data_maker_sr3t10.log', \
-                            '--train-file', '../dataset/train/'
+                            '--train-file', '../dataset/train/',\
+                            '--val-file','../dataset/eval/'
                             ])
 
 
@@ -82,6 +83,7 @@ if __name__ == "__main__":
 
   # TODO: make val part works here
   train = []
+  val = []
   # train, val = None, None
 
 
@@ -91,6 +93,11 @@ if __name__ == "__main__":
     for train_file in train_lst:
       with open(train_file,'rb') as f:
         train.append(pickle.load(f))
+
+  eval_lst = walkFile(args.val_file)
+  for val_file in eval_lst:
+    with open(val_file,'rb') as f2:
+      val.append(pickle.load(f2))
 
   #FIXME: This part works strange
 
@@ -112,12 +119,16 @@ if __name__ == "__main__":
 
   best_acc = 0.0
   start_epoch = 0
-  end_epoch = 120
+  #end_epoch = 120
 
   if train is not None:
     for problem in train:
       refine_target(problem)
     print('num of train batches: ', len(train), file=log_file, flush=True)
+
+  if val is not None:
+    for val_file in val:
+      refine_target(val_file)
 
   if args.restore is not None:
     print('restoring from', args.restore, file=log_file, flush=True)
@@ -127,7 +138,7 @@ if __name__ == "__main__":
     net.load_state_dict(model['state_dict'])
 
   #one batch one iteration at first?
-  for epoch in range(start_epoch, end_epoch):
+  for epoch in range(start_epoch, args.epochs):
 
     print('==> %d/%d epoch, previous best: %.3f' % (epoch+1, args.epochs, best_acc))
     print('==> %d/%d epoch, previous best: %.3f' % (epoch+1, args.epochs, best_acc), file=log_file, flush=True)
@@ -170,14 +181,15 @@ if __name__ == "__main__":
 
     '''
         -------------------------------------------------validation----------------------------------------------------------
-    
+    '''
+
     val_bar = tqdm(val)
     TP, TN, FN, FP = torch.zeros(1).long(), torch.zeros(1).long(), torch.zeros(1).long(), torch.zeros(1).long()
     net.eval()
     for _, prob in enumerate(val_bar):
       optim.zero_grad()
       outputs = net(prob)
-      target = torch.Tensor(prob.is_sat).cuda().float()
+      target = torch.Tensor(prob.is_flexible).cuda().float()
       # print(outputs.shape, target.shape)
       # print(outputs, target)
       outputs = sigmoid(outputs)
@@ -199,10 +211,8 @@ if __name__ == "__main__":
 
     acc = (TP.item() + TN.item()) * 1.0 / TOT.item()
     torch.save({'epoch': epoch + 1, 'acc': acc, 'state_dict': net.state_dict()},
-               os.path.join(args.model_dir, task_name + '_last.pth.tar'))
+               os.path.join(args.model_dir, args.task_name + '_last.pth.tar'))
     if acc >= best_acc:
       best_acc = acc
       torch.save({'epoch': epoch + 1, 'acc': best_acc, 'state_dict': net.state_dict()},
-                 os.path.join(args.model_dir, task_name + '_best.pth.tar'))
-                 
-    '''
+                 os.path.join(args.model_dir, args.task_name + '_best.pth.tar'))
