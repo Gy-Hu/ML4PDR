@@ -4,3 +4,106 @@
 ==> 1/5 epoch, previous best: 0.000
 num of train batches:  72
 ==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+loss: 0.7134; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 2/5 epoch, previous best: 0.000
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+loss: 0.7172; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 2/5 epoch, previous best: 0.000
+num of train batches:  60
+num of train batches:  60
+==> 1/5 epoch, previous best: 0.000
+loss: 0.7044; acc: 0.628, TP: 0.000, TN: 0.628, FN: 0.371, FP: 0.001
+==> 2/5 epoch, previous best: 0.000
+loss: 0.7185; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 3/5 epoch, previous best: 0.000
+loss: 0.7424; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 4/5 epoch, previous best: 0.000
+loss: 0.7566; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 5/5 epoch, previous best: 0.000
+loss: 0.7602; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 6/5 epoch, previous best: 0.000
+loss: 0.7613; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 7/5 epoch, previous best: 0.000
+loss: 0.7616; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 8/5 epoch, previous best: 0.000
+loss: 0.7612; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 9/5 epoch, previous best: 0.000
+loss: 0.7598; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 10/5 epoch, previous best: 0.000
+loss: 0.7573; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 11/5 epoch, previous best: 0.000
+loss: 0.7543; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 12/5 epoch, previous best: 0.000
+loss: 0.7492; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 13/5 epoch, previous best: 0.000
+loss: 0.7443; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 14/5 epoch, previous best: 0.000
+loss: 0.7398; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 15/5 epoch, previous best: 0.000
+loss: 0.7298; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 16/5 epoch, previous best: 0.000
+loss: 0.7174; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 17/5 epoch, previous best: 0.000
+loss: 0.7109; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 18/5 epoch, previous best: 0.000
+loss: 0.7063; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 19/5 epoch, previous best: 0.000
+loss: 0.7265; acc: 0.601, TP: 0.000, TN: 0.601, FN: 0.371, FP: 0.028
+==> 20/5 epoch, previous best: 0.000
+loss: 0.7398; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 21/5 epoch, previous best: 0.000
+loss: 0.7295; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 22/5 epoch, previous best: 0.000
+loss: 0.7199; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 23/5 epoch, previous best: 0.000
+loss: 0.7142; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 24/5 epoch, previous best: 0.000
+loss: 0.7101; acc: 0.629, TP: 0.000, TN: 0.629, FN: 0.371, FP: 0.000
+==> 25/5 epoch, previous best: 0.000
+loss: 0.7061; acc: 0.631, TP: 0.002, TN: 0.629, FN: 0.369, FP: 0.000
+==> 26/5 epoch, previous best: 0.000
+loss: 0.7040; acc: 0.639, TP: 0.030, TN: 0.609, FN: 0.341, FP: 0.020
+==> 27/5 epoch, previous best: 0.000
+loss: 0.7023; acc: 0.639, TP: 0.030, TN: 0.609, FN: 0.341, FP: 0.020
+==> 28/5 epoch, previous best: 0.000
+loss: 0.7016; acc: 0.639, TP: 0.030, TN: 0.609, FN: 0.341, FP: 0.020
+==> 29/5 epoch, previous best: 0.000
+loss: 0.6997; acc: 0.639, TP: 0.030, TN: 0.609, FN: 0.341, FP: 0.020
+==> 30/5 epoch, previous best: 0.000

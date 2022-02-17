@@ -20,7 +20,13 @@ class generate_graph:
         self.solver = z3.Solver()
         self.solver_node_val = z3.Solver()
         self.eval_node_val()
+        #self.single_node = {}
         #self.model4NodeEvl = self.eval_node_val()
+
+    # def find_single_node(self):
+    #     for var in self.constraints[:-1]:
+    #         if var not in self.constraints[-1]:
+
 
     def getnid(self, node):
         if node in self.node2nid:
@@ -175,7 +181,8 @@ class problem:
         self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
         #FIXME: Here has problem, the value is not correct
-        self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
+        #self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
+        self.n_nodes = self.n_vars - (self.value_table[~self.value_table.index.str.contains('m_')]).shape[0]
         index2list = self.check(str(filename[0]))
         self.is_flexible = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
         self.is_flexible = [int(x) for x in self.is_flexible]
@@ -218,6 +225,11 @@ def mk_adj_matrix(filename):
     node_ref = {}
     for key,value in new_graph.node2nid.items():
         node_ref[value] = key.sexpr()
+
+    #FIXME: Incomplete
+    #TODO: Incomplete part. Plan to extract a list of node/var in graph or not in graph
+
+
     with open("../dataset/tmp/edges_and_relation/"+"er_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'wb') as f:
         pickle.dump((new_graph.edges, new_graph.relations, node_ref), f)
 
@@ -248,10 +260,11 @@ def generate_val():
 if __name__ == '__main__':
     #TODO: Add function to auto-skip the generated file
     #TODO: Try aigfuzz or AIGGEN to generate aiger
-    # smt2_file_list = walkFile("../dataset/generalize_pre/")
-    #
-    # for smt2_file in smt2_file_list[:]:
-    #     mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
+
+    smt2_file_list = walkFile("../dataset/generalize_pre/")
+
+    for smt2_file in smt2_file_list[:2]:
+        mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
     #FIXME: here still incomplete
     #refine_GT() # refine the ground truth by MUST tool

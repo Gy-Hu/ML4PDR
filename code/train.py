@@ -27,6 +27,44 @@ def refine_data(problem):
   df_empty.drop(columns=['old_index'],inplace=True)
   problem.db_gt = problem.db_gt.reindex(columns=problem.db_gt.columns | df_empty.columns)
 
+def refine_output(problem, output):
+  '''
+  Find out the node not in graph, and re-construct the output after net() return the value
+  '''
+  output_lst = (output.squeeze()).tolist()
+  single_node_index = [] # store the index
+  var_list = list(problem.db_gt)
+  var_list.pop(0) #remove "filename_nextcube"
+  tmp = problem.value_table[~problem.value_table.index.str.contains('m_')]
+  tmp.index = tmp.index.str.replace("n_","")
+
+  for i, element in enumerate(var_list):
+    if element not in tmp.index.tolist():
+      single_node_index.append(i)
+
+  for index in single_node_index:
+    output_lst.insert(index,1)
+
+  return torch.Tensor(output_lst).cuda().float()
+
+def refine_target(problem):
+  '''
+  Refine the is_flexiable
+  '''
+  single_node_index = [] # store the index
+  var_list = list(problem.db_gt)
+  var_list.pop(0) #remove "filename_nextcube"
+  tmp = problem.value_table[~problem.value_table.index.str.contains('m_')]
+  tmp.index = tmp.index.str.replace("n_","")
+
+  for i, element in enumerate(var_list):
+    if element not in tmp.index.tolist():
+      single_node_index.append(i)
+
+  for index in reversed(single_node_index):
+    problem.is_flexible.pop(index)
+
+
 if __name__ == "__main__":
 
   args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '26', \
@@ -77,6 +115,8 @@ if __name__ == "__main__":
   end_epoch = 120
 
   if train is not None:
+    for problem in train:
+      refine_target(problem)
     print('num of train batches: ', len(train), file=log_file, flush=True)
 
   if args.restore is not None:
@@ -102,8 +142,9 @@ if __name__ == "__main__":
     for _, prob in enumerate(train_bar):
       optim.zero_grad()
       outputs = net(prob)
-      target = torch.Tensor(prob.gt).cuda().float() #TODO: update the loss function here
+      target = torch.Tensor(prob.is_flexible).cuda().float() #TODO: update the loss function here
       outputs = sigmoid(outputs)
+      #outputs = refine_output(prob,outputs)
       loss = loss_fn(outputs, target)
       desc = 'loss: %.4f; ' % (loss.item())
 

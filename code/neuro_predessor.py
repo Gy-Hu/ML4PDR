@@ -45,7 +45,7 @@ class NeuroPredessor(nn.Module):
         #false_tensor = torch.tensor([]).cuda()
         all_init = torch.tensor([]).cuda()
         for key, value in dict_vt.items():
-            if value is 1:
+            if value == 1:
                 tmp_tensor = self.true_init(init_ts).view(1, 1, -1) #<-assign true init tensor
                 #true_tensor = torch.cat((true_tensor,tmp_true_tensor),dim=1)
             else:
@@ -76,18 +76,23 @@ class NeuroPredessor(nn.Module):
             var_pre_msg = self.children_msg(var_state[:][0].squeeze(0))
             child_to_par_msg = torch.matmul(unpack, var_pre_msg) #TODO: ask question "two embedding of m here"
             #FIXME: Expected hidden[0] size (1, 204, 128), got (1, 231, 128), fix the size in adj_matrix (where's prime needed?) , and re-run this
-            _, var_state[:problem.n_nodes] = self.var_update(child_to_par_msg.unsqueeze(0), var_state[:problem.n_nodes])  #TODO: replace node_state with the partial var_state
+            #var_state_slice = ((var_state[0])[:,:problem.n_nodes,:], (var_state[1])[:,:problem.n_nodes,:])
+            var_node_state = ((var_state[0])[:, :problem.n_nodes, :], (var_state[1])[:, :problem.n_nodes, :])
+            var_rest_state = ((var_state[0])[:, problem.n_nodes: , :], (var_state[1])[:, problem.n_nodes: , :])
+            _, var_node_state = self.var_update(child_to_par_msg.unsqueeze(0), var_node_state)
+            #_, ((var_state[0])[:, :problem.n_nodes, :], (var_state[1])[:, :problem.n_nodes, :]) = self.var_update(child_to_par_msg.unsqueeze(0), ((var_state[0])[:, :problem.n_nodes, :], (var_state[1])[:, :problem.n_nodes, :]))
+            #_, var_state = self.var_update(torch.cat(child_to_par_msg.unsqueeze(0), ((var_state[0])[:,:problem.n_nodes,:], (var_state[1])[:,:problem.n_nodes,:])))  #TODO: replace node_state with the partial var_state
+            var_state = (torch.cat((var_node_state[0],var_rest_state[0]),dim=1),torch.cat((var_node_state[1],var_rest_state[1]),dim=1))
 
-
-            node_pre_msg = self.parent_msg(var_state[:problem.n_nodes][0].squeeze(0))
+            node_pre_msg = self.parent_msg(((var_state[0])[:,:problem.n_nodes,:]).squeeze(0))
             par_to_child_msg = torch.matmul(unpack.t(), node_pre_msg)
-            _, var_state[:] = self.node_update(par_to_child_msg[0].unsqueeze(0), var_state[:])
+            _, var_state = self.node_update(par_to_child_msg.unsqueeze(0), var_state)
 
         logits = var_state[0].squeeze(0)
         #TODO: update here with the correct number
-        vote = self.node_vote(logits[:(n_var-n_node),:]) # (a+b) * dim -> a * dim
-        vote_mean = torch.mean(vote, dim=1)
-        return vote_mean
+        vote = self.var_vote(logits[problem.n_nodes:,:]) # (a+b) * dim -> a * dim
+        #vote_mean = torch.mean(vote, dim=1)
+        return vote.squeeze()
 
 
 
