@@ -7,3 +7,5 @@ test.ipynb
 ./dataset/tmp/*
 **/train
 **/tmp
+*.swp
+*.pkl
