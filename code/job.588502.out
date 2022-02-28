@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/home/ghuae/coding_env/ML4PDR/code/train.py", line 11, in <module>
+    from data_gen import problem, walkFile
+  File "/home/ghuae/coding_env/ML4PDR/code/data_gen.py", line 6, in <module>
+    from natsort import natsorted
+ModuleNotFoundError: No module named 'natsort'

@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/ghuae/coding_env/ML4PDR/code/train.py", line 113, in <module>
+    log_file = open(os.path.join(args.log_dir, args.task_name + '.log'), 'a+')
+FileNotFoundError: [Errno 2] No such file or directory: '/home/gary/coding_env/ML4PDR/log/neuropdr_no1.log'

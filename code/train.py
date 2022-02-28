@@ -69,7 +69,6 @@ if __name__ == "__main__":
 
   args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '120', \
                             '--epochs', '20', \
-                            '--gen_log', '/home/gary/coding_env/NeuroSAT/log/data_maker_sr3t10.log', \
                             '--train-file', '../dataset/train/',\
                             '--val-file','../dataset/eval/'
                             ])
