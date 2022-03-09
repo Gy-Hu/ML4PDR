@@ -2,7 +2,7 @@ import argparse
 import pickle
 import os
 from tqdm import tqdm
-
+import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,6 +10,9 @@ from config import parser
 from neuro_predessor import NeuroPredessor
 from data_gen import problem, walkFile
 import pandas as pd
+from pathlib import Path
+
+#TODO: Try small size sample and test accuracy
 
 #TODO: setup the batch size, iteration and epoch
 '''
@@ -89,6 +92,8 @@ if __name__ == "__main__":
 
 
   if args.train_file is not None:
+    #print(sys.path[0])
+    #print(os.getcwd())
     train_lst = walkFile(args.train_file)
     for train_file in train_lst:
       with open(train_file,'rb') as f:
@@ -113,8 +118,9 @@ if __name__ == "__main__":
   log_file = open(os.path.join(args.log_dir, args.task_name + '.log'), 'a+')
   detail_log_file = open(os.path.join(args.log_dir, args.task_name + '_detail.log'), 'a+')
 
-  loss_fn = nn.BCELoss()
+  loss_fn = nn.BCELoss() #TODO: Try to modify this part
   optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
+  #optim = optim.Adam(net.parameters(), lr=0.02, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
   sigmoid  = nn.Sigmoid()
 
   best_acc = 0.0
