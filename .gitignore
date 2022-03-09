@@ -1,3 +1,17 @@
 ./log
 .idea
 test.ipynb
+./code/__pycache__
+./PyMiniSolvers/
+./deps/
+./dataset/*
+./dataset/train/*
+./dataset/tmp/*
+**/train
+**/tmp
+*.swp
+*.pkl
+__pycache__
+./bak/
+bak/
+.vscode
