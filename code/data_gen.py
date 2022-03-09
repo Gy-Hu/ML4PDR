@@ -1,3 +1,6 @@
+'''
+Generate graph for training
+'''
 import z3
 import numpy as np
 import pandas as pd

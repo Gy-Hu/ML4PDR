@@ -7,3 +7,7 @@ test.ipynb
 ./dataset/tmp/*
 **/train
 **/tmp
+*.swp
+*.pkl
+__pycache__
+./bak/

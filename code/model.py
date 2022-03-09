@@ -1,3 +1,6 @@
+'''
+The parser for PDR
+'''
 import re
 from z3 import *
 

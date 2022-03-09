@@ -1,3 +1,6 @@
+'''
+Used in training process (parameter setting)
+'''
 import argparse
 from pathlib import Path
 prefix_folder = folder = Path(__file__).parent.parent
