@@ -13,7 +13,7 @@ import pdr
 
 # When you need to run all folder, setup this
 test_file_path = "../dataset/"
-test_file_folder_path_ = "../dataset/aag4train/" #open this if run through a folder
+test_file_folder_path = "../dataset/aag4train/" #open this if run through a folder
 #test_file_path = "../dataset/toy_experiment"
 #test_file_path = "../dataset/hwmcc07_amba"
 #test_file_path = "../dataset/ILAng_pipeline"

@@ -1,5 +1,9 @@
 from z3 import *
-from deps.PyMiniSolvers import minisolvers
+import sys
+import sys
+sys.path.append("../deps")
+print(sys.path)
+from PyMiniSolvers import minisolvers
 
 
 class TCube:
