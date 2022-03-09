@@ -1,0 +1,13 @@
+submitit INFO (2022-03-03 19:53:51,933) - Starting with JobEnvironment(job_id=590029, hostname=hhnode-ib-139, local_rank=0(1), node=0(1), global_rank=0(1))
+submitit INFO (2022-03-03 19:53:51,934) - Loading pickle: /home/ghuae/coding_env/ML4PDR/code/test_submitit_logs/590029_submitted.pkl
+==> 1/20 epoch, previous best: 0.000
+==> 2/20 epoch, previous best: 0.575
+==> 3/20 epoch, previous best: 0.575
+==> 4/20 epoch, previous best: 0.575
+==> 5/20 epoch, previous best: 0.575
+==> 6/20 epoch, previous best: 0.575
+==> 7/20 epoch, previous best: 0.575
+submitit INFO (2022-03-03 19:57:10,249) - Job has timed out. Ran 3 minutes out of requested 5 minutes.
+submitit WARNING (2022-03-03 19:57:10,249) - Caught signal 10 on hhnode-ib-139: this job is timed-out.
+submitit INFO (2022-03-03 19:57:10,249) - Job not requeued because: timed-out and not checkpointable.
+submitit ERROR (2022-03-03 19:57:10,253) - Submitted job triggered an exception

@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/home/ghuae/coding_env/ML4PDR/code/train.py", line 112, in <module>
+    net = net.cuda() #TODO: modify to accept both CPU and GPU version
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/torch/nn/modules/module.py", line 680, in cuda
+    return self._apply(lambda t: t.cuda(device))
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/torch/nn/modules/module.py", line 570, in _apply
+    module._apply(fn)
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/torch/nn/modules/module.py", line 593, in _apply
+    param_applied = fn(param)
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/torch/nn/modules/module.py", line 680, in <lambda>
+    return self._apply(lambda t: t.cuda(device))
+RuntimeError: CUDA error: out of memory
+CUDA kernel errors might be asynchronously reported at some other API call,so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.

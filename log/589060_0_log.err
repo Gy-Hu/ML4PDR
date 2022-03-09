@@ -1,0 +1,20 @@
+submitit ERROR (2022-03-02 14:51:46,909) - Submitted job triggered an exception
+Traceback (most recent call last):
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/submitit/core/_submit.py", line 11, in <module>
+    submitit_main()
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/submitit/core/submission.py", line 71, in submitit_main
+    process_job(args.folder)
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/submitit/core/submission.py", line 64, in process_job
+    raise error
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/submitit/core/submission.py", line 53, in process_job
+    result = delayed.result()
+  File "/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/submitit/core/utils.py", line 126, in result
+    self._result = self.function(*self.args, **self.kwargs)
+  File "/home/ghuae/coding_env/ML4PDR/code/train.py", line 93, in run
+    train.append(pickle.load(f))
+AttributeError: Can't get attribute 'problem' on <module 'submitit.core._submit' from '/home/ghuae/miniconda3/envs/pytorch-gpu/lib/python3.9/site-packages/submitit/core/_submit.py'>
+srun: error: hhnode-ib-145: task 0: Exited with exit code 1
