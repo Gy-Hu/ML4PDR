@@ -4,6 +4,8 @@ Only used when run on HPC
 from simple_slurm import Slurm
 import os
 import time
+from pathlib import Path
+prefix_folder = Path(__file__).parent.parent
 
 slurm = Slurm(
     job_name='test_simple_slurm',
@@ -12,7 +14,7 @@ slurm = Slurm(
     ntasks_per_node=6,
     gres='gpu:1',
     qos='qos_gpu-share',
-    output=f'test_simple_slurm.out',
+    output=f'{prefix_folder}/log/test_simple_slurm.out',
 )
 slurm.sbatch('python train.py' + Slurm.SLURM_ARRAY_TASK_ID)
 time.sleep(20)
