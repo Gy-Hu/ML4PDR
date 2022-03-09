@@ -11,3 +11,5 @@ test.ipynb
 *.pkl
 __pycache__
 ./bak/
+bak/
+.vscode
