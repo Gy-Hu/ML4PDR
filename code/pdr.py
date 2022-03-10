@@ -363,6 +363,7 @@ class PDR:
             if z is None:
                 sz = s.true_size()
                 # original_s = s.clone()
+                #s = self.generate_GT(s)
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
                 self._check_MIC(s)
@@ -491,6 +492,13 @@ class PDR:
         #     if self.down(q1):
         #         q = q1
         # return q
+    
+    def generate_GT(self,q: tCube):
+        #if q.true_size()>1 :
+        print("stuck here")
+        #else:
+        print("ops!")
+
 
     def unsatcore_reduce(self, q:  tCube, trans, frame):
         # (( not(q) /\ F /\ T ) \/ init' ) /\ q'   is unsat
@@ -636,7 +644,7 @@ class PDR:
     #     x = Not(x)
 
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr):
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, smt2_gen=0):
         '''
         :param prev_cube: sat model of CTI (v1 == xx , v2 == xx , v3 == xxx ...)
         :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
@@ -669,22 +677,34 @@ class PDR:
         #s.add(prev_cube.cube())
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
-        s = Solver()
-        s_smt = Solver() #use to generate SMT-lib2 file
-        for index, literals in enumerate(tcube_cp.cubeLiterals):
-            s_smt.add(literals)
-            s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
-        s.add(Not(nextcube))
-        s_smt.add(Not(nextcube))
-        assert(s.check() == unsat and s_smt.check() == unsat)
-        core = s.unsat_core()
-        core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
+        
+        if smt2_gen==1:
+            s = Solver()
+            s_smt = Solver()  #use to generate SMT-lib2 file
+            for index, literals in enumerate(tcube_cp.cubeLiterals):
+                s_smt.add(literals) 
+                s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+            s.add(Not(nextcube))
+            s_smt.add(Not(nextcube)) 
+            assert(s.check() == unsat and s_smt.check() == unsat)
+            core = s.unsat_core()
+            core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
 
-        filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data)) +'.smt2')
-        data['nextcube'] = filename.split('/')[-1]
-        with open(filename, mode='w') as f:
-            f.write(s_smt.to_smt2())
-        f.close()
+            filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data)) +'.smt2')
+            data['nextcube'] = filename.split('/')[-1]
+            with open(filename, mode='w') as f:
+                f.write(s_smt.to_smt2())
+            f.close()
+
+        elif smt2_gen==0:
+            s = Solver()
+            for index, literals in enumerate(tcube_cp.cubeLiterals):
+                s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+            s.add(Not(nextcube))
+            assert(s.check() == unsat)
+            core = s.unsat_core()
+            core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
+        
         # cube_list = []
         # for index, literals in enumerate(tcube_cp.cubeLiterals):
         #     if index in core_list:

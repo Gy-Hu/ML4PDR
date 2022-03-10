@@ -1,9 +1,10 @@
 from z3 import *
 import sys
-import sys
-sys.path.append("../deps")
-print(sys.path)
-from PyMiniSolvers import minisolvers
+from pathlib import Path
+folder = Path(__file__).parent.parent
+sys.path.append(str(folder))
+#print(sys.path)
+from deps.PyMiniSolvers import minisolvers
 
 
 class TCube:
