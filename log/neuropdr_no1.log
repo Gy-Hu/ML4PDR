@@ -626,3 +626,239 @@ acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
 ==> 20/20 epoch, previous best: 0.425
 loss: 0.5372; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
 acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+num of train batches:  40
+==> 1/20 epoch, previous best: 0.000
+loss: 0.6761; acc: 0.539, TP: 0.219, TN: 0.320, FN: 0.094, FP: 0.368
+acc: 0.537, TP: 0.348, TN: 0.188, FN: 0.227, FP: 0.236
+==> 2/20 epoch, previous best: 0.537
+loss: 0.6344; acc: 0.685, TP: 0.000, TN: 0.685, FN: 0.312, FP: 0.003
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 3/20 epoch, previous best: 0.537
+loss: 0.5760; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 4/20 epoch, previous best: 0.537
+loss: 0.5438; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 5/20 epoch, previous best: 0.537
+loss: 0.5359; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 6/20 epoch, previous best: 0.537
+loss: 0.5299; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 7/20 epoch, previous best: 0.537
+loss: 0.5243; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 8/20 epoch, previous best: 0.537
+loss: 0.5194; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 9/20 epoch, previous best: 0.537
+loss: 0.5147; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 10/20 epoch, previous best: 0.537
+loss: 0.5106; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 11/20 epoch, previous best: 0.537
+loss: 0.5074; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 12/20 epoch, previous best: 0.537
+loss: 0.5062; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 13/20 epoch, previous best: 0.537
+loss: 0.5090; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 14/20 epoch, previous best: 0.537
+loss: 0.5164; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 15/20 epoch, previous best: 0.537
+loss: 0.5245; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 16/20 epoch, previous best: 0.537
+loss: 0.5310; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 17/20 epoch, previous best: 0.537
+loss: 0.5348; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 18/20 epoch, previous best: 0.537
+num of train batches:  40
+==> 1/20 epoch, previous best: 0.000
+loss: 0.7040; acc: 0.337, TP: 0.312, TN: 0.025, FN: 0.000, FP: 0.663
+acc: 0.575, TP: 0.575, TN: 0.000, FN: 0.000, FP: 0.425
+==> 2/20 epoch, previous best: 0.575
+loss: 0.6629; acc: 0.562, TP: 0.169, TN: 0.394, FN: 0.144, FP: 0.294
+acc: 0.537, TP: 0.348, TN: 0.188, FN: 0.227, FP: 0.236
+==> 3/20 epoch, previous best: 0.575
+loss: 0.5909; acc: 0.683, TP: 0.000, TN: 0.683, FN: 0.312, FP: 0.005
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 4/20 epoch, previous best: 0.575
+loss: 0.5436; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 5/20 epoch, previous best: 0.575
+loss: 0.5364; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 6/20 epoch, previous best: 0.575
+loss: 0.5298; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 7/20 epoch, previous best: 0.575
+loss: 0.5245; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 8/20 epoch, previous best: 0.575
+loss: 0.5199; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 9/20 epoch, previous best: 0.575
+loss: 0.5161; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 10/20 epoch, previous best: 0.575
+loss: 0.5130; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 11/20 epoch, previous best: 0.575
+loss: 0.5108; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 12/20 epoch, previous best: 0.575
+loss: 0.5098; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 13/20 epoch, previous best: 0.575
+loss: 0.5111; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 14/20 epoch, previous best: 0.575
+loss: 0.5153; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 15/20 epoch, previous best: 0.575
+loss: 0.5207; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 16/20 epoch, previous best: 0.575
+loss: 0.5261; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 17/20 epoch, previous best: 0.575
+loss: 0.5307; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 18/20 epoch, previous best: 0.575
+loss: 0.5340; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.537, TP: 0.208, TN: 0.329, FN: 0.367, FP: 0.096
+==> 19/20 epoch, previous best: 0.575
+loss: 0.5364; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.530, TP: 0.208, TN: 0.323, FN: 0.367, FP: 0.102
+==> 20/20 epoch, previous best: 0.575
+loss: 0.5383; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.530, TP: 0.208, TN: 0.323, FN: 0.367, FP: 0.102
+num of train batches:  40
+==> 1/20 epoch, previous best: 0.000
+loss: 0.6413; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 2/20 epoch, previous best: 0.425
+loss: 0.6138; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 3/20 epoch, previous best: 0.425
+loss: 0.5766; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 4/20 epoch, previous best: 0.425
+loss: 0.5450; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 5/20 epoch, previous best: 0.425
+loss: 0.5333; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 6/20 epoch, previous best: 0.425
+loss: 0.5265; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 7/20 epoch, previous best: 0.425
+loss: 0.5208; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 8/20 epoch, previous best: 0.425
+loss: 0.5157; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 9/20 epoch, previous best: 0.425
+loss: 0.5111; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 10/20 epoch, previous best: 0.425
+loss: 0.5074; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 11/20 epoch, previous best: 0.425
+loss: 0.5057; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 12/20 epoch, previous best: 0.425
+loss: 0.5089; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 13/20 epoch, previous best: 0.425
+loss: 0.5075; acc: 0.677, TP: 0.000, TN: 0.677, FN: 0.312, FP: 0.011
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 14/20 epoch, previous best: 0.425
+loss: 0.5078; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 15/20 epoch, previous best: 0.425
+loss: 0.5183; acc: 0.686, TP: 0.000, TN: 0.686, FN: 0.312, FP: 0.002
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 16/20 epoch, previous best: 0.425
+loss: 0.5184; acc: 0.687, TP: 0.000, TN: 0.687, FN: 0.312, FP: 0.001
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 17/20 epoch, previous best: 0.425
+loss: 0.5204; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 18/20 epoch, previous best: 0.425
+loss: 0.5247; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 19/20 epoch, previous best: 0.425
+loss: 0.5283; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 20/20 epoch, previous best: 0.425
+loss: 0.5310; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+num of train batches:  40
+==> 1/20 epoch, previous best: 0.000
+loss: 0.6386; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 2/20 epoch, previous best: 0.425
+loss: 0.6094; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 3/20 epoch, previous best: 0.425
+loss: 0.5731; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 4/20 epoch, previous best: 0.425
+loss: 0.5463; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 5/20 epoch, previous best: 0.425
+loss: 0.5363; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 6/20 epoch, previous best: 0.425
+loss: 0.5301; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 7/20 epoch, previous best: 0.425
+loss: 0.5245; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 8/20 epoch, previous best: 0.425
+loss: 0.5192; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 9/20 epoch, previous best: 0.425
+loss: 0.5143; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 10/20 epoch, previous best: 0.425
+loss: 0.5100; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 11/20 epoch, previous best: 0.425
+loss: 0.5075; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 12/20 epoch, previous best: 0.425
+loss: 0.5102; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 13/20 epoch, previous best: 0.425
+loss: 0.5055; acc: 0.674, TP: 0.000, TN: 0.674, FN: 0.312, FP: 0.014
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 14/20 epoch, previous best: 0.425
+loss: 0.5045; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 15/20 epoch, previous best: 0.425
+loss: 0.5116; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 16/20 epoch, previous best: 0.425
+loss: 0.5110; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 17/20 epoch, previous best: 0.425
+loss: 0.5133; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 18/20 epoch, previous best: 0.425
+loss: 0.5159; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 19/20 epoch, previous best: 0.425
+loss: 0.5187; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
+==> 20/20 epoch, previous best: 0.425
+loss: 0.5215; acc: 0.688, TP: 0.000, TN: 0.688, FN: 0.312, FP: 0.000
+acc: 0.425, TP: 0.000, TN: 0.425, FN: 0.575, FP: 0.000
