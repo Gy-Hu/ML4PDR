@@ -14,8 +14,8 @@ prefix_folder = Path(__file__).parent.parent
 if __name__ == '__main__':
     help_info = "Usage: python run_slurm.py <mode>"
     parser = argparse.ArgumentParser(description="Submit the job to slurm or check the log file")
-    parser.add_argument('--mode',type=int,help='choose the mode to run the program, 0 means submit job, 1 means check the output log',default=0)
-    parser.add_argument('--job-name',type=str,help='give the job name of this task')
+    parser.add_argument('-m','--mode',type=int,help='choose the mode to run the program, 0 means submit job, 1 means check the output log',default=0)
+    parser.add_argument('-j','--job-name',type=str,help='give the job name of this task')
     # test usage
     #args = parser.parse_args(['--job-name','test'])
     #args = parser.parse_args(['--mode',1,'--job-name','test'])
