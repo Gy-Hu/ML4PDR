@@ -37,7 +37,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run tests examples on the PDR algorithm")
     parser.add_argument('fileName', type=str, help='The name of the test to run', default=None, nargs='?')
     parser.add_argument('--mode',type=int,help='choose the mode to run the program, 0 means only run one file, 1 means run through the files in folder',default=0)
-    parser.add_argument('-m', type=int, help='the time limitation of one test to run', default=900)
+    parser.add_argument('-t', type=int, help='the time limitation of one test to run', default=900)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
     #TODO: Add abstract & craig interpolation?
     #args = parser.parse_args(['../dataset/ILAng_pipeline/simple_pipe_verify_stall_ADD_2.aag', '-c'])
@@ -96,7 +96,7 @@ if __name__ == '__main__':
                     m = model.Model()
                     solver = pdr.PDR(*m.parse(os.path.join(root, name)))
                     startTime = datetime.now()
-                    if not run_with_limited_time(solver.run, args.m):
+                    if not run_with_limited_time(solver.run, args.t):
                         print("Time Out")
                     else:
                         endTime = datetime.now()

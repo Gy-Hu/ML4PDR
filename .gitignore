@@ -1,6 +1,6 @@
 ./log
 .idea
-test.ipynb
+*.ipynb
 ./code/__pycache__
 ./PyMiniSolvers/
 ./deps/
@@ -14,5 +14,7 @@ test.ipynb
 __pycache__
 ./bak/
 bak/
-.vscode
+.vscode/
 *.out
+*.ipynb
+*.km

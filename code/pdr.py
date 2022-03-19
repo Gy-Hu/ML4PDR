@@ -8,6 +8,7 @@ from queue import PriorityQueue
 from functools import wraps
 import pandas as pd
 from bmc import BMC
+from itertools import combinations
 
 
 # 查询接口中每行代码执行的时间
@@ -106,7 +107,10 @@ class tCube:
         #     self.cubeLiterals.append(True)
 
     def true_size(self):
-        return len(self.cubeLiterals) - self.cubeLiterals.count(True)
+        '''
+        Remove the 'True' in list (not the BoolRef Variable)
+        '''
+        return len(self.cubeLiterals) - self.cubeLiterals.count(True) 
 
     def join(self,  model):
         # first extract var,val from cubeLiteral
@@ -362,10 +366,11 @@ class PDR:
             z = self.solveRelative(s)
             if z is None:
                 sz = s.true_size()
-                # original_s = s.clone()
-                #s = self.generate_GT(s)
+                original_s = s.clone()
+                s_enumerate = self.generate_GT(original_s) #Generate ground truth here
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
+                print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
@@ -447,6 +452,7 @@ class PDR:
                 if self._solveRelative(qnew) == unsat:
                     passed_single_q.append(qnew)
         return passed_single_q
+        
 
     def MIC(self, q: tCube): #TODO: Check the algorithm is correct or not
         #passed_single_q_sz1 = self._test_MIC1(q)
@@ -464,7 +470,7 @@ class PDR:
                 continue
             q1 = q.delete(i)
             print(f'MIC try idx:{i}')
-            if self.down(q1):
+            if self.down(q1): 
                 q = q1
         q.remove_true()
         print (q)
@@ -476,7 +482,7 @@ class PDR:
         #     print ('Not optimal!!!')
         # if q.true_size() > 2 and len(passed_single_q_sz2) != 0:
         #     for newq in passed_single_q_sz2:
-        #         if 'False' in str(newq):
+        #         if 'False' in str(newq): #Ask this, why is 'False' in str(newq)?
         #             q = newq
         #     # should be changed!
         #     print ('Not optimal!!!')
@@ -494,10 +500,45 @@ class PDR:
         # return q
     
     def generate_GT(self,q: tCube):
-        #if q.true_size()>1 :
-        print("stuck here")
-        #else:
-        print("ops!")
+        def check_init(c: tCube):
+            slv = Solver()
+            slv.add(self.init.cube())
+            slv.add(c.cube())
+            return slv.check()
+
+        # sz = q.true_size()
+        # self.unsatcore_reduce(q, trans=self.trans.cube(), frame=self.frames[q.t-1].cube())
+        # print('unsatcore', sz, ' --> ', q.true_size())
+        # q.remove_true()
+
+        end_lst = []
+        passed_minimum_q = []
+        is_looping = True
+        for i in range(1,len(q.cubeLiterals)):
+            tmp_lst = []
+            for c in combinations(q.cubeLiterals, i):
+                tmp_lst.append(c)
+            end_lst.extend(tmp_lst)
+    
+            for tuble in tmp_lst:
+                if len(passed_minimum_q) > 0:
+                    is_looping = False
+                    break
+                elif len(passed_minimum_q) == 0:
+                    qnew = tCube(q.t)
+                    qnew.cubeLiterals = [tcube for tcube in tuble]
+                    if check_init(qnew) == sat:
+                        continue
+                    if self._solveRelative(qnew) == unsat:
+                        passed_minimum_q.append(qnew)
+                else:
+                    print("Program met bug!")
+                #ADD: When len(passed_single_q) != 0, break the for loop
+            
+            if not is_looping:
+                break # break out of outer loop
+        q = passed_minimum_q[0]
+        return q
 
 
     def unsatcore_reduce(self, q:  tCube, trans, frame):
