@@ -18,3 +18,5 @@ bak/
 *.out
 *.ipynb
 *.km
+log/
+model/
