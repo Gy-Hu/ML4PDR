@@ -499,46 +499,60 @@ class PDR:
         #         q = q1
         # return q
     
-    def generate_GT(self,q: tCube):
-        def check_init(c: tCube):
-            slv = Solver()
-            slv.add(self.init.cube())
-            slv.add(c.cube())
-            return slv.check()
+    def generate_GT(self,q: tCube,smt2_gen_IG=0): #smt2_gen_IG is a switch to trun on/off .smt file generation
+        
+        if smt2_gen_IG == 0:
+            pass
+        elif smt2_gen_IG == 1:
+            #FIXME: This .smt generation still exists problem, remember to fix this
+            s_smt = Solver()  #use to generate SMT-lib2 file
+            cubePrime = substitute(q.cube(), self.primeMap)
+            for index, literals in enumerate(q.cubeLiterals): 
+                s_smt.add(Not(q.cube()))
+                s_smt.add(self.frames[q.t - 1].cube())
+                s_smt.add(self.trans.cube())
+                s_smt.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
 
-        # sz = q.true_size()
-        # self.unsatcore_reduce(q, trans=self.trans.cube(), frame=self.frames[q.t-1].cube())
-        # print('unsatcore', sz, ' --> ', q.true_size())
-        # q.remove_true()
+            def check_init(c: tCube):
+                slv = Solver()
+                slv.add(self.init.cube())
+                slv.add(c.cube())
+                return slv.check()
 
-        end_lst = []
-        passed_minimum_q = []
-        is_looping = True
-        for i in range(1,len(q.cubeLiterals)):
-            tmp_lst = []
-            for c in combinations(q.cubeLiterals, i):
-                tmp_lst.append(c)
-            end_lst.extend(tmp_lst)
-    
-            for tuble in tmp_lst:
-                if len(passed_minimum_q) > 0:
-                    is_looping = False
-                    break
-                elif len(passed_minimum_q) == 0:
-                    qnew = tCube(q.t)
-                    qnew.cubeLiterals = [tcube for tcube in tuble]
-                    if check_init(qnew) == sat:
-                        continue
-                    if self._solveRelative(qnew) == unsat:
-                        passed_minimum_q.append(qnew)
-                else:
-                    print("Program met bug!")
-                #ADD: When len(passed_single_q) != 0, break the for loop
+            # sz = q.true_size()
+            # self.unsatcore_reduce(q, trans=self.trans.cube(), frame=self.frames[q.t-1].cube())
+            # print('unsatcore', sz, ' --> ', q.true_size())
+            # q.remove_true()
+
+            end_lst = []
+            passed_minimum_q = []
+            is_looping = True
+            for i in range(1,len(q.cubeLiterals)+1): #When i==len(q.cubeLiterals), this means it met wrost case
+                tmp_lst = []
+                for c in combinations(q.cubeLiterals, i):
+                    tmp_lst.append(c)
+                end_lst.extend(tmp_lst)
+        
+                for tuble in tmp_lst:
+                    if len(passed_minimum_q) > 0:
+                        is_looping = False
+                        break
+                    elif len(passed_minimum_q) == 0:
+                        qnew = tCube(q.t)
+                        qnew.cubeLiterals = [tcube for tcube in tuble]
+                        if check_init(qnew) == sat:
+                            continue
+                        if self._solveRelative(qnew) == unsat:
+                            passed_minimum_q.append(qnew)
+                    else:
+                        print("Program met bug!")
+                    #ADD: When len(passed_single_q) != 0, break the for loop
+                
+                if not is_looping:
+                    break # break out of outer loop
+            q = passed_minimum_q[0] # Minimum ground truth has been generated
             
-            if not is_looping:
-                break # break out of outer loop
-        q = passed_minimum_q[0]
-        return q
+            return q
 
 
     def unsatcore_reduce(self, q:  tCube, trans, frame):
@@ -685,7 +699,7 @@ class PDR:
     #     x = Not(x)
 
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, smt2_gen=0):
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, smt2_gen_GP=0): #smt2_gen_GP is a switch to trun on/off .smt file generation
         '''
         :param prev_cube: sat model of CTI (v1 == xx , v2 == xx , v3 == xxx ...)
         :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
@@ -719,7 +733,7 @@ class PDR:
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
         
-        if smt2_gen==1:
+        if smt2_gen_GP==1:
             s = Solver()
             s_smt = Solver()  #use to generate SMT-lib2 file
             for index, literals in enumerate(tcube_cp.cubeLiterals):
@@ -737,7 +751,7 @@ class PDR:
                 f.write(s_smt.to_smt2())
             f.close()
 
-        elif smt2_gen==0:
+        elif smt2_gen_GP==0:
             s = Solver()
             for index, literals in enumerate(tcube_cp.cubeLiterals):
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
