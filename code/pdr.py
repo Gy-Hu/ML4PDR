@@ -370,7 +370,7 @@ class PDR:
                 s_enumerate = self.generate_GT(original_s) #Generate ground truth here
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
-                print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
+                if s_enumerate is not None: print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
@@ -504,14 +504,29 @@ class PDR:
         if smt2_gen_IG == 0:
             pass
         elif smt2_gen_IG == 1:
+            '''
+            ---------------------Generate .smt2 file (for building graph)--------------
+            '''
             #FIXME: This .smt generation still exists problem, remember to fix this
             s_smt = Solver()  #use to generate SMT-lib2 file
             cubePrime = substitute(q.cube(), self.primeMap)
+            #This cube is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
+            Cube = Not(
+                And(
+                    Not(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
+                      substitute(substitute(q.cube(), self.primeMap),self.inp_map)))  # Fi-1 ! and not(q) and T and q'
+                ,
+                    Not(And(self.frames[0].cube(),q.cube()))
+                    )
+            )
+            
             for index, literals in enumerate(q.cubeLiterals): 
-                s_smt.add(Not(q.cube()))
-                s_smt.add(self.frames[q.t - 1].cube())
-                s_smt.add(self.trans.cube())
-                s_smt.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
+                s_smt.add(literals) 
+                s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+
+            '''
+            -------------------Generate ground truth--------------
+            '''
 
             def check_init(c: tCube):
                 slv = Solver()
