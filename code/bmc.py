@@ -1,6 +1,3 @@
-'''
-Used in PDR
-'''
 from z3 import *
 
 class BMC:
@@ -16,14 +13,14 @@ class BMC:
         self.primary_inputs = primary_inputs
         self.init = init
         self.trans = trans
-        self.literals = literals
+        self.literals = literals + primary_inputs
         self.items = self.primary_inputs + self.literals
         self.inp_prime = primes_inp
         self.lMap = {str(l): l for l in self.items}
         self.post = post
         self.frames = list()
-        self.primes = primes
-        self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
+        self.primes = primes + [Bool(str(pi)+'_prime') for pi in primary_inputs]
+        self.primeMap = [(self.literals[i], self.primes[i]) for i in range(len(self.literals))]
         self.pv2next = pv2next
         self.initprime = substitute(self.init.cube(), self.primeMap)
         self.inp_map = [(primary_inputs[i], primes_inp[i]) for i in range(len(primes_inp))]
