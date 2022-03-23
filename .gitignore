@@ -20,3 +20,10 @@ bak/
 *.km
 log/
 model/
+*.html
+# *.aag
+aiger_tools/
+**/aiger_tools
+bak/
+**/bak/
+**/bak

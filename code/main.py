@@ -40,12 +40,16 @@ if __name__ == '__main__':
     parser.add_argument('-t', type=int, help='the time limitation of one test to run', default=900)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
     #TODO: Add abstract & craig interpolation?
+    
+    args = parser.parse_args(['../dataset/aag4train/vis.coherence^5.E.aag', '-c'])
+    #args = parser.parse_args(['../dataset/aag4train/spec10-and-env.aag', '-c'])
+
     #args = parser.parse_args(['../dataset/ILAng_pipeline/simple_pipe_verify_stall_ADD_2.aag', '-c'])
     #args = parser.parse_args(['../dataset/hwmcc07_tip/ken.flash^12.C.aag', '-c']) #SAT, this case can cause memory exploration
     #TODO: Using Dr.Zhang's method to accelerate the speed of solving unsafe case
     #args = parser.parse_args(['../dataset/hwmcc07_tip/texas.two_proc^5.E.aag', '-c']) #SAT, time so long, around 20 minutes
     #args = parser.parse_args(['../dataset/toy_experiment/play.aag', '-c'])
-    args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
+    #args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
     #TODO: Solve the bug on this case (safe -> unsafe)
     #args = parser.parse_args(['../dataset/hwmcc07_amba/spec1-and-env.aag','-c']) #When you need to run single file, setup this
     #args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])

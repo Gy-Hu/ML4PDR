@@ -9,6 +9,9 @@ from functools import wraps
 import pandas as pd
 from bmc import BMC
 from itertools import combinations
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from scipy.special import comb
 
 
 # 查询接口中每行代码执行的时间
@@ -207,8 +210,17 @@ class PDR:
         # for debugging purpose
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
                        init=init, trans=trans, post=post, pv2next=pv2next, primes_inp = primes_inp)
-        self.generaliztion_data = []
+        self.generaliztion_data_GP = []# Store the ground truth data of generalized predecessor
+        self.generaliztion_data_IG = []# Store the ground truth data of inductive generalization 
+        #TODO: Use self.generaliztion_data_IG to store the ground truth data of inductive generalization 
         self.filename = filename
+        '''
+        --------------The following variables are used to calculate the reducing rate--------
+        '''
+        self.sum_MIC = 0 # Sum of the literals produced by MIC
+        self.sum_IG_GT = 0 # Sum of the literals produced by combinations
+        self.sum_GP = 0 # Sum of the literals of predecessor (unsat core or other methods)
+        self.sum_GP_GT = 0 #Sum of the minimum literals of predecessor (MUST, ternary simulation etc.)
 
     def check_init(self):
         s = Solver()
@@ -244,11 +256,23 @@ class PDR:
                 trace = self.recBlockCube(c) # conduct generalize predecessor here (in solve relative process)
                 #TODO: 找出spec3-and-env这个case为什么没有recBlock
                 if trace is not None:
-                    df = pd.DataFrame(self.generaliztion_data)
-                    df = df.fillna(1)
-                    df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    # Generate ground truth of generalized predecessor
+                    if self.generaliztion_data_GP: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_GP)
+                        df = df.fillna(1)
+                        df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
+                    # Print out the improvement space of inductive generalization
+                    if self.sum_IG_GT != 0:
+                        print("Sum of the literals produced by MIC(): ",self.sum_MIC)
+                        print("Sum of the literals produced by enumeration in indutive generalization: ",self.sum_IG_GT)
+                        print("Reducing ",((self.sum_MIC-self.sum_IG_GT)/self.sum_MIC)*100,"% ")
+                    
                     print("Found trace ending in bad state:")
+                    
+                    
                     self._debug_trace(trace)
+                    # If want to print the trace, remember to comment the _debug_trace() function
                     while not trace.empty():
                         idx, cube = trace.get()
                         print(cube)
@@ -259,10 +283,20 @@ class PDR:
                 inv = self.checkForInduction()
                 if inv != None:
                     print("Found inductive invariant")
-                    df = pd.DataFrame(self.generaliztion_data)
-                    df = df.fillna(1)
-                    #df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
-                    df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    # Print out the improvement space of inductive generalization
+                    if self.sum_IG_GT != 0:
+                        print("Sum of the literals produced by MIC(): ",self.sum_MIC)
+                        print("Sum of the literals produced by enumeration in indutive generalization: ",self.sum_IG_GT)
+                        print("Reducing ",((self.sum_MIC-self.sum_IG_GT)/self.sum_MIC)*100,"% ")
+                    
+                    
+                    # Generate ground truth of generalized predecessor
+                    if self.generaliztion_data_GP: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_GP)
+                        df = df.fillna(1)
+                        #df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
+                        df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
 
@@ -370,7 +404,13 @@ class PDR:
                 s_enumerate = self.generate_GT(original_s) #Generate ground truth here
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
-                if s_enumerate is not None: print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
+                self.sum_MIC = self.sum_MIC + s.true_size()
+                if s_enumerate is not None: 
+                    print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
+                    self.sum_IG_GT = self.sum_IG_GT + s_enumerate.true_size()
+                else:
+                    print ("Minimum not found")
+                    self.sum_IG_GT = self.sum_IG_GT + s.true_size()
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
@@ -499,30 +539,44 @@ class PDR:
         #         q = q1
         # return q
     
-    def generate_GT(self,q: tCube,smt2_gen_IG=0): #smt2_gen_IG is a switch to trun on/off .smt file generation
+    #TODO: Add assertion on this to check inductive relative
+    #TODO: Add assertion to check there is no 'True' and 'False' in the cubeLiterals list
+    def generate_GT(self,q: tCube,smt2_gen_IG=1): #smt2_gen_IG is a switch to trun on/off .smt file generation
         
         if smt2_gen_IG == 0:
-            pass
+            return None
         elif smt2_gen_IG == 1:
-            '''
-            ---------------------Generate .smt2 file (for building graph)--------------
-            '''
-            #FIXME: This .smt generation still exists problem, remember to fix this
-            s_smt = Solver()  #use to generate SMT-lib2 file
-            cubePrime = substitute(q.cube(), self.primeMap)
-            #This cube is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
-            Cube = Not(
-                And(
-                    Not(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
-                      substitute(substitute(q.cube(), self.primeMap),self.inp_map)))  # Fi-1 ! and not(q) and T and q'
-                ,
-                    Not(And(self.frames[0].cube(),q.cube()))
-                    )
-            )
+            # assert(q.cubeLiterals.count(True)==0)
+            # assert(q.cubeLiterals.count(False)==0)
+            # '''
+            # ---------------------Generate .smt2 file (for building graph)--------------
+            # '''
+            # #FIXME: This .smt generation still exists problem, remember to fix this
+            # s_smt = Solver()  #use to generate SMT-lib2 file
+
+            # #This "Cube" is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
+
+            # # s_smt.add(Not(q.cube()))
+            # # s_smt.add(self.frames[q.t - 1].cube())
+            # # s_smt.add(self.trans.cube())
+            # # s_smt.add(substitute(q.cube(), self.primeMap))
             
-            for index, literals in enumerate(q.cubeLiterals): 
-                s_smt.add(literals) 
-                s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+            # Cube = Not(
+            #     And(
+            #         Not(
+            #             And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
+            #           substitute(substitute(q.cube(), self.primeMap),self.inp_map))
+            #           )  # Fi-1 ! and not(q) and T and q'
+            #     ,
+            #         Not(And(self.frames[0].cube(),q.cube()))
+            #         )
+            # )
+            
+            # assert (s_smt.check() == unsat)
+
+            # for index, literals in enumerate(q.cubeLiterals): 
+            #     s_smt.add(literals) 
+            #     s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
 
             '''
             -------------------Generate ground truth--------------
@@ -543,31 +597,51 @@ class PDR:
             passed_minimum_q = []
             is_looping = True
             for i in range(1,len(q.cubeLiterals)+1): #When i==len(q.cubeLiterals), this means it met wrost case
+                if len(end_lst) > 500: break
                 tmp_lst = []
                 for c in combinations(q.cubeLiterals, i):
                     tmp_lst.append(c)
                 end_lst.extend(tmp_lst)
-        
-                for tuble in tmp_lst:
-                    if len(passed_minimum_q) > 0:
-                        is_looping = False
-                        break
-                    elif len(passed_minimum_q) == 0:
-                        qnew = tCube(q.t)
-                        qnew.cubeLiterals = [tcube for tcube in tuble]
-                        if check_init(qnew) == sat:
-                            continue
-                        if self._solveRelative(qnew) == unsat:
-                            passed_minimum_q.append(qnew)
-                    else:
-                        print("Program met bug!")
-                    #ADD: When len(passed_single_q) != 0, break the for loop
-                
-                if not is_looping:
-                    break # break out of outer loop
-            q = passed_minimum_q[0] # Minimum ground truth has been generated
+
+            #FIXME: This may cause memory exploration of list (length 2^n, n is the length of original q)
+
+            '''
+            1 -> 0
+            2 -> Cn1
+            3 -> Cn1+Cn2
+            4 -> Cn1+Cn2+Cn3
+            5 -> Cn1+Cn2+Cn3+Cn4
+            ...
+            n -> Cn1+Cn2+Cn3+Cn4+...+Cnn -> 2^n - 1 
+            '''
             
-            return q
+            #TODO: Using multi-thread to handle inductive relative checking
+            dict_n = {}
+            dict_n[1] = 0
+            dict_n[2] = int(comb(len(end_lst),1))
+            dict_n[3] = int(comb(len(end_lst),1) + comb(len(end_lst),2))
+            dict_n[4] = int(comb(len(end_lst),1) + comb(len(end_lst),2) \
+                + comb(len(end_lst),2)+comb(len(end_lst),3))
+            
+            for tuble in end_lst:
+                if len(passed_minimum_q) > 0:
+                    break
+                elif len(passed_minimum_q) == 0:
+                    qnew = tCube(q.t)
+                    qnew.cubeLiterals = [tcube for tcube in tuble]
+                    if check_init(qnew) == sat:
+                        continue
+                    if self._solveRelative(qnew) == unsat:
+                        passed_minimum_q.append(qnew)
+                else:
+                    print("Program met bug!")
+                #ADD: When len(passed_single_q) != 0, break the for loop
+            if len(passed_minimum_q)!= 0:
+                q = passed_minimum_q[0] # Minimum ground truth has been generated
+                return q
+            else:
+                print("The ground truth has not been found")
+                return None
 
 
     def unsatcore_reduce(self, q:  tCube, trans, frame):
@@ -729,7 +803,7 @@ class PDR:
 
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception warning
         ground_true = prev_cube.clone()
-        print("original size of !P (or CTI): ", len(tcube_cp.cubeLiterals))
+        #print("original size of !P (or CTI): ", len(tcube_cp.cubeLiterals))
         #print("Begin to generalize predessor")
 
         #replace the state as the next state (by trans) -> !P (s')
@@ -760,7 +834,7 @@ class PDR:
             core = s.unsat_core()
             core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
 
-            filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data)) +'.smt2')
+            filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_GP)) +'.smt2')
             data['nextcube'] = filename.split('/')[-1]
             with open(filename, mode='w') as f:
                 f.write(s_smt.to_smt2())
@@ -830,7 +904,7 @@ class PDR:
         # tcube_cp.cubeLiterals = [tcube_cp.cubeLiterals[i] for i in range(0, len(tcube_cp.cubeLiterals), 1) if i not in index_to_remove]
         # return tcube_cp
 
-        self.generaliztion_data.append(data)
+        if smt2_gen_GP==1: self.generaliztion_data_GP.append(data)
 
         tcube_cp.remove_true()
         #print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
