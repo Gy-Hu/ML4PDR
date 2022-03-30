@@ -238,7 +238,7 @@ class PDR:
             return False
         return True
 
-    def run(self, agent):
+    def run(self, agent=None):
 
         if not self.check_init():
             print("Found trace ending in bad state")
@@ -455,7 +455,11 @@ class PDR:
         return None
 
     def _solveRelative(self, tcube) -> tCube:
-        cubePrime = substitute(tcube.cube(), self.primeMap)
+        '''
+        #FIXME: The inductive relative checking should subtitue input -> input'
+        '''
+        #cubePrime = substitute(tcube.cube(), self.primeMap)
+        cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
         s = Solver()
         s.add(Not(tcube.cube()))
         s.add(self.frames[tcube.t - 1].cube())
@@ -541,42 +545,44 @@ class PDR:
     
     #TODO: Add assertion on this to check inductive relative
     #TODO: Add assertion to check there is no 'True' and 'False' in the cubeLiterals list
-    def generate_GT(self,q: tCube,smt2_gen_IG=1): #smt2_gen_IG is a switch to trun on/off .smt file generation
+    def generate_GT(self,q: tCube,smt2_gen_IG=0): #smt2_gen_IG is a switch to trun on/off .smt file generation
         
         if smt2_gen_IG == 0:
             return None
         elif smt2_gen_IG == 1:
-            # assert(q.cubeLiterals.count(True)==0)
-            # assert(q.cubeLiterals.count(False)==0)
-            # '''
-            # ---------------------Generate .smt2 file (for building graph)--------------
-            # '''
-            # #FIXME: This .smt generation still exists problem, remember to fix this
-            # s_smt = Solver()  #use to generate SMT-lib2 file
+            assert(q.cubeLiterals.count(True)==0)
+            assert(q.cubeLiterals.count(False)==0)
+            '''
+            ---------------------Generate .smt2 file (for building graph)--------------
+            '''
+            #FIXME: This .smt generation still exists problem, remember to fix this
+            s_smt = Solver()  #use to generate SMT-lib2 file
 
-            # #This "Cube" is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
+            #This "Cube" is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
 
-            # # s_smt.add(Not(q.cube()))
-            # # s_smt.add(self.frames[q.t - 1].cube())
-            # # s_smt.add(self.trans.cube())
-            # # s_smt.add(substitute(q.cube(), self.primeMap))
+            # s_smt.add(Not(q.cube()))
+            # s_smt.add(self.frames[q.t - 1].cube())
+            # s_smt.add(self.trans.cube())
+            # s_smt.add(substitute(substitute(q.cube(), self.primeMap),self.inp_map))
             
-            # Cube = Not(
-            #     And(
-            #         Not(
-            #             And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
-            #           substitute(substitute(q.cube(), self.primeMap),self.inp_map))
-            #           )  # Fi-1 ! and not(q) and T and q'
-            #     ,
-            #         Not(And(self.frames[0].cube(),q.cube()))
-            #         )
-            # )
+            Cube = Not(
+                And(
+                    Not(
+                      And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
+                      substitute(substitute(q.cube(), self.primeMap),self.inp_map))
+                      )  # Fi-1 ! and not(q) and T and q'
+                ,
+                    Not(And(self.frames[0].cube(),q.cube()))
+                    )
+            )
             
-            # assert (s_smt.check() == unsat)
+            s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
 
-            # for index, literals in enumerate(q.cubeLiterals): 
-            #     s_smt.add(literals) 
-            #     s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+            for index, literals in enumerate(q.cubeLiterals): 
+                s_smt.add(literals) 
+                # s_smt.assert_and_track(literals,'p'+str(index))
+            
+            assert (s_smt.check() == unsat)
 
             '''
             -------------------Generate ground truth--------------
@@ -597,11 +603,13 @@ class PDR:
             passed_minimum_q = []
             is_looping = True
             for i in range(1,len(q.cubeLiterals)+1): #When i==len(q.cubeLiterals), this means it met wrost case
-                if len(end_lst) > 500: break
-                tmp_lst = []
                 for c in combinations(q.cubeLiterals, i):
-                    tmp_lst.append(c)
-                end_lst.extend(tmp_lst)
+                    if len(end_lst) > 3000:
+                        is_looping = False
+                        break
+                    end_lst.append(c)
+                if is_looping==False:
+                    break
 
             #FIXME: This may cause memory exploration of list (length 2^n, n is the length of original q)
 
@@ -616,12 +624,12 @@ class PDR:
             '''
             
             #TODO: Using multi-thread to handle inductive relative checking
-            dict_n = {}
-            dict_n[1] = 0
-            dict_n[2] = int(comb(len(end_lst),1))
-            dict_n[3] = int(comb(len(end_lst),1) + comb(len(end_lst),2))
-            dict_n[4] = int(comb(len(end_lst),1) + comb(len(end_lst),2) \
-                + comb(len(end_lst),2)+comb(len(end_lst),3))
+            # dict_n = {}
+            # dict_n[1] = 0
+            # dict_n[2] = int(comb(len(end_lst),1))
+            # dict_n[3] = int(comb(len(end_lst),1) + comb(len(end_lst),2))
+            # dict_n[4] = int(comb(len(end_lst),1) + comb(len(end_lst),2) \
+            #     + comb(len(end_lst),2)+comb(len(end_lst),3))
             
             for tuble in end_lst:
                 if len(passed_minimum_q) > 0:
@@ -630,6 +638,9 @@ class PDR:
                     qnew = tCube(q.t)
                     qnew.cubeLiterals = [tcube for tcube in tuble]
                     if check_init(qnew) == sat:
+                        continue
+                    if self._solveRelative(qnew) == sat:
+                        print("Did not pass inductive relative check")
                         continue
                     if self._solveRelative(qnew) == unsat:
                         passed_minimum_q.append(qnew)

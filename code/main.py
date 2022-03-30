@@ -4,7 +4,10 @@ Main function to run PDR (extract the graph as well)
 import argparse
 import os
 from datetime import datetime
+from datetime import timedelta
 from multiprocessing import Process
+from threading import Thread
+from time import sleep
 import sys
 sys.path.append("..")
 import model
@@ -20,15 +23,14 @@ test_file_folder_path = "../dataset/aag4train/" #open this if run through a fold
 #TODO: 把hwmcc07-10的数据集都跑一次，记录log，pk the SOTA with this framework
 #TODO: 尝试一下上次那个用parafoast有争议的case（就是转cnf那个，似乎是ilang simple pipeline 的 stall case？）
 
-def run_with_limited_time(func, time):
+def run_with_limited_time(func, t):
     p = Process(target=func)
     p.start()
-    p.join(time)
+    p.join(timeout=t)
     if p.is_alive():
         p.terminate()
         return False
     return True
-#test
 
 #TODO: add a switch to open "generate training set or not"
 if __name__ == '__main__':
@@ -40,8 +42,9 @@ if __name__ == '__main__':
     parser.add_argument('-t', type=int, help='the time limitation of one test to run', default=900)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
     #TODO: Add abstract & craig interpolation?
-    
-    args = parser.parse_args(['../dataset/aag4train/vis.coherence^5.E.aag', '-c'])
+    args = parser.parse_args(['--mode', '1', '-t', '20', '-c'])
+
+    #args = parser.parse_args(['../dataset/aag4train/vis.coherence^5.E.aag', '-c'])
     #args = parser.parse_args(['../dataset/aag4train/spec10-and-env.aag', '-c'])
 
     #args = parser.parse_args(['../dataset/ILAng_pipeline/simple_pipe_verify_stall_ADD_2.aag', '-c'])
@@ -93,6 +96,7 @@ if __name__ == '__main__':
 
     elif args.mode==1: # 1 means runs through all the folder
         print("================ Test the ./aag directory ========")
+        agent = None
         for root, dirs, files in os.walk(test_file_folder_path): #TODO: 把aig原本的二进制文件也搬进来，这边代码改成仅把.aag加入处理的文件队列里面
             for name in files:
                 if name.endswith('.aag'):
@@ -100,8 +104,28 @@ if __name__ == '__main__':
                     m = model.Model()
                     solver = pdr.PDR(*m.parse(os.path.join(root, name)))
                     startTime = datetime.now()
-                    if not run_with_limited_time(solver.run, args.t):
+
+                    # t = Thread(target=solver.run)
+                    # t.daemon = True
+                    # t.start() # start the thread
+                    # t.join(timeout=args.t) #FIXME: If timeout, the thread will throw exception and program core dump
+                    
+                    p = Process(target=solver.run, name="PDR")
+                    p.start()
+                    # Wait a maximum of 10 seconds for foo
+                    # Usage: join([timeout in seconds])
+                    p.join(int(args.t))
+
+                    # If thread is active
+                    if p.is_alive():
+                        print("PDR is running... let's kill it...")
+                        # Terminate foo
+                        p.terminate()
+                        p.join()
+
+                    if(int((datetime.now() - startTime).seconds) >= args.t):
                         print("Time Out")
+                        sleep(100)
                     else:
                         endTime = datetime.now()
                         print("Done in time")
