@@ -155,6 +155,17 @@ class tCube:
     def cube(self): #导致速度变慢的罪魁祸首？
         return simplify(And(self.cubeLiterals))
 
+    # Convert the trans into real cube
+    def cube_remove_equal(self):
+        res = tCube(self.t)
+        for literal in self.cubeLiterals:
+            children = literal.children()
+            assert(len(children) == 2)
+            cube_literal = And(Not(And(children[0],Not(children[1]))), Not(And(children[1],Not(children[0]))))
+            res.add(cube_literal)
+        return res
+
+
     # def ternary_sim(self, index_of_x):
     #     # first extract var,val from cubeLiteral
     #     s = Solver()
@@ -199,7 +210,7 @@ class PDR:
         self.literals = literals
         self.items = self.primary_inputs + self.literals + primes_inp + primes
         self.lMap = {str(l): l for l in self.items}
-        self.post = post
+        self.post = post 
         self.frames = list()
        # self.primaMap_new = [(literals[i], primes[i]) for i in range(len(literals))] #TODO: Map the input to input' (input prime)
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
@@ -586,15 +597,16 @@ class PDR:
             Cube = Not(
                 And(
                     Not(
-                      And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
-                      substitute(substitute(q.cube(), self.primeMap),self.inp_map))
+                      And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube_remove_equal().cube(),
+                      substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),list(self.pv2next.items())))
+                      #substitute(q.cube(), self.primeMap))
                       )  # Fi-1 ! and not(q) and T and q'
                 ,
                     Not(And(self.frames[0].cube(),q.cube()))
                     )
             )
-            
-            
+
+            #Cube = substitute(Cube,list(self.pv2next.items()))
 
             for index, literals in enumerate(q.cubeLiterals): 
                 s_smt.add(literals) 
