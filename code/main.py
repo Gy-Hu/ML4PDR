@@ -23,14 +23,6 @@ test_file_folder_path = "../dataset/aag4train/" #open this if run through a fold
 #TODO: 把hwmcc07-10的数据集都跑一次，记录log，pk the SOTA with this framework
 #TODO: 尝试一下上次那个用parafoast有争议的case（就是转cnf那个，似乎是ilang simple pipeline 的 stall case？）
 
-def run_with_limited_time(func, t):
-    p = Process(target=func)
-    p.start()
-    p.join(timeout=t)
-    if p.is_alive():
-        p.terminate()
-        return False
-    return True
 
 #TODO: add a switch to open "generate training set or not"
 if __name__ == '__main__':
@@ -41,8 +33,9 @@ if __name__ == '__main__':
     parser.add_argument('--mode',type=int,help='choose the mode to run the program, 0 means only run one file, 1 means run through the files in folder',default=0)
     parser.add_argument('-t', type=int, help='the time limitation of one test to run', default=900)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
+    parser.add_argument('-s', type=str, help='switch to do data generation in generalized predecessor or inductive generalization', default='off')
     #TODO: Add abstract & craig interpolation?
-    args = parser.parse_args(['--mode', '1', '-t', '20', '-c'])
+    #args = parser.parse_args(['--mode', '1', '-t', '20', '-c'])
 
     #args = parser.parse_args(['../dataset/aag4train/vis.coherence^5.E.aag', '-c'])
     #args = parser.parse_args(['../dataset/aag4train/spec10-and-env.aag', '-c'])
@@ -52,7 +45,7 @@ if __name__ == '__main__':
     #TODO: Using Dr.Zhang's method to accelerate the speed of solving unsafe case
     #args = parser.parse_args(['../dataset/hwmcc07_tip/texas.two_proc^5.E.aag', '-c']) #SAT, time so long, around 20 minutes
     #args = parser.parse_args(['../dataset/toy_experiment/play.aag', '-c'])
-    #args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
+    args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c','-s','gp'])
     #TODO: Solve the bug on this case (safe -> unsafe)
     #args = parser.parse_args(['../dataset/hwmcc07_amba/spec1-and-env.aag','-c']) #When you need to run single file, setup this
     #args = parser.parse_args(['../dataset/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
@@ -79,6 +72,18 @@ if __name__ == '__main__':
 
         # Not using RL
         solver = pdr.PDR(*m.parse(file))
+        if args.s=='off':
+            solver.smt2_gen_GP = 1
+            solver.smt2_gen_IG = 1
+        elif args.s=='on':
+            solver.smt2_gen_GP = 1
+            solver.smt2_gen_IG = 1
+        elif args.s=='ig':
+            solver.smt2_gen_IG = 1
+            solver.smt2_gen_GP = 0
+        elif args.s=='gp':
+            solver.smt2_gen_IG = 0
+            solver.smt2_gen_GP = 1
         startTime = datetime.now()
         solver.run(agent)
         endTime = datetime.now()
@@ -103,6 +108,19 @@ if __name__ == '__main__':
                     print("============ Testing " + str(name) + " ==========")
                     m = model.Model()
                     solver = pdr.PDR(*m.parse(os.path.join(root, name)))
+                    if args.s=='off':
+                        solver.smt2_gen_GP = 1
+                        solver.smt2_gen_IG = 1
+                    elif args.s=='on':
+                        solver.smt2_gen_GP = 1
+                        solver.smt2_gen_IG = 1
+                    elif args.s=='ig':
+                        solver.smt2_gen_IG = 1
+                        solver.smt2_gen_GP = 0
+                    elif args.s=='gp':
+                        solver.smt2_gen_IG = 0
+                        solver.smt2_gen_GP = 1
+
                     startTime = datetime.now()
 
                     # t = Thread(target=solver.run)
@@ -125,7 +143,7 @@ if __name__ == '__main__':
 
                     if(int((datetime.now() - startTime).seconds) >= args.t):
                         print("Time Out")
-                        sleep(100)
+                        #sleep(100)
                     else:
                         endTime = datetime.now()
                         print("Done in time")

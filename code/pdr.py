@@ -184,7 +184,7 @@ def _extract(literaleq):
     return v, val
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename, smt2_gen_GP=0, smt2_gen_IG=0):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -221,6 +221,12 @@ class PDR:
         self.sum_IG_GT = 0 # Sum of the literals produced by combinations
         self.sum_GP = 0 # Sum of the literals of predecessor (unsat core or other methods)
         self.sum_GP_GT = 0 #Sum of the minimum literals of predecessor (MUST, ternary simulation etc.)
+        '''
+        --------------Switch to open/close the ground truth data generation------------------
+        '''
+        self.smt2_gen_IG = smt2_gen_IG
+        self.smt2_gen_GP = smt2_gen_GP
+        
 
     def check_init(self):
         s = Solver()
@@ -260,7 +266,13 @@ class PDR:
                     if self.generaliztion_data_GP: # When this list is not empty, it return true
                         df = pd.DataFrame(self.generaliztion_data_GP)
                         df = df.fillna(1)
-                        df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                        df.to_csv("../dataset/GP2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
+                    # Generate ground truth of inductive generalization
+                    if self.generaliztion_data_IG: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_IG)
+                        df = df.fillna(0)
+                        df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
                     
                     # Print out the improvement space of inductive generalization
                     if self.sum_IG_GT != 0:
@@ -295,7 +307,13 @@ class PDR:
                         df = pd.DataFrame(self.generaliztion_data_GP)
                         df = df.fillna(1)
                         #df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
-                        df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                        df.to_csv("../dataset/GP2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
+                    # Generate ground truth of inductive generalization
+                    if self.generaliztion_data_IG: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_IG)
+                        df = df.fillna(0)
+                        df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
                     
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
@@ -545,11 +563,11 @@ class PDR:
     
     #TODO: Add assertion on this to check inductive relative
     #TODO: Add assertion to check there is no 'True' and 'False' in the cubeLiterals list
-    def generate_GT(self,q: tCube,smt2_gen_IG=0): #smt2_gen_IG is a switch to trun on/off .smt file generation
+    def generate_GT(self,q: tCube): #smt2_gen_IG is a switch to trun on/off .smt file generation
         
-        if smt2_gen_IG == 0:
+        if self.smt2_gen_IG == 0:
             return None
-        elif smt2_gen_IG == 1:
+        elif self.smt2_gen_IG == 1:
             assert(q.cubeLiterals.count(True)==0)
             assert(q.cubeLiterals.count(False)==0)
             '''
@@ -576,13 +594,20 @@ class PDR:
                     )
             )
             
-            s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+            
 
             for index, literals in enumerate(q.cubeLiterals): 
                 s_smt.add(literals) 
                 # s_smt.assert_and_track(literals,'p'+str(index))
             
+            s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+
             assert (s_smt.check() == unsat)
+
+            filename = '../dataset/IG2graph/generalize_IG/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_IG)) +'.smt2')
+            with open(filename, mode='w') as f:
+                f.write(s_smt.to_smt2())
+            f.close()
 
             '''
             -------------------Generate ground truth--------------
@@ -631,6 +656,8 @@ class PDR:
             # dict_n[4] = int(comb(len(end_lst),1) + comb(len(end_lst),2) \
             #     + comb(len(end_lst),2)+comb(len(end_lst),3))
             
+            data = {} # Store ground truth, and output to .csv
+            data['inductive_check'] = filename.split('/')[-1] #Store the name of .smt file
             for tuble in end_lst:
                 if len(passed_minimum_q) > 0:
                     break
@@ -639,17 +666,24 @@ class PDR:
                     qnew.cubeLiterals = [tcube for tcube in tuble]
                     if check_init(qnew) == sat:
                         continue
-                    if self._solveRelative(qnew) == sat:
-                        print("Did not pass inductive relative check")
-                        continue
+                    # if self._solveRelative(qnew) == sat:
+                    #     print("Did not pass inductive relative check")
+                    #     continue
                     if self._solveRelative(qnew) == unsat:
                         passed_minimum_q.append(qnew)
                 else:
-                    print("Program met bug!")
+                    raise AssertionError
                 #ADD: When len(passed_single_q) != 0, break the for loop
             if len(passed_minimum_q)!= 0:
-                q = passed_minimum_q[0] # Minimum ground truth has been generated
-                return q
+                q_minimum = passed_minimum_q[0] # Minimum ground truth has been generated
+                for idx in range(len(q.cubeLiterals)):
+                    var, val = _extract(q.cubeLiterals[idx])
+                    data[str(var)] = 0
+                for idx in range(len(q_minimum.cubeLiterals)):
+                    var, val = _extract(q_minimum.cubeLiterals[idx])
+                    data[str(var)] = 1 # Mark q-like as 1
+                self.generaliztion_data_IG.append(data)
+                return q_minimum
             else:
                 print("The ground truth has not been found")
                 return None
@@ -799,7 +833,7 @@ class PDR:
     #     x = Not(x)
 
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, smt2_gen_GP=0): #smt2_gen_GP is a switch to trun on/off .smt file generation
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr): #smt2_gen_GP is a switch to trun on/off .smt file generation
         '''
         :param prev_cube: sat model of CTI (v1 == xx , v2 == xx , v3 == xxx ...)
         :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
@@ -833,7 +867,7 @@ class PDR:
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
         
-        if smt2_gen_GP==1:
+        if self.smt2_gen_GP==1:
             s = Solver()
             s_smt = Solver()  #use to generate SMT-lib2 file
             for index, literals in enumerate(tcube_cp.cubeLiterals):
@@ -845,13 +879,13 @@ class PDR:
             core = s.unsat_core()
             core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
 
-            filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_GP)) +'.smt2')
+            filename = '../dataset/GP2graph/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_GP)) +'.smt2')
             data['nextcube'] = filename.split('/')[-1]
             with open(filename, mode='w') as f:
                 f.write(s_smt.to_smt2())
             f.close()
 
-        elif smt2_gen_GP==0:
+        elif self.smt2_gen_GP==0:
             s = Solver()
             for index, literals in enumerate(tcube_cp.cubeLiterals):
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
@@ -915,7 +949,7 @@ class PDR:
         # tcube_cp.cubeLiterals = [tcube_cp.cubeLiterals[i] for i in range(0, len(tcube_cp.cubeLiterals), 1) if i not in index_to_remove]
         # return tcube_cp
 
-        if smt2_gen_GP==1: self.generaliztion_data_GP.append(data)
+        if self.smt2_gen_GP==1: self.generaliztion_data_GP.append(data)
 
         tcube_cp.remove_true()
         #print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))

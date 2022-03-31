@@ -11,6 +11,7 @@ from neuro_predessor import NeuroPredessor
 from data_gen import problem, walkFile
 import pandas as pd
 from pathlib import Path
+from sklearn.model_selection import train_test_split
 
 #TODO: Try small size sample and test accuracy
 
@@ -20,6 +21,13 @@ dataset -> contains around 10000 cases
 batch -> one .smt2? (one time of generalized predecessor?) 
 iteration -> every .smt2
 epoch -> len(dataset)/batch -> 10000/1 maybe?
+'''
+
+'''
+Note: 
+For the label of the problem, 
+label of the flexiable node -> generalized predecessor
+label of the minimum q (q-like) -> inductive generalization
 '''
 
 def refine_data(problem):
@@ -52,7 +60,7 @@ def refine_output(problem, output):
 
 def refine_target(problem):
   '''
-  Refine the is_flexiable
+  Refine the is_flexiable -> ignore the single node in the graph
   '''
   single_node_index = [] # store the index
   var_list = list(problem.db_gt)
@@ -65,7 +73,7 @@ def refine_target(problem):
       single_node_index.append(i)
 
   for index in reversed(single_node_index):
-    problem.is_flexible.pop(index)
+    problem.label.pop(index)
 
 
 if __name__ == "__main__":
@@ -73,8 +81,11 @@ if __name__ == "__main__":
   args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '120', \
                             '--epochs', '20', \
                             '--gen_log', '/home/gary/coding_env/NeuroSAT/log/data_maker_sr3t10.log', \
-                            '--train-file', '../dataset/train/',\
-                            '--val-file','../dataset/eval/'
+                            # '--train-file', '../dataset/GP2graph/train/',\
+                            # '--val-file','../dataset/GP2graph/validate/',\
+                            '--train-file', '../dataset/IG2graph/train/',\
+                            '--val-file','../dataset/IG2graph/validate/',\
+                            '--mode', 'test'
                             ])
 
 
@@ -99,10 +110,13 @@ if __name__ == "__main__":
       with open(train_file,'rb') as f:
         train.append(pickle.load(f))
 
-  eval_lst = walkFile(args.val_file)
-  for val_file in eval_lst:
-    with open(val_file,'rb') as f2:
-      val.append(pickle.load(f2))
+  if args.mode=='test':
+    train, val = train_test_split(train, test_size=0.2, random_state=42)
+  elif args.mode=='train':
+    val_lst = walkFile(args.val_file)
+    for val_file in val_lst:
+      with open(val_file,'rb') as f2:
+        val.append(pickle.load(f2))
 
   #FIXME: This part works strange
 
@@ -159,7 +173,7 @@ if __name__ == "__main__":
     for _, prob in enumerate(train_bar):
       optim.zero_grad()
       outputs = net(prob)
-      target = torch.Tensor(prob.is_flexible).cuda().float() #TODO: update the loss function here
+      target = torch.Tensor(prob.label).cuda().float() #TODO: update the loss function here
       outputs = sigmoid(outputs)
       #outputs = refine_output(prob,outputs)
       loss = loss_fn(outputs, target)
@@ -195,7 +209,7 @@ if __name__ == "__main__":
     for _, prob in enumerate(val_bar):
       optim.zero_grad()
       outputs = net(prob)
-      target = torch.Tensor(prob.is_flexible).cuda().float()
+      target = torch.Tensor(prob.label).cuda().float()
       # print(outputs.shape, target.shape)
       # print(outputs, target)
       outputs = sigmoid(outputs)
