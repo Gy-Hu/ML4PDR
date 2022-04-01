@@ -32,7 +32,7 @@
 (assert
  (= v26 true))
 (assert
- (let (($x168 (and v18 v22 v26)))
+ (let (($x172 (and v18 v22 v26)))
  (let (($x70 (not v30)))
  (let (($x55 (not v28)))
  (let (($x50 (not v26)))
@@ -44,8 +44,8 @@
  (let (($x35 (not v14)))
  (let (($x36 (not v12)))
  (let (($x141 (and $x36 $x35 $x41 $x40 $x46 $x45 $x51 $x50 $x55 $x70)))
- (let (($x345 (and $x141)))
+ (let (($x227 (and $x141)))
  (let (($x220 (and (not (and v12_prime (not (and (not (and $x35 $x36)) i2)))) (not (and (not (and $x35 $x36)) i2 (not v12_prime))) (not (and v14_prime $x40)) (not (and v18 (not v14_prime))) (not (and v16_prime (not (and (not (and $x40 $x41)) i4)))) (not (and (not (and $x40 $x41)) i4 (not v16_prime))) (not (and v18_prime $x45)) (not (and v22 (not v18_prime))) (not (and v20_prime (not (and (not (and $x45 $x46)) i6)))) (not (and (not (and $x45 $x46)) i6 (not v20_prime))) (not (and v22_prime $x50)) (not (and v26 (not v22_prime))) (not (and v24_prime (not (and (not (and $x50 $x51)) i8)))) (not (and (not (and $x50 $x51)) i8 (not v24_prime))) (not (and v26_prime v30)) (not (and $x70 (not v26_prime))) (not (and v28_prime (not (and (not (and v30 $x55)) i10)))) (not (and (not (and v30 $x55)) i10 (not v28_prime))) (not (and v30_prime v14)) (not (and $x35 (not v30_prime))))))
- (let (($x227 (and (not (and $x345 (not $x168) $x220 (and v22 v26 $x70))) (not (and $x345 $x168)))))
- (not $x227)))))))))))))))))
+ (let (($x255 (and (not (and $x227 (not $x172) $x220 (and v22 v26 $x70))) (not (and $x227 $x172)))))
+ (not $x255)))))))))))))))))
 (check-sat)

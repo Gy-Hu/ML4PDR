@@ -30,37 +30,57 @@ label of the flexiable node -> generalized predecessor
 label of the minimum q (q-like) -> inductive generalization
 '''
 
-def refine_data(problem):
-  df_empty = pd.DataFrame(columns=problem.unpack_matrix.columns, index=problem.unpack_matrix.index)
-  df_empty = df_empty.fillna(1)
-  df_empty = df_empty[df_empty.columns.drop(list(df_empty.filter(regex='m_')))]
-  df_empty.columns = df_empty.columns.str.replace(r'n_', '')
-  df_empty.drop(columns=['old_index'],inplace=True)
-  problem.db_gt = problem.db_gt.reindex(columns=problem.db_gt.columns | df_empty.columns)
 
-def refine_output(problem, output):
+# def refine_data(problem):
+#   df_empty = pd.DataFrame(columns=problem.unpack_matrix.columns, index=problem.unpack_matrix.index)
+#   df_empty = df_empty.fillna(1)
+#   df_empty = df_empty[df_empty.columns.drop(list(df_empty.filter(regex='m_')))]
+#   df_empty.columns = df_empty.columns.str.replace(r'n_', '')
+#   df_empty.drop(columns=['old_index'],inplace=True)
+#   problem.db_gt = problem.db_gt.reindex(columns=problem.db_gt.columns | df_empty.columns)
+
+# def refine_output(problem, output):
+#   '''
+#   Find out the node not in graph, and re-construct the output after net() return the value
+#   '''
+#   output_lst = (output.squeeze()).tolist()
+#   single_node_index = [] # store the index
+#   var_list = list(problem.db_gt)
+#   var_list.pop(0) #remove "filename_nextcube"
+#   tmp = problem.value_table[~problem.value_table.index.str.contains('m_')]
+#   tmp.index = tmp.index.str.replace("n_","")
+
+#   for i, element in enumerate(var_list):
+#     if element not in tmp.index.tolist():
+#       single_node_index.append(i)
+
+#   for index in single_node_index:
+#     output_lst.insert(index,1)
+
+#   return torch.Tensor(output_lst).cuda().float()
+
+# def del_tensor_ele(arr,index):
+#     arr1 = arr[0:index]
+#     arr2 = arr[index+1:]
+#     return torch.cat((arr1,arr2),dim=0)
+
+def refine_cube(problem):
   '''
-  Find out the node not in graph, and re-construct the output after net() return the value
+  Caculate the q index in the value table
+  -> for reducing the output of NN -> inductive generalization 
   '''
-  output_lst = (output.squeeze()).tolist()
-  single_node_index = [] # store the index
-  var_list = list(problem.db_gt)
-  var_list.pop(0) #remove "filename_nextcube"
-  tmp = problem.value_table[~problem.value_table.index.str.contains('m_')]
-  tmp.index = tmp.index.str.replace("n_","")
+  q_index = []
+  tmp_lst_all_node = problem.value_table.index.to_list()[problem.n_nodes:]
+  tmp_lst_q = list(problem.db_gt)[1:]
+  for element in tmp_lst_q:
+    q_index.append(tmp_lst_all_node.index('n_'+str(element)))
+  return q_index  
 
-  for i, element in enumerate(var_list):
-    if element not in tmp.index.tolist():
-      single_node_index.append(i)
-
-  for index in single_node_index:
-    output_lst.insert(index,1)
-
-  return torch.Tensor(output_lst).cuda().float()
 
 def refine_target(problem):
   '''
   Refine the is_flexiable -> ignore the single node in the graph
+  -> generalized predecessor
   '''
   single_node_index = [] # store the index
   var_list = list(problem.db_gt)
@@ -124,6 +144,10 @@ if __name__ == "__main__":
   #   refine_data(train_data)
 
   #TODO: dump the data in data_gen.py
+
+  # Fetch the index of q for reduce the output of NN
+  if train is not None: q_index = refine_cube(train[0])
+  
   net = NeuroPredessor(args)
   net = net.cuda() #TODO: modify to accept both CPU and GPU version
 
@@ -175,6 +199,10 @@ if __name__ == "__main__":
       outputs = net(prob)
       target = torch.Tensor(prob.label).cuda().float() #TODO: update the loss function here
       outputs = sigmoid(outputs)
+      
+      torch_select = torch.Tensor(q_index).cuda().int() 
+      outputs = torch.index_select(outputs, 0, torch_select)
+      
       #outputs = refine_output(prob,outputs)
       loss = loss_fn(outputs, target)
       desc = 'loss: %.4f; ' % (loss.item())
@@ -213,6 +241,8 @@ if __name__ == "__main__":
       # print(outputs.shape, target.shape)
       # print(outputs, target)
       outputs = sigmoid(outputs)
+      torch_select = torch.Tensor(q_index).cuda().int()
+      outputs = torch.index_select(outputs, 0, torch_select)
       preds = torch.where(outputs > 0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
 
       TP += (preds.eq(1) & target.eq(1)).cpu().sum()

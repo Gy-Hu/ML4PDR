@@ -29,3 +29,4 @@ bak/
 **/bak
 aag4train_bak/
 not_used/
+*.smt2

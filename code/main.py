@@ -45,7 +45,7 @@ if __name__ == '__main__':
     #TODO: Using Dr.Zhang's method to accelerate the speed of solving unsafe case
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/texas.two_proc^5.E.aag', '-c']) #SAT, time so long, around 20 minutes
     #args = parser.parse_args(['../dataset/aig_benchmark/toy_experiment/play.aag', '-c'])
-    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c','-s','ig'])
+    #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c','-s','ig'])
     #TODO: Solve the bug on this case (safe -> unsafe)
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec1-and-env.aag','-c']) #When you need to run single file, setup this
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     #args = parser.parse_args(['../dataset/aig_benchmark/toy_experiment/counter_unsat.aag', '-c'])
     #args = parser.parse_args(['../dataset/aig_benchmark/toy_experiment/play.aag', '-c'])
     #args = parser.parse_args(['-c']) #Run through a folder
-    #args = parser.parse_args()
+    args = parser.parse_args()
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()

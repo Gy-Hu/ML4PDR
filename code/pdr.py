@@ -583,7 +583,8 @@ class PDR:
             assert(q.cubeLiterals.count(False)==0)
             '''
             ---------------------Generate .smt2 file (for building graph)--------------
-            '''
+            
+            
             #FIXME: This .smt generation still exists problem, remember to fix this
             s_smt = Solver()  #use to generate SMT-lib2 file
 
@@ -620,6 +621,8 @@ class PDR:
             with open(filename, mode='w') as f:
                 f.write(s_smt.to_smt2())
             f.close()
+            '''
+            
 
             '''
             -------------------Generate ground truth--------------
@@ -669,7 +672,6 @@ class PDR:
             #     + comb(len(end_lst),2)+comb(len(end_lst),3))
             
             data = {} # Store ground truth, and output to .csv
-            data['inductive_check'] = filename.split('/')[-1] #Store the name of .smt file
             for tuble in end_lst:
                 if len(passed_minimum_q) > 0:
                     break
@@ -687,10 +689,33 @@ class PDR:
                     raise AssertionError
                 #ADD: When len(passed_single_q) != 0, break the for loop
             if len(passed_minimum_q)!= 0:
+                '''
+                ---------------------Generate .smt2 file (for building graph)--------------
+
+                Not generate the .smt2 file when enumerate combinations of literals could not find ground truth
+                '''
+                
+                s_smt = Solver()
+                Cube = Not(And(Not(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube_remove_equal().cube(), substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),list(self.pv2next.items())))),Not(And(self.frames[0].cube(),q.cube()))))
+                for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+                s_smt.add(Cube)
+                assert (s_smt.check() == unsat)
+                filename = '../dataset/IG2graph/generalize_IG/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_IG)) +'.smt2')
+                data['inductive_check'] = filename.split('/')[-1] #Store the name of .smt file
+                with open(filename, mode='w') as f: f.write(s_smt.to_smt2())
+                f.close() 
+                
+
+                '''
+                ---------------------Export the ground truth----------------------
+                '''
                 q_minimum = passed_minimum_q[0] # Minimum ground truth has been generated
-                for idx in range(len(q.cubeLiterals)):
+                for idx in range(len(q.cubeLiterals)): # -> ground truth size is q
                     var, val = _extract(q.cubeLiterals[idx])
                     data[str(var)] = 0
+                # for idx in range(len(Cube.cubeLiterals)): # -> ground truth size is Cube (combine of two check)
+                #     var, val = _extract(Cube.cubeLiterals[idx])
+                #     data[str(var)] = 0
                 for idx in range(len(q_minimum.cubeLiterals)):
                     var, val = _extract(q_minimum.cubeLiterals[idx])
                     data[str(var)] = 1 # Mark q-like as 1

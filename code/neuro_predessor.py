@@ -29,6 +29,7 @@ class NeuroPredessor(nn.Module):
         self.var_vote = MLP(self.dim, self.dim, 1) #vote for variable and node
         self.denom = torch.sqrt(torch.Tensor([self.dim]))
 
+
     def forward(self, problem):
         n_var = problem.n_vars #TODO: Refine here (modify in data_gen.py)
         n_node = problem.n_nodes #TODO: Refine here (modify in data_gen.py)
