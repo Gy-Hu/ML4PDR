@@ -12,6 +12,7 @@ from data_gen import problem, walkFile
 import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
+from time import sleep
 
 #TODO: Try small size sample and test accuracy
 
@@ -156,7 +157,10 @@ if __name__ == "__main__":
   log_file = open(os.path.join(args.log_dir, args.task_name + '.log'), 'a+')
   detail_log_file = open(os.path.join(args.log_dir, args.task_name + '_detail.log'), 'a+')
 
-  loss_fn = nn.BCELoss() #TODO: Try to modify this part
+  #loss_fn = nn.BCELoss() #TODO: Try to modify this part
+  #loss_fn = nn.SmoothL1Loss()
+  #loss_fn = nn.CrossEntropyLoss()
+  loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([7]).cuda())
   optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
   #optim = optim.Adam(net.parameters(), lr=0.02, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
   sigmoid  = nn.Sigmoid()
