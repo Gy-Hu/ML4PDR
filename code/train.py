@@ -147,7 +147,7 @@ if __name__ == "__main__":
   #TODO: dump the data in data_gen.py
 
   # Fetch the index of q for reduce the output of NN
-  if train is not None: q_index = refine_cube(train[0])
+  # if train is not None: q_index = refine_cube(train[0])
   
   net = NeuroPredessor(args)
   net = net.cuda() #TODO: modify to accept both CPU and GPU version
@@ -160,9 +160,9 @@ if __name__ == "__main__":
   #loss_fn = nn.BCELoss() #TODO: Try to modify this part
   #loss_fn = nn.SmoothL1Loss()
   #loss_fn = nn.CrossEntropyLoss()
-  loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([7]).cuda())
+  loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([8]).cuda())
   optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
-  #optim = optim.Adam(net.parameters(), lr=0.02, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
+  #optim = optim.Adam(net.parameters(), lr=0.0002, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
   sigmoid  = nn.Sigmoid()
 
   best_acc = 0.0
@@ -197,8 +197,11 @@ if __name__ == "__main__":
     train_bar = tqdm(train)
     TP, TN, FN, FP = torch.zeros(1).long(), torch.zeros(1).long(), torch.zeros(1).long(), torch.zeros(1).long()
     net.train()
+    perfection_rate = 0 # Used to record the perfection ratio of the validation set
+    all = 0 # Used to record the number of all samples in the validation set
     #FIXME: The train here should be a list contains serverals files (>1)
     for _, prob in enumerate(train_bar):
+      q_index = refine_cube(prob)
       optim.zero_grad()
       outputs = net(prob)
       target = torch.Tensor(prob.label).cuda().float() #TODO: update the loss function here
@@ -216,13 +219,17 @@ if __name__ == "__main__":
 
       preds = torch.where(outputs>0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
 
+      # Calulate the perfect accuracy
+      all = all + 1
+      if target.equal(preds): perfection_rate = perfection_rate + 1
+      
       TP += (preds.eq(1) & target.eq(1)).cpu().sum()
       TN += (preds.eq(0) & target.eq(0)).cpu().sum()
       FN += (preds.eq(0) & target.eq(1)).cpu().sum()
       FP += (preds.eq(1) & target.eq(0)).cpu().sum()
       TOT = TP + TN + FN + FP
 
-      desc += 'acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % ((TP.item()+TN.item())*1.0/TOT.item(), TP.item()*1.0/TOT.item(), TN.item()*1.0/TOT.item(), FN.item()*1.0/TOT.item(), FP.item()*1.0/TOT.item())
+      desc += 'perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (perfection_rate*1.0/all,(TP.item()+TN.item())*1.0/TOT.item(), TP.item()*1.0/TOT.item(), TN.item()*1.0/TOT.item(), FN.item()*1.0/TOT.item(), FP.item()*1.0/TOT.item())
       # train_bar.set_description(desc)
       if (_ + 1) % 100 == 0:
         print(desc, file=detail_log_file, flush=True)
@@ -238,7 +245,10 @@ if __name__ == "__main__":
     val_bar = tqdm(val)
     TP, TN, FN, FP = torch.zeros(1).long(), torch.zeros(1).long(), torch.zeros(1).long(), torch.zeros(1).long()
     net.eval()
+    perfection_rate = 0 # Used to record the perfection ratio of the validation set
+    all = 0 # Used to record the number of all samples in the validation set
     for _, prob in enumerate(val_bar):
+      q_index = refine_cube(prob)
       optim.zero_grad()
       outputs = net(prob)
       target = torch.Tensor(prob.label).cuda().float()
@@ -249,13 +259,18 @@ if __name__ == "__main__":
       outputs = torch.index_select(outputs, 0, torch_select)
       preds = torch.where(outputs > 0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
 
+      # Calulate the perfect accuracy
+      all = all + 1
+      if target.equal(preds): perfection_rate = perfection_rate + 1
+
       TP += (preds.eq(1) & target.eq(1)).cpu().sum()
       TN += (preds.eq(0) & target.eq(0)).cpu().sum()
       FN += (preds.eq(0) & target.eq(1)).cpu().sum()
       FP += (preds.eq(1) & target.eq(0)).cpu().sum()
       TOT = TP + TN + FN + FP
 
-      desc = 'acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (
+      desc = 'perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (
+      perfection_rate*1.0/all,
       (TP.item() + TN.item()) * 1.0 / TOT.item(), TP.item() * 1.0 / TOT.item(), TN.item() * 1.0 / TOT.item(),
       FN.item() * 1.0 / TOT.item(), FP.item() * 1.0 / TOT.item())
       # val_bar.set_description(desc)

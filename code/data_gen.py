@@ -305,7 +305,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Generate graph from SMT2 file")
     # help_info = "Usage: python generate_aag.py <aig-dir>"
     parser.add_argument('-d', type=str, default=None, help='Input the smt file directory name for converting to graph')
-    parser.add_argument('-m',type=str,help='choose the mode to run the program, 0 means run for generalizaed predecessor, 1 means run for inductive generalization',default=None)
+    parser.add_argument('-m',type=str,help='choose the mode to run the program, gp means run for generalizaed predecessor, ig means run for inductive generalization',default=None)
     args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig'])
     #args = parser.parse_args(['-d','../dataset/GP2graph/generalize_pre/','-m', 'gp'])
 
@@ -341,7 +341,7 @@ if __name__ == '__main__':
                 if any(substr in str_ for str_ in item):
                     item.insert(1 , "../dataset/GP2graph/generalization/" + substr + ".csv")
 
-        matching = [s for s in zipped_lst if len(s)!=3]
+        matching = [s for s in zipped_lst if len(s)==4]
         # filename4prb = ["../dataset/GP2graph/tmp/generalize_adj_matrix/adj_nusmv.syncarb5^2.B_0.pkl","../dataset/GP2graph/generalization/nusmv.syncarb5^2.B.csv","../dataset/GP2graph/tmp/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl","../dataset/GP2graph/tmp/edges_and_relation/er_nusmv.syncarb5^2.B_0.pkl"]
         for filename4prb in matching:
             prob = problem(filename4prb)
@@ -357,20 +357,22 @@ if __name__ == '__main__':
         GT_table_csv_list = walkFile("../dataset/IG2graph/generalization/")
         vt_all_node_pkl_list = walkFile("../dataset/IG2graph/tmp/all_node_value_table/")
         edge_and_relation_pkl_list = walkFile("../dataset/IG2graph/tmp/edges_and_relation/")
-
-        zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))
+        # The number of tmp file should equal to .smt file
+        assert(len(adj_matrix_pkl_list) == len(vt_all_node_pkl_list) == len(edge_and_relation_pkl_list)==len(smt2_file_list))
+        zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))       
         raw_str_lst = []
         for raw in GT_table_csv_list:
             raw_str = (raw.split('/')[-1]).replace(".csv","")
             if any(raw_str in s for s in adj_matrix_pkl_list):
                 raw_str_lst.append(raw_str)
         matching = []
+        # When zip the list, the list will be converted to tuple, so we need to convert it back to list
         zipped_lst = list(map(lambda x: list(x), zipped))
         for substr in raw_str_lst:
             for item in zipped_lst:
                 if any(substr in str_ for str_ in item):
                     item.insert(1 , "../dataset/IG2graph/generalization/" + substr + ".csv")
-        matching = [s for s in zipped_lst if len(s)!=3]
+        matching = [s for s in zipped_lst if len(s)==4]
         for filename4prb in matching:
             prob = problem(filename4prb,mode=args.m)
             prob.dump("../dataset/IG2graph/train/", filename4prb[0])

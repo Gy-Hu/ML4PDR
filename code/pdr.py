@@ -696,7 +696,16 @@ class PDR:
                 '''
                 
                 s_smt = Solver()
-                Cube = Not(And(Not(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube_remove_equal().cube(), substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),list(self.pv2next.items())))),Not(And(self.frames[0].cube(),q.cube()))))
+                Cube = Not(
+                    And(
+                        Not(
+                        And(self.frames[q.t-1].cube(), 
+                        Not(q.cube()), 
+                        substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                        list(self.pv2next.items()))
+                        )),
+                        Not(And(self.frames[0].cube(),q.cube()))
+                        ))
                 for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
                 s_smt.add(Cube)
                 assert (s_smt.check() == unsat)
