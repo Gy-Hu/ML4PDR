@@ -13,6 +13,7 @@ import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from time import sleep
+import z3
 
 #TODO: Try small size sample and test accuracy
 
@@ -65,18 +66,32 @@ label of the minimum q (q-like) -> inductive generalization
 #     arr2 = arr[index+1:]
 #     return torch.cat((arr1,arr2),dim=0)
 
-def refine_cube(problem):
+def refine_cube(problem): #FIXME: This part has issue!
+  '''
+  Caculate the variable index in the value table (variable in db_gt)
+  -> for reducing the output of NN -> inductive generalization 
+  '''
+  var_index = []
+  tmp_lst_all_node = problem.value_table.index.to_list()[problem.n_nodes:]
+  tmp_lst_var = list(problem.db_gt)[1:] #sequence is different from the table
+  for element in tmp_lst_var:
+    var_index.append(tmp_lst_all_node.index('n_'+str(element)))
+  return var_index  
+
+def extract_q_like(problem):
   '''
   Caculate the q index in the value table
   -> for reducing the output of NN -> inductive generalization 
   '''
   q_index = []
   tmp_lst_all_node = problem.value_table.index.to_list()[problem.n_nodes:]
-  tmp_lst_q = list(problem.db_gt)[1:]
-  for element in tmp_lst_q:
+  
+  constraints = z3.parse_smt2_file(((problem.filename[0].split('/')[-1]).replace('.pkl','.smt2')).replace('adj_',''), sorts={}, decls={})
+  ig_q = constraints[:-1]
+
+  for element in ig_q: # literals in q (in inductive generalization process)
     q_index.append(tmp_lst_all_node.index('n_'+str(element)))
   return q_index  
-
 
 def refine_target(problem):
   '''

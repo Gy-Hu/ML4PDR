@@ -305,7 +305,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Generate graph from SMT2 file")
     # help_info = "Usage: python generate_aag.py <aig-dir>"
     parser.add_argument('-d', type=str, default=None, help='Input the smt file directory name for converting to graph')
-    parser.add_argument('-m',type=str,help='choose the mode to run the program, gp means run for generalizaed predecessor, ig means run for inductive generalization',default=None)
+    parser.add_argument('-m',type=str,help='choose the mode to run the program, 0 means run for generalizaed predecessor, 1 means run for inductive generalization',default=None)
     args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig'])
     #args = parser.parse_args(['-d','../dataset/GP2graph/generalize_pre/','-m', 'gp'])
 

@@ -34,6 +34,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', type=int, help='the time limitation of one test to run', default=900)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
     parser.add_argument('-s', type=str, help='switch to do data generation in generalized predecessor or inductive generalization', default='off')
+    parser.add_argument('-n', type=str, help='switch to use neural network in inductive generalization or generalized predecessor', default='off')
+
     #TODO: Add abstract & craig interpolation?
     #args = parser.parse_args(['--mode', '1', '-t', '20', '-c','-s','ig'])
 
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     #TODO: Using Dr.Zhang's method to accelerate the speed of solving unsafe case
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/texas.two_proc^5.E.aag', '-c']) #SAT, time so long, around 20 minutes
     #args = parser.parse_args(['../dataset/aig_benchmark/toy_experiment/play.aag', '-c'])
-    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c','-s','ig'])
+    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c','-s','off','-n','ig'])
     #TODO: Solve the bug on this case (safe -> unsafe)
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec1-and-env.aag','-c']) #When you need to run single file, setup this
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c'])
@@ -72,9 +74,25 @@ if __name__ == '__main__':
 
         # Not using RL
         solver = pdr.PDR(*m.parse(file))
+
+        # Switch to turn on/off using neural network to guide generalization (predecessor/inductive generalization)
+        if args.n=='off':
+            solver.test_IG_NN = 0
+            solver.test_GP_NN = 0
+        elif args.n=='on':
+            solver.test_IG_NN = 1
+            solver.test_GP_NN = 1
+        elif args.n=='ig':
+            solver.test_IG_NN = 1
+            solver.test_GP_NN = 0
+        elif args.n=='gp':
+            solver.test_IG_NN = 0
+            solver.test_GP_NN = 1
+
+        # Switch to turn on/off the data generation of generalized predecessor or inductive generalization
         if args.s=='off':
-            solver.smt2_gen_GP = 1
-            solver.smt2_gen_IG = 1
+            solver.smt2_gen_GP = 0
+            solver.smt2_gen_IG = 0
         elif args.s=='on':
             solver.smt2_gen_GP = 1
             solver.smt2_gen_IG = 1
@@ -108,9 +126,25 @@ if __name__ == '__main__':
                     print("============ Testing " + str(name) + " ==========")
                     m = model.Model()
                     solver = pdr.PDR(*m.parse(os.path.join(root, name)))
+
+                    # Switch to turn on/off using neural network to guide generalization (predecessor/inductive generalization)
+                    if args.n=='off':
+                        solver.test_IG_NN = 0
+                        solver.test_GP_NN = 0
+                    elif args.n=='on':
+                        solver.test_IG_NN = 1
+                        solver.test_GP_NN = 1
+                    elif args.n=='ig':
+                        solver.test_IG_NN = 1
+                        solver.test_GP_NN = 0
+                    elif args.n=='gp':
+                        solver.test_IG_NN = 0
+                        solver.test_GP_NN = 1
+
+                    # Switch to turn on/off the data generation of generalized predecessor or inductive generalization
                     if args.s=='off':
-                        solver.smt2_gen_GP = 1
-                        solver.smt2_gen_IG = 1
+                        solver.smt2_gen_GP = 0
+                        solver.smt2_gen_IG = 0
                     elif args.s=='on':
                         solver.smt2_gen_GP = 1
                         solver.smt2_gen_IG = 1

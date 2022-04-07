@@ -12,6 +12,11 @@ from itertools import combinations
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from scipy.special import comb
+import build_graph_online
+import torch
+import torch.nn as nn
+import neuro_predessor
+#from train import extract_q_like, refine_cube
 
 
 # 查询接口中每行代码执行的时间
@@ -195,7 +200,7 @@ def _extract(literaleq):
     return v, val
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename, smt2_gen_GP=0, smt2_gen_IG=0):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename, smt2_gen_GP=0, smt2_gen_IG=0, test_IG_NN=0, test_GP_NN=0):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -237,8 +242,17 @@ class PDR:
         '''
         self.smt2_gen_IG = smt2_gen_IG
         self.smt2_gen_GP = smt2_gen_GP
+        '''
+        --------------Switch to open/close the NN-guided inductive generalization------------------
+        '''
+        self.test_IG_NN = test_IG_NN
+        self.test_GP_NN = test_GP_NN
+        '''
+        ---------------Count down the success/fail of NN-guided inductive generalization------------------
+        '''
+        self.NN_guide_ig_success = 0
+        self.NN_guide_ig_fail = 0
         
-
     def check_init(self):
         s = Solver()
         s.add(self.init.cube())
@@ -429,8 +443,10 @@ class PDR:
             z = self.solveRelative(s)
             if z is None:
                 sz = s.true_size()
-                original_s = s.clone()
-                s_enumerate = self.generate_GT(original_s) #Generate ground truth here
+                original_s_1 = s.clone() # For generating ground truth
+                original_s_2 = s.clone() # For testing the NN-guided inductive generalization
+                s_enumerate = self.generate_GT(original_s_1) #Generate ground truth here
+                s_NN = self.NN_guided_inductive_generalization(original_s_2)
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
                 self.sum_MIC = self.sum_MIC + s.true_size()
@@ -733,8 +749,85 @@ class PDR:
             else:
                 print("The ground truth has not been found")
                 return None
+    
+    def NN_guided_inductive_generalization(self, q: tCube):
+        '''
+        Test the NN-version inductive generalization
+        '''
+        if self.test_IG_NN == 0:
+            pass
+        elif self.test_IG_NN == 1:
+            s_smt = Solver()
+            Cube = Not(
+                And(
+                    Not(
+                    And(self.frames[q.t-1].cube(), 
+                    Not(q.cube()), 
+                    substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                    list(self.pv2next.items()))
+                    )),
+                    Not(And(self.frames[0].cube(),q.cube()))
+                    ))
+            for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+            s_smt.add(Cube)
+            assert (s_smt.check() == unsat)
+            res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN) #-> this is a list to guide which literals should be kept/throwed
+            # Conductive two relative check of the return q-like
+            print('restoring from: ', "../dataset/model/neuropdr_no1_last.pth.tar")
+            # Load model to predict
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            net = neuro_predessor.NeuroPredessor()
+            model = torch.load("../model/neuropdr_no1_last.pth.tar")
+            net.load_state_dict(model['state_dict'])
+            net = net.to(device)
+            sigmoid  = nn.Sigmoid()
+            torch.no_grad()
 
+            #q_index = extract_q_like(res)
+            q_index = []
+            tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
+            ig_q = res.ig_q # original q in inductive generalization
+            for q_literal in ig_q: # literals in q (in inductive generalization process)
+                q_index.append(tmp_lst_all_node.index('n_'+str(q_literal.children()[0])))
 
+            outputs = sigmoid(net(res))
+            torch_select = torch.Tensor(q_index).cuda().int() 
+            outputs = torch.index_select(outputs, 0, torch_select)
+            preds = torch.where(outputs>0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+        '''
+        Generate the new q (which is also q-like) under the NN-given answer
+        '''
+        q_like = tCube(q.t)
+        for idx, preds_ans in enumerate(preds):
+            if preds_ans == 1:
+                q_like.cubeLiterals.append(q.cubeLiterals[idx])
+        '''
+        Check whether this answer pass the relative check
+        ''' 
+        def check_init(c: tCube):
+                slv = Solver()
+                slv.add(self.init.cube())
+                slv.add(c.cube())
+                return slv.check()
+
+        if check_init(q_like) == unsat:
+            s = Solver()
+            s.add(And(self.frames[q_like.t-1].cube(), Not(q_like.cube()), self.trans.cube(), 
+                        substitute(substitute(q_like.cube(), self.primeMap),self.inp_map)))  
+            if s.check() == unsat:
+                # Pass both check
+                print("Congratulation, the NN-guide inductive generalization is correct")
+                self.NN_guide_ig_success += 1
+            else:
+                # Not pass the second check
+                self.NN_guide_ig_fail += 1
+        else:
+            # Not pass the first check
+            self.NN_guide_ig_fail += 1
+
+        
+
+            
     def unsatcore_reduce(self, q:  tCube, trans, frame):
         # (( not(q) /\ F /\ T ) \/ init' ) /\ q'   is unsat
         slv = Solver()

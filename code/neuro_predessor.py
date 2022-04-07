@@ -7,10 +7,14 @@ import pandas as pd
 
 
 class NeuroPredessor(nn.Module):
-    def __init__(self,args):
+    def __init__(self,args = None):
         super(NeuroPredessor, self).__init__()
         self.args = args
         self.dim = 128
+        if args!=None:
+            self.n_rounds = args.n_rounds
+        else:
+            self.n_rounds = 120
 
         self.init_ts = torch.ones(1)
         self.init_ts.requires_grad = False
@@ -72,7 +76,7 @@ class NeuroPredessor(nn.Module):
 
         # message passing procedure
         #TODO: refine the n_rounds
-        for _ in range(self.args.n_rounds): #TODO: Using LSTM to eliminate the error brought by symmetry
+        for _ in range(self.n_rounds): #TODO: Using LSTM to eliminate the error brought by symmetry
 
             var_pre_msg = self.children_msg(var_state[:][0].squeeze(0))
             child_to_par_msg = torch.matmul(unpack, var_pre_msg) #TODO: ask question "two embedding of m here"
