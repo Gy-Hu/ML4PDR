@@ -810,19 +810,22 @@ class PDR:
                 slv.add(c.cube())
                 return slv.check()
 
-        if check_init(q_like) == unsat:
-            s = Solver()
-            s.add(And(self.frames[q_like.t-1].cube(), Not(q_like.cube()), self.trans.cube(), 
-                        substitute(substitute(q_like.cube(), self.primeMap),self.inp_map)))  
-            if s.check() == unsat:
-                # Pass both check
-                print("Congratulation, the NN-guide inductive generalization is correct")
-                self.NN_guide_ig_success += 1
+        if len(q_like.cubeLiterals)!= 0:
+            if check_init(q_like) == unsat:
+                s = Solver()
+                s.add(And(self.frames[q_like.t-1].cube(), Not(q_like.cube()), self.trans.cube(), 
+                            substitute(substitute(q_like.cube(), self.primeMap),self.inp_map)))  
+                if s.check() == unsat:
+                    # Pass both check
+                    print("Congratulation, the NN-guide inductive generalization is correct")
+                    self.NN_guide_ig_success += 1
+                else:
+                    # Not pass the second check
+                    self.NN_guide_ig_fail += 1
             else:
-                # Not pass the second check
+                # Not pass the first check
                 self.NN_guide_ig_fail += 1
         else:
-            # Not pass the first check
             self.NN_guide_ig_fail += 1
 
         
