@@ -450,12 +450,19 @@ class PDR:
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
                 self.sum_MIC = self.sum_MIC + s.true_size()
+                
                 if s_enumerate is not None: 
-                    print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
+                    print ("Enueration find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
                     self.sum_IG_GT = self.sum_IG_GT + s_enumerate.true_size()
                 else:
-                    print ("Minimum not found")
+                    print ("Minimum not found by enueration")
                     self.sum_IG_GT = self.sum_IG_GT + s.true_size()
+                
+                if s_NN is not None:
+                    print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
+                else:
+                    print ("Minimum not found by NN-guided inductive generalization")
+                
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
@@ -794,39 +801,45 @@ class PDR:
             torch_select = torch.Tensor(q_index).cuda().int() 
             outputs = torch.index_select(outputs, 0, torch_select)
             preds = torch.where(outputs>0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
-        '''
-        Generate the new q (which is also q-like) under the NN-given answer
-        '''
-        q_like = tCube(q.t)
-        for idx, preds_ans in enumerate(preds):
-            if preds_ans == 1:
-                q_like.cubeLiterals.append(q.cubeLiterals[idx])
-        '''
-        Check whether this answer pass the relative check
-        ''' 
-        def check_init(c: tCube):
-                slv = Solver()
-                slv.add(self.init.cube())
-                slv.add(c.cube())
-                return slv.check()
+        
+            '''
+            Generate the new q (which is also q-like) under the NN-given answer
+            '''
+            q_like = tCube(q.t)
+            for idx, preds_ans in enumerate(preds):
+                if preds_ans == 1:
+                    q_like.cubeLiterals.append(q.cubeLiterals[idx])
+            
+            '''
+            Check whether this answer pass the relative check
+            ''' 
+            def check_init(c: tCube):
+                    slv = Solver()
+                    slv.add(self.init.cube())
+                    slv.add(c.cube())
+                    return slv.check()
 
-        if len(q_like.cubeLiterals)!= 0:
-            if check_init(q_like) == unsat:
-                s = Solver()
-                s.add(And(self.frames[q_like.t-1].cube(), Not(q_like.cube()), self.trans.cube(), 
-                            substitute(substitute(q_like.cube(), self.primeMap),self.inp_map)))  
-                if s.check() == unsat:
-                    # Pass both check
-                    print("Congratulation, the NN-guide inductive generalization is correct")
-                    self.NN_guide_ig_success += 1
+            if len(q_like.cubeLiterals)!= 0:
+                if check_init(q_like) == unsat:
+                    s = Solver()
+                    s.add(And(self.frames[q_like.t-1].cube(), Not(q_like.cube()), self.trans.cube(), 
+                                substitute(substitute(q_like.cube(), self.primeMap),self.inp_map)))  
+                    if s.check() == unsat:
+                        # Pass both check
+                        print("Congratulation, the NN-guide inductive generalization is correct")
+                        self.NN_guide_ig_success += 1
+                        return q_like
+                    else:
+                        # Not pass the second check
+                        self.NN_guide_ig_fail += 1
+                        return None
                 else:
-                    # Not pass the second check
+                    # Not pass the first check
                     self.NN_guide_ig_fail += 1
+                    return None
             else:
-                # Not pass the first check
                 self.NN_guide_ig_fail += 1
-        else:
-            self.NN_guide_ig_fail += 1
+                return None
 
         
 
