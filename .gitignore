@@ -21,7 +21,9 @@ bak/
 log/
 model/
 *.html
-# *.aag
+*.aag
+*.aig
+*.pkl
 aiger_tools/
 **/aiger_tools
 bak/
