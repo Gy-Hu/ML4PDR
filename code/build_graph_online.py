@@ -22,7 +22,7 @@ def mk_adj_matrix(solver, mode=0):
         # while len(new_graph.bfs_queue) != 0:
         #     new_graph.add()
 
-        # New method to generate graph
+        #New method to generate graph
         s2 = z3.Solver()
         s2.add(solver.assertions())
         new_graph_2 = graph(s2, mode=mode)
