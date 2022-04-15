@@ -17,9 +17,19 @@ def mk_adj_matrix(solver, mode=0):
     if mode == 0:
        pass
     elif mode == 1:
-        new_graph = graph(solver, mode=mode)
-        while len(new_graph.bfs_queue) != 0:
-            new_graph.add()
+        # Old method to generate graph
+        # new_graph = graph(solver, mode=mode)
+        # while len(new_graph.bfs_queue) != 0:
+        #     new_graph.add()
+
+        # New method to generate graph
+        s2 = z3.Solver()
+        s2.add(solver.assertions())
+        new_graph_2 = graph(s2, mode=mode)
+        new_graph_2.add_upgrade_version()
+
+        new_graph = new_graph_2
+
         new_graph.print()
         new_graph.to_matrix()
         node_ref = {}
@@ -84,6 +94,38 @@ class graph:
         for c in children:
             cnid = self.getnid(c)
             self.edges.add((nnid, cnid))
+
+    def add_upgrade_version(self):
+        remove_duplicated = lambda x: list(dict.fromkeys(x))
+        index = 0
+        while True:
+            #len((self.bfs_queue[index]).children()) != 0
+            old_length = len(self.bfs_queue)
+            self.bfs_queue += list((self.bfs_queue[index]).children())
+            new_length = len(self.bfs_queue)
+            if new_length == old_length and index==(len(self.bfs_queue)-1):
+                break
+            index += 1
+        self.bfs_queue = remove_duplicated(self.bfs_queue)
+
+        for n in self.bfs_queue:
+            nnid = self.getnid(n)
+            self.calculate_node_value(n, nnid)
+            op = n.decl().kind()
+            if op == z3.Z3_OP_AND:
+                opstr = 'AND'
+            elif op == z3.Z3_OP_NOT:
+                opstr = 'NOT'
+            else:
+                opstr = 'OTHER'
+
+            if len(n.children())!= 0:
+                rel = f'{nnid} := {opstr} ( {[self.getnid(c) for c in n.children()]} )'
+                self.relations.add(rel)
+
+            for c in n.children():
+                cnid = self.getnid(c)
+                self.edges.add((nnid, cnid))
 
     def print(self):
         print('-------------------')

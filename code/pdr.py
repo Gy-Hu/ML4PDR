@@ -16,6 +16,7 @@ import build_graph_online
 import torch
 import torch.nn as nn
 import neuro_predessor
+from datetime import datetime
 #from train import extract_q_like, refine_cube
 
 
@@ -252,6 +253,14 @@ class PDR:
         '''
         self.NN_guide_ig_success = 0
         self.NN_guide_ig_fail = 0
+        '''
+        ---------------Time consuming of NN-guided inductive generalization------------------
+        '''
+        self.NN_guide_ig_time_sum = 0
+        '''
+        ---------------Determine whether append NN-guided ig append to MIC------------------
+        '''
+        self.NN_guide_ig_append = 0
         
     def check_init(self):
         s = Solver()
@@ -446,7 +455,10 @@ class PDR:
                 original_s_1 = s.clone() # For generating ground truth
                 original_s_2 = s.clone() # For testing the NN-guided inductive generalization
                 s_enumerate = self.generate_GT(original_s_1) #Generate ground truth here
+                NN_guide_start_time = datetime.now()
                 s_NN = self.NN_guided_inductive_generalization(original_s_2)
+                NN_guide_consuming_t = int((datetime.now() - NN_guide_start_time).seconds)
+                self.NN_guide_ig_time_sum += NN_guide_consuming_t
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
                 self.sum_MIC = self.sum_MIC + s.true_size()
@@ -463,10 +475,34 @@ class PDR:
                 else:
                     print ("Minimum not found by NN-guided inductive generalization")
                 
+                '''
+                Determine whether use MIC
+                '''
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
                     self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
+                
+                
+                '''
+                Add NN-guided inductive generalization generated answer
+                '''
+                #Use unsat core reduce
+                if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
+                    original_s_3 = s_NN.clone()
+                    self.unsatcore_reduce(original_s_3, trans=self.trans.cube(), frame=self.frames[original_s_3.t-1].cube())
+                    original_s_3.remove_true()
+                    self.frames[s.t].add(Not(original_s_3.cube()), pushed=False)
+                    for i in range(1, s.t):
+                        self.frames[i].add(Not(original_s_3.cube()), pushed=True)
+
+                #Not use unsat core reduce
+                # if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
+                #     self.frames[s.t].add(Not(s_NN.cube()), pushed=False)
+                #     for i in range(1, s.t):
+                #         self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                
+
                 # reQueue : see IC3 PDR Friends
                 #Fmin = original_s.t+1
                 #Fmax = len(self.frames)

@@ -29,6 +29,10 @@ aiger_tools/
 bak/
 **/bak/
 **/bak
+log/
+**/log/
+**/log
 aag4train_bak/
 not_used/
+log/*
 *.smt2
