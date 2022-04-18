@@ -201,7 +201,7 @@ def _extract(literaleq):
     return v, val
 
 class PDR:
-    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename, smt2_gen_GP=0, smt2_gen_IG=0, test_IG_NN=0, test_GP_NN=0):
+    def __init__(self, primary_inputs, literals, primes, init, trans, post, pv2next, primes_inp, filename):
         '''
         :param primary_inputs:
         :param literals: Boolean Variables
@@ -241,13 +241,13 @@ class PDR:
         '''
         --------------Switch to open/close the ground truth data generation------------------
         '''
-        self.smt2_gen_IG = smt2_gen_IG
-        self.smt2_gen_GP = smt2_gen_GP
+        self.smt2_gen_IG = 0
+        self.smt2_gen_GP = 0
         '''
         --------------Switch to open/close the NN-guided inductive generalization------------------
         '''
-        self.test_IG_NN = test_IG_NN
-        self.test_GP_NN = test_GP_NN
+        self.test_IG_NN = 0
+        self.test_GP_NN = 0
         '''
         ---------------Count down the success/fail of NN-guided inductive generalization------------------
         '''
@@ -455,9 +455,9 @@ class PDR:
                 original_s_1 = s.clone() # For generating ground truth
                 original_s_2 = s.clone() # For testing the NN-guided inductive generalization
                 s_enumerate = self.generate_GT(original_s_1) #Generate ground truth here
-                NN_guide_start_time = datetime.now()
+                NN_guide_start_time = time.process_time()
                 s_NN = self.NN_guided_inductive_generalization(original_s_2)
-                NN_guide_consuming_t = int((datetime.now() - NN_guide_start_time).seconds)
+                NN_guide_consuming_t = time.process_time() - NN_guide_start_time
                 self.NN_guide_ig_time_sum += NN_guide_consuming_t
                 s = self.MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)

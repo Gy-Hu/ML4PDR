@@ -33,6 +33,7 @@ log/
 **/log/
 **/log
 aag4train_bak/
+aag4train/
 not_used/
 log/*
 *.smt2
