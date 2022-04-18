@@ -38,9 +38,9 @@ def remove_trivially_unsat_aiger(list_of_file):
         with open(file[1], 'r') as f:
             lines = f.readlines()
         # remove trivially unsat aiger
-        file_first_line = lines[1].split(' ')
+        file_first_line = lines[0].split(' ')
         index_of_output = int(file_first_line[2]) + int(file_first_line[3]) + 1
-        if lines(index_of_output) == 0:
+        if int(lines[index_of_output].strip('\n')) == 0:
             subprocess.run(["trash-put", file[1]])
         else:
             lst_trivially_unsat_removed.append(file)
