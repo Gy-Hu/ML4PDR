@@ -40,9 +40,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Convert aig to aag automatically")
     parser.add_argument('-indir', type=str, default=None, help='Input the aiger directory name for aig to convert to aag')
     parser.add_argument('-outdir', type=str, default=aag_dir, help='Export the converted aag to the directory')
-    parser.add_argument('-d', type=int, default=0, help='Determin whether to divide files into subset')
-    #args = parser.parse_args(['-indir','../dataset/aig_benchmark/beem/','-outdir','../dataset/aig_benchmark/beem_aag/'])
-    args = parser.parse_args()
+    parser.add_argument('-d', type=int, default=1, help='Determin whether to divide files into subset')
+    parser.add_argument('-n', type=int, default=10, help='Determin how many files to divide into subset')
+    args = parser.parse_args(['-indir','../dataset/aig_benchmark/hwmcc07_tip/','-outdir','../dataset/aag4train/','-n', '5'])
+    #args = parser.parse_args()
     if args.indir is not None:
         aig_dir = args.indir
         file_lst = walkFile(aig_dir)
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     if args.d != 0:
         lst = split_to_subset()
         list_removed_empty = remove_empty_file(lst)
-        list_chunks = list(chunk(list_removed_empty, 50))
+        list_chunks = list(chunk(list_removed_empty, args.n))
         for i_tuple in range(len(list_chunks)):
             if not os.path.isdir("../dataset/aag4train/subset_"+str(i_tuple)): 
                 os.makedirs("../dataset/aag4train/subset_"+str(i_tuple))
