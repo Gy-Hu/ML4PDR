@@ -33,6 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('fileName', type=str, help='The name of the test to run', default=None, nargs='?')
     parser.add_argument('--mode',type=int,help='choose the mode to run the program, 0 means only run one file, 1 means run through the files in folder',default=0)
     parser.add_argument('-t', type=int, help='the time limitation of one test to run', default=900)
+    parser.add_argument('-p', type=str, help='file path of mode 1', default=None)
     parser.add_argument('-c', help='switch to counting time', action='store_true')
     parser.add_argument('-d', type=str, help='switch to do data generation in generalized predecessor or inductive generalization', default='off')
     parser.add_argument('-n', type=str, help='switch to use neural network in inductive generalization or generalized predecessor', default='off')
@@ -144,7 +145,7 @@ if __name__ == '__main__':
     elif args.mode==1: # 1 means runs through all the folder
         print("================ Test the ./aag directory ========")
         agent = None
-        for root, dirs, files in os.walk(test_file_folder_path): #TODO: 把aig原本的二进制文件也搬进来，这边代码改成仅把.aag加入处理的文件队列里面
+        for root, dirs, files in os.walk(args.p): #TODO: 把aig原本的二进制文件也搬进来，这边代码改成仅把.aag加入处理的文件队列里面
             for name in files:
                 if name.endswith('.aag'):
                     print("============ Testing " + str(name) + " ==========")

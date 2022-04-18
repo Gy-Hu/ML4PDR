@@ -4,6 +4,7 @@ Generate aag to extract graph
 from ast import arg
 import subprocess
 import sys
+from matplotlib.cbook import index_of
 from natsort import natsorted
 import argparse
 from pathlib import Path
@@ -29,6 +30,21 @@ def remove_empty_file(list_of_file):
     for file in list_of_file:
         if file[0] == '0': subprocess.run(["trash-put", file[1]])
     return [file for file in list_of_file if file[0] != '0']
+
+def remove_trivially_unsat_aiger(list_of_file):
+    lst_trivially_unsat_removed = []
+    for file in list_of_file:
+        # read file into list by line
+        with open(file[1], 'r') as f:
+            lines = f.readlines()
+        # remove trivially unsat aiger
+        file_first_line = lines[1].split(' ')
+        index_of_output = int(file_first_line[2]) + int(file_first_line[3]) + 1
+        if lines(index_of_output) == 0:
+            subprocess.run(["trash-put", file[1]])
+        else:
+            lst_trivially_unsat_removed.append(file)
+    return lst_trivially_unsat_removed
     
 if __name__ == '__main__':
     
@@ -61,7 +77,8 @@ if __name__ == '__main__':
     if args.d != 0:
         lst = split_to_subset()
         list_removed_empty = remove_empty_file(lst)
-        list_chunks = list(chunk(list_removed_empty, args.n))
+        list_removed_trivial_unsat = remove_trivially_unsat_aiger(list_removed_empty)
+        list_chunks = list(chunk(list_removed_trivial_unsat, args.n))
         for i_tuple in range(len(list_chunks)):
             if not os.path.isdir("../dataset/aag4train/subset_"+str(i_tuple)): 
                 os.makedirs("../dataset/aag4train/subset_"+str(i_tuple))
