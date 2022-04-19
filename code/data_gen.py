@@ -345,14 +345,17 @@ if __name__ == '__main__':
     # help_info = "Usage: python generate_aag.py <aig-dir>"
     parser.add_argument('-d', type=str, default=None, help='Input the smt file directory name for converting to graph')
     parser.add_argument('-m',type=str,help='choose the mode to run the program, 0 means run for generalizaed predecessor, 1 means run for inductive generalization',default=None)
-    args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig'])
+    parser.add_argument('-s',type=str,help='select the particular aiger to generate graph',default=None)
+    #args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig','-s','cmu.gigamax.B'])
     #args = parser.parse_args(['-d','../dataset/GP2graph/generalize_pre/','-m', 'gp'])
+    args = parser.parse_args()
 
     if args.m == 'gp':
         #TODO: Add function to auto-skip the generated file
         #TODO: Try aigfuzz or AIGGEN to generate aiger
 
         smt2_file_list = walkFile(args.d)
+        
 
         for smt2_file in smt2_file_list[:]:
             mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
@@ -389,13 +392,25 @@ if __name__ == '__main__':
     
     elif args.m == 'ig':
         smt2_file_list = walkFile(args.d)
+        
+        if args.s is not None:
+            smt2_file_list = [smt2_file for smt2_file in smt2_file_list if args.s in smt2_file]
+
         for smt2_file in smt2_file_list[:]: #FIXME: Remember to change this index to generate all
             mk_adj_matrix(smt2_file,args.m)
+        
         
         adj_matrix_pkl_list = walkFile("../dataset/IG2graph/tmp/generalize_adj_matrix/")
         GT_table_csv_list = walkFile("../dataset/IG2graph/generalization/")
         vt_all_node_pkl_list = walkFile("../dataset/IG2graph/tmp/all_node_value_table/")
         edge_and_relation_pkl_list = walkFile("../dataset/IG2graph/tmp/edges_and_relation/")
+        
+        if args.s is not None:
+            adj_matrix_pkl_list = [adj_matrix_pkl for adj_matrix_pkl in adj_matrix_pkl_list if args.s in adj_matrix_pkl]
+            GT_table_csv_list = [GT_table_csv for GT_table_csv in GT_table_csv_list if args.s in GT_table_csv]
+            vt_all_node_pkl_list = [vt_all_node_pkl for vt_all_node_pkl in vt_all_node_pkl_list if args.s in vt_all_node_pkl]
+            edge_and_relation_pkl_list = [edge_and_relation_pkl for edge_and_relation_pkl in edge_and_relation_pkl_list if args.s in edge_and_relation_pkl]
+
         # The number of tmp file should equal to .smt file
         assert(len(adj_matrix_pkl_list) == len(vt_all_node_pkl_list) == len(edge_and_relation_pkl_list)==len(smt2_file_list))
         zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))       
