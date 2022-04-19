@@ -841,7 +841,7 @@ class PDR:
             '''
             Generate the new q (which is also q-like) under the NN-given answer
             '''
-            q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+            #q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
             q_like = tCube(q.t)
             for idx, preds_ans in enumerate(preds):
                 if preds_ans == 1:

@@ -14,6 +14,9 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from time import sleep
 import z3
+from torch.utils.tensorboard import SummaryWriter 
+
+
 
 #TODO: Try small size sample and test accuracy
 
@@ -114,9 +117,13 @@ def refine_target(problem):
 
 if __name__ == "__main__":
 
+  os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+  # Set up the tensorboard log directory
+  writer = SummaryWriter('../log/tensorboard')
+
   args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '120', \
                             '--epochs', '20', \
-                            '--gen_log', '/home/gary/coding_env/NeuroSAT/log/data_maker_sr3t10.log', \
+                            '--gen_log', '../log/data_maker_sr3t10.log', \
                             # '--train-file', '../dataset/GP2graph/train/',\
                             # '--val-file','../dataset/GP2graph/validate/',\
                             '--train-file', '../dataset/IG2graph/train/',\
@@ -145,6 +152,9 @@ if __name__ == "__main__":
     for train_file in train_lst:
       with open(train_file,'rb') as f:
         train.append(pickle.load(f))
+  
+  # Remove the train file which exists bug (has no adj_matrix generated)
+  train = [train_file for train_file in train if hasattr(train_file,'adj_matrix')]
 
   if args.mode=='test':
     train, val = train_test_split(train, test_size=0.2, random_state=42)
@@ -175,8 +185,9 @@ if __name__ == "__main__":
   #loss_fn = nn.BCELoss() #TODO: Try to modify this part
   #loss_fn = nn.SmoothL1Loss()
   #loss_fn = nn.CrossEntropyLoss()
-  loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([8]).cuda())
-  optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
+  loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([10]).cuda())
+  #optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
+  optim = optim.SGD(net.parameters(), lr=0.00001, momentum=0.9, weight_decay=1e-10)
   #optim = optim.Adam(net.parameters(), lr=0.0002, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
   sigmoid  = nn.Sigmoid()
 
@@ -245,11 +256,18 @@ if __name__ == "__main__":
       TOT = TP + TN + FN + FP
 
       desc += 'perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (perfection_rate*1.0/all,(TP.item()+TN.item())*1.0/TOT.item(), TP.item()*1.0/TOT.item(), TN.item()*1.0/TOT.item(), FN.item()*1.0/TOT.item(), FP.item()*1.0/TOT.item())
+      
+      writer.add_scalar('confusion_matrix/true_possitive', TP.item()*1.0/TOT.item(), _)
+      writer.add_scalar('confusion_matrix/false_possitive', FP.item()*1.0/TOT.item(), _)
+
       # train_bar.set_description(desc)
       if (_ + 1) % 100 == 0:
         print(desc, file=detail_log_file, flush=True)
 
     print(desc, file=log_file, flush=True)
+    writer.add_scalar('accuracy/training_accuracy', (TP.item()+TN.item())*1.0/TOT.item(), epoch)
+    writer.add_scalar('loss/training_loss', loss.item(), epoch)
+    
 
     #FIXME: fix this part for doing validation
 
@@ -294,9 +312,15 @@ if __name__ == "__main__":
     print(desc, file=log_file, flush=True)
 
     acc = (TP.item() + TN.item()) * 1.0 / TOT.item()
+    writer.add_scalar('accuracy/validation_accuracy', acc, epoch)
     torch.save({'epoch': epoch + 1, 'acc': acc, 'state_dict': net.state_dict()},
                os.path.join(args.model_dir, args.task_name + '_last.pth.tar'))
     if acc >= best_acc:
       best_acc = acc
       torch.save({'epoch': epoch + 1, 'acc': best_acc, 'state_dict': net.state_dict()},
                  os.path.join(args.model_dir, args.task_name + '_best.pth.tar'))
+        
+  try:
+    writer.close()
+  except BaseException:
+    writer.close()

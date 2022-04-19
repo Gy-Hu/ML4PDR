@@ -220,6 +220,7 @@ class graph:
 
 class problem:
     def __init__(self, filename, mode = 'gp'): # This class store the graph generated from generalized predessor (with serveral batches)
+        self.skip = False # determine whether to dump this problem
         # Should contain targets, which used for calculating loss
         self.mode = mode
         self.filename = filename
@@ -235,18 +236,25 @@ class problem:
         #self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
         self.n_nodes = self.n_vars - (self.value_table[~self.value_table.index.str.contains('m_')]).shape[0]
         index2list = self.check(str(filename[0]))
-        self.label = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
+        if index2list != 'not found':
+            self.label = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
+        else: # index2list == 'not found'
+            self.skip = True
+            return
         self.label = [int(x) for x in self.label]
         self.adj_matrix = self.unpack_matrix.copy()
         self.adj_matrix = self.adj_matrix.T.reset_index(drop=True).T
         self.adj_matrix.drop(self.adj_matrix.columns[0], axis=1, inplace=True)
         with open(filename[3], 'rb') as f:
             self.edges, self.relations, self.node_ref = pickle.load(f)
+        
         # with open("../dataset/GP2graph/graph/" + filename[2], 'w') as p:
         #     g = pickle.load(p)
 
 
     def dump(self, dir, filename):
+        if self.skip:
+            pass
         dataset_filename = dir + (filename.split('/')[-1]).replace('adj_','')
         with open(dataset_filename, 'wb') as f_dump:
             pickle.dump(self, f_dump)
@@ -346,9 +354,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', type=str, default=None, help='Input the smt file directory name for converting to graph')
     parser.add_argument('-m',type=str,help='choose the mode to run the program, 0 means run for generalizaed predecessor, 1 means run for inductive generalization',default=None)
     parser.add_argument('-s',type=str,help='select the particular aiger to generate graph',default=None)
-    #args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig','-s','cmu.gigamax.B'])
+    args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig','-s','texas.ifetch1^5.E'])
     #args = parser.parse_args(['-d','../dataset/GP2graph/generalize_pre/','-m', 'gp'])
-    args = parser.parse_args()
+    #args = parser.parse_args()
 
     if args.m == 'gp':
         #TODO: Add function to auto-skip the generated file
@@ -429,6 +437,7 @@ if __name__ == '__main__':
         matching = [s for s in zipped_lst if len(s)==4]
         for filename4prb in matching:
             prob = problem(filename4prb,mode=args.m)
-            prob.dump("../dataset/IG2graph/train/", filename4prb[0])
+            if prob is not None:
+                prob.dump("../dataset/IG2graph/train/", filename4prb[0])
 
 
