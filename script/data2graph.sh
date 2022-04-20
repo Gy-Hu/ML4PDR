@@ -1,4 +1,5 @@
 
+#!/bin/bash
 # Run in the code directory of the project
 
 # has run

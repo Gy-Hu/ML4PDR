@@ -14,7 +14,8 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from time import sleep
 import z3
-from torch.utils.tensorboard import SummaryWriter 
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 
 
@@ -119,10 +120,11 @@ if __name__ == "__main__":
 
   os.environ["CUDA_VISIBLE_DEVICES"] = "1"
   # Set up the tensorboard log directory
-  writer = SummaryWriter('../log/tensorboard')
+  datetime_str = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+  writer = SummaryWriter('../log/tensorboard'+'-'+datetime_str.replace(' ','_'))
 
-  args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '120', \
-                            '--epochs', '20', \
+  args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '240', \
+                            '--epochs', '120', \
                             '--gen_log', '../log/data_maker_sr3t10.log', \
                             # '--train-file', '../dataset/GP2graph/train/',\
                             # '--val-file','../dataset/GP2graph/validate/',\
@@ -187,7 +189,8 @@ if __name__ == "__main__":
   #loss_fn = nn.CrossEntropyLoss()
   loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([10]).cuda())
   #optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
-  optim = optim.SGD(net.parameters(), lr=0.00001, momentum=0.9, weight_decay=1e-10)
+  optim = optim.Adam(net.parameters(), lr=0.00001, weight_decay=1e-10)
+  #optim = optim.SGD(net.parameters(), lr=0.00001, momentum=0.9, weight_decay=1e-10)
   #optim = optim.Adam(net.parameters(), lr=0.0002, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
   sigmoid  = nn.Sigmoid()
 
@@ -211,6 +214,7 @@ if __name__ == "__main__":
     best_acc = model['acc']
     net.load_state_dict(model['state_dict'])
 
+  iteration = 0
   #one batch one iteration at first?
   for epoch in range(start_epoch, args.epochs):
 
@@ -227,6 +231,7 @@ if __name__ == "__main__":
     all = 0 # Used to record the number of all samples in the validation set
     #FIXME: The train here should be a list contains serverals files (>1)
     for _, prob in enumerate(train_bar):
+      iteration += 1
       q_index = refine_cube(prob)
       optim.zero_grad()
       outputs = net(prob)
@@ -257,8 +262,26 @@ if __name__ == "__main__":
 
       desc += 'perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (perfection_rate*1.0/all,(TP.item()+TN.item())*1.0/TOT.item(), TP.item()*1.0/TOT.item(), TN.item()*1.0/TOT.item(), FN.item()*1.0/TOT.item(), FP.item()*1.0/TOT.item())
       
-      writer.add_scalar('confusion_matrix/true_possitive', TP.item()*1.0/TOT.item(), _)
-      writer.add_scalar('confusion_matrix/false_possitive', FP.item()*1.0/TOT.item(), _)
+      writer.add_scalar('confusion_matrix/true_possitive', TP.item()*1.0/TOT.item(), iteration)
+      writer.add_scalar('confusion_matrix/false_possitive', FP.item()*1.0/TOT.item(), iteration)
+      try:
+        writer.add_scalar('confusion_matrix/precision', TP.item()*1.0/(TP.item()*1.0 + FP.item()*1.0), iteration)
+      except:
+        writer.add_scalar('confusion_matrix/precision', 0, iteration)
+      writer.add_scalar('model_evaluate/TPR_recall',  TP.item()*1.0/(TP.item()*1.0 + FN.item()*1.0), iteration)
+      writer.add_scalar('model_evaluate/FPR',  FP.item()*1.0/(FP.item()*1.0+ TN.item()*1.0), iteration)
+      # Plot More Metric Curve on tensorboard
+      # writer.add_scalar('model_evaluate/MCC',  (TP.item()*1.0 - FP.item()*1.0)*1.0/(TP.item()*1.0 + FP.item()*1.0 + FN.item()*1.0 - TP.item()*1.0 - FP.item()*1.0 - FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/MSE',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/RMSE',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/MAE',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/MAD',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/MAPE',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/MSPE',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/MASE',  (TP.item()*1.0 + TN.item()*1.0 - FP.item()*1.0 - FN.item()*1.0)*1.0/(TP.item()*1.0 + TN.item()*1.0 + FP.item()*1.0 + FN.item()*1.0), iteration)
+      # writer.add_scalar('model_evaluate/ROC_curve', (TP.item()*1.0/(TP.item()*1.0+ FN.item()*1.0)), (FP.item()*1.0/(FP.item()*1.0+TN.item()*1.0)))
+      
+      writer.add_scalar('model_evalute/F1-Socre', 2*TP.item()*1.0/(2*TP.item()*1.0+FP.item()*1.0+FN.item()*1.0), iteration)
 
       # train_bar.set_description(desc)
       if (_ + 1) % 100 == 0:

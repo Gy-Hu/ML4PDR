@@ -254,9 +254,10 @@ class PDR:
         self.NN_guide_ig_success = 0
         self.NN_guide_ig_fail = 0
         '''
-        ---------------Time consuming of NN-guided inductive generalization------------------
+        ---------------Time consuming of NN-guided/MIC inductive generalization------------------
         '''
         self.NN_guide_ig_time_sum = 0
+        self.MIC_time_sum = 0
         '''
         ---------------Determine whether append NN-guided ig append to MIC------------------
         '''
@@ -459,7 +460,10 @@ class PDR:
                 s_NN = self.NN_guided_inductive_generalization(original_s_2)
                 NN_guide_consuming_t = time.process_time() - NN_guide_start_time
                 self.NN_guide_ig_time_sum += NN_guide_consuming_t
+                MIC_start_time = time.process_time()
                 s = self.MIC(s)
+                MIC_consuming_t = time.process_time() - MIC_start_time
+                self.MIC_time_sum += MIC_consuming_t
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
                 self.sum_MIC = self.sum_MIC + s.true_size()
                 
@@ -485,16 +489,33 @@ class PDR:
                 
                 
                 '''
+                Only Use NN-guided IG
+                
+                self._check_MIC(s_NN)
+                self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                for i in range(1, s_NN.t):
+                    self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                '''
+                
+                
+                '''
                 Add NN-guided inductive generalization generated answer
                 '''
                 #Use unsat core reduce
                 if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
                     original_s_3 = s_NN.clone()
+                    original_s_4 = s.clone()
                     self.unsatcore_reduce(original_s_3, trans=self.trans.cube(), frame=self.frames[original_s_3.t-1].cube())
                     original_s_3.remove_true()
-                    self.frames[s.t].add(Not(original_s_3.cube()), pushed=False)
-                    for i in range(1, s.t):
-                        self.frames[i].add(Not(original_s_3.cube()), pushed=True)
+                    #if not((len(s_NN.cubeLiterals)== len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):   
+                    original_s_3.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+                    original_s_4.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+                    if not(original_s_3.cubeLiterals == original_s_4.cubeLiterals): 
+                        self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                        for i in range(1, s.t):
+                            self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                
+                
 
                 #Not use unsat core reduce
                 # if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
@@ -797,6 +818,12 @@ class PDR:
         '''
         Test the NN-version inductive generalization
         '''
+
+        # Generate a backup of the original frames -> using unsat core reduce method to reduce
+        q4unsatcore = q.clone()
+        self.unsatcore_reduce(q4unsatcore, trans=self.trans.cube(), frame=self.frames[q4unsatcore.t-1].cube())
+        q4unsatcore.remove_true()
+
         if self.test_IG_NN == 0:
             pass
         elif self.test_IG_NN == 1:
@@ -836,12 +863,12 @@ class PDR:
             outputs = sigmoid(net(res))
             torch_select = torch.Tensor(q_index).cuda().int() 
             outputs = torch.index_select(outputs, 0, torch_select)
-            preds = torch.where(outputs>0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+            preds = torch.where(outputs>0.995, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
         
             '''
             Generate the new q (which is also q-like) under the NN-given answer
             '''
-            #q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+            q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
             q_like = tCube(q.t)
             for idx, preds_ans in enumerate(preds):
                 if preds_ans == 1:
@@ -865,18 +892,21 @@ class PDR:
                         # Pass both check
                         print("Congratulation, the NN-guide inductive generalization is correct")
                         self.NN_guide_ig_success += 1
-                        return q_like
+                        if len(q_like.cubeLiterals) > len(q4unsatcore.cubeLiterals) + 1:
+                            return q4unsatcore
+                        else:
+                            return q_like
                     else:
                         # Not pass the second check
                         self.NN_guide_ig_fail += 1
-                        return None
+                        return q4unsatcore
                 else:
                     # Not pass the first check
                     self.NN_guide_ig_fail += 1
-                    return None
+                    return q4unsatcore
             else:
                 self.NN_guide_ig_fail += 1
-                return None
+                return q4unsatcore
 
         
 

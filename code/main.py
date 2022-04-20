@@ -75,7 +75,7 @@ if __name__ == '__main__':
     '''
     
     
-    args = parser.parse_args()
+    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb10^2.B', '-c','-d','off','-n','on','-a','on']) 
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
