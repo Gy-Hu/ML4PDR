@@ -17,6 +17,7 @@ import torch
 import torch.nn as nn
 import neuro_predessor
 from datetime import datetime
+from operator import itemgetter
 #from train import extract_q_like, refine_cube
 
 
@@ -476,17 +477,24 @@ class PDR:
                 
                 if s_NN is not None:
                     print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
+                    self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                    for i in range(1, s_NN.t):
+                        self.frames[i].add(Not(s_NN.cube()), pushed=True)
                 else:
                     print ("Minimum not found by NN-guided inductive generalization")
+                    self._check_MIC(s)
+                    self.frames[s.t].add(Not(s.cube()), pushed=False)
+                    for i in range(1, s.t):
+                        self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
                 
                 '''
                 Determine whether use MIC
-                '''
+                
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
                     self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
-                
+                '''
                 
                 '''
                 Only Use NN-guided IG
@@ -500,13 +508,13 @@ class PDR:
                 
                 '''
                 Add NN-guided inductive generalization generated answer
-                '''
+                
                 #Use unsat core reduce
                 if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
                     original_s_3 = s_NN.clone()
                     original_s_4 = s.clone()
-                    self.unsatcore_reduce(original_s_3, trans=self.trans.cube(), frame=self.frames[original_s_3.t-1].cube())
-                    original_s_3.remove_true()
+                    #self.unsatcore_reduce(original_s_3, trans=self.trans.cube(), frame=self.frames[original_s_3.t-1].cube())
+                    #original_s_3.remove_true()
                     #if not((len(s_NN.cubeLiterals)== len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):   
                     original_s_3.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
                     original_s_4.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
@@ -514,7 +522,7 @@ class PDR:
                         self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
                         for i in range(1, s.t):
                             self.frames[i].add(Not(s_NN.cube()), pushed=True)
-                
+                '''
                 
 
                 #Not use unsat core reduce
@@ -575,6 +583,27 @@ class PDR:
         s.add(self.trans.cube())
         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
         return s.check()
+
+    def _solveRelative_upgrade(self, tcube) -> tCube:
+        check_init = sat
+        slv = Solver()
+        slv.add(self.init.cube())
+        slv.add(tcube.cube())
+        check_init = slv.check()
+
+        check_relative = sat
+        cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
+        s = Solver()
+        s.add(Not(tcube.cube()))
+        s.add(self.frames[tcube.t - 1].cube())
+        s.add(self.trans.cube())
+        s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
+        check_relative = s.check()
+
+        if check_init == unsat and check_relative == unsat:
+            return 'pass the check'
+        else:
+            return 'not pass'
 
     def _test_MIC1(self, q: tCube):
         passed_single_q = []
@@ -860,9 +889,11 @@ class PDR:
             for q_literal in ig_q: # literals in q (in inductive generalization process)
                 q_index.append(tmp_lst_all_node.index('n_'+str(q_literal.children()[0])))
 
+            q_index.sort() # Fixed the bug of indexing the correct literals
             outputs = sigmoid(net(res))
             torch_select = torch.Tensor(q_index).cuda().int() 
             outputs = torch.index_select(outputs, 0, torch_select)
+            top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-5:]
             preds = torch.where(outputs>0.995, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
         
             '''
@@ -870,9 +901,10 @@ class PDR:
             '''
             q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
             q_like = tCube(q.t)
-            for idx, preds_ans in enumerate(preds):
+            for idx, preds_ans in enumerate(preds.tolist()):
                 if preds_ans == 1:
-                    q_like.cubeLiterals.append(q.cubeLiterals[idx])
+                    for top_outputs in top_k_outputs:
+                        if top_outputs[0] == idx: q_like.cubeLiterals.append(q.cubeLiterals[idx])
             
             '''
             Check whether this answer pass the relative check
@@ -892,21 +924,22 @@ class PDR:
                         # Pass both check
                         print("Congratulation, the NN-guide inductive generalization is correct")
                         self.NN_guide_ig_success += 1
-                        if len(q_like.cubeLiterals) > len(q4unsatcore.cubeLiterals) + 1:
-                            return q4unsatcore
-                        else:
-                            return q_like
+                        return q_like
+                        # if len(q_like.cubeLiterals) > len(q4unsatcore.cubeLiterals) + 1:
+                        #     return q4unsatcore
+                        # else:
+                        #     return q_like
                     else:
                         # Not pass the second check
                         self.NN_guide_ig_fail += 1
-                        return q4unsatcore
+                        return None
                 else:
                     # Not pass the first check
                     self.NN_guide_ig_fail += 1
-                    return q4unsatcore
+                    return None
             else:
                 self.NN_guide_ig_fail += 1
-                return q4unsatcore
+                return None
 
         
 

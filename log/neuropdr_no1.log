@@ -3101,3 +3101,221 @@ perfection rate: 0.087, acc: 0.850, TP: 0.054, TN: 0.797, FN: 0.023, FP: 0.126
 loss: 1.2153; perfection rate: 0.107, acc: 0.850, TP: 0.057, TN: 0.794, FN: 0.020, FP: 0.130
 perfection rate: 0.101, acc: 0.867, TP: 0.046, TN: 0.821, FN: 0.031, FP: 0.102
 ==> 48/120 epoch, previous best: 0.923
+loss: 1.1914; perfection rate: 0.118, acc: 0.885, TP: 0.041, TN: 0.844, FN: 0.035, FP: 0.080
+perfection rate: 0.123, acc: 0.859, TP: 0.041, TN: 0.819, FN: 0.036, FP: 0.104
+==> 49/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.095, acc: 0.848, TP: 0.051, TN: 0.797, FN: 0.026, FP: 0.127
+perfection rate: 0.094, acc: 0.833, TP: 0.059, TN: 0.774, FN: 0.018, FP: 0.149
+==> 50/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.100, acc: 0.850, TP: 0.058, TN: 0.792, FN: 0.019, FP: 0.132
+perfection rate: 0.109, acc: 0.846, TP: 0.059, TN: 0.787, FN: 0.018, FP: 0.136
+==> 51/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.118, acc: 0.861, TP: 0.057, TN: 0.803, FN: 0.019, FP: 0.120
+perfection rate: 0.116, acc: 0.866, TP: 0.056, TN: 0.810, FN: 0.021, FP: 0.113
+==> 52/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.118, acc: 0.864, TP: 0.056, TN: 0.808, FN: 0.020, FP: 0.116
+perfection rate: 0.123, acc: 0.869, TP: 0.056, TN: 0.813, FN: 0.021, FP: 0.110
+==> 53/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.116, acc: 0.877, TP: 0.054, TN: 0.823, FN: 0.022, FP: 0.101
+perfection rate: 0.116, acc: 0.894, TP: 0.046, TN: 0.847, FN: 0.031, FP: 0.076
+==> 54/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.122, acc: 0.878, TP: 0.053, TN: 0.825, FN: 0.023, FP: 0.098
+perfection rate: 0.116, acc: 0.872, TP: 0.055, TN: 0.818, FN: 0.022, FP: 0.105
+==> 55/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.125, acc: 0.876, TP: 0.055, TN: 0.821, FN: 0.022, FP: 0.102
+perfection rate: 0.116, acc: 0.865, TP: 0.057, TN: 0.808, FN: 0.020, FP: 0.115
+==> 56/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.120, acc: 0.870, TP: 0.056, TN: 0.814, FN: 0.020, FP: 0.110
+perfection rate: 0.101, acc: 0.875, TP: 0.056, TN: 0.819, FN: 0.021, FP: 0.103
+==> 57/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.125, acc: 0.875, TP: 0.056, TN: 0.819, FN: 0.020, FP: 0.105
+perfection rate: 0.087, acc: 0.846, TP: 0.059, TN: 0.787, FN: 0.018, FP: 0.136
+==> 58/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.120, acc: 0.854, TP: 0.058, TN: 0.796, FN: 0.018, FP: 0.128
+perfection rate: 0.130, acc: 0.866, TP: 0.058, TN: 0.809, FN: 0.019, FP: 0.114
+==> 59/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.118, acc: 0.840, TP: 0.059, TN: 0.781, FN: 0.018, FP: 0.142
+perfection rate: 0.109, acc: 0.843, TP: 0.058, TN: 0.785, FN: 0.019, FP: 0.138
+==> 60/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.111, acc: 0.852, TP: 0.058, TN: 0.794, FN: 0.019, FP: 0.129
+perfection rate: 0.109, acc: 0.839, TP: 0.060, TN: 0.780, FN: 0.017, FP: 0.143
+==> 61/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.115, acc: 0.855, TP: 0.058, TN: 0.797, FN: 0.018, FP: 0.127
+perfection rate: 0.101, acc: 0.842, TP: 0.060, TN: 0.783, FN: 0.017, FP: 0.140
+==> 62/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.118, acc: 0.848, TP: 0.059, TN: 0.789, FN: 0.017, FP: 0.135
+perfection rate: 0.109, acc: 0.834, TP: 0.060, TN: 0.774, FN: 0.017, FP: 0.149
+==> 63/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.118, acc: 0.852, TP: 0.058, TN: 0.794, FN: 0.018, FP: 0.130
+perfection rate: 0.116, acc: 0.845, TP: 0.058, TN: 0.787, FN: 0.019, FP: 0.136
+==> 64/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.111, acc: 0.854, TP: 0.057, TN: 0.797, FN: 0.019, FP: 0.127
+perfection rate: 0.101, acc: 0.846, TP: 0.058, TN: 0.789, FN: 0.019, FP: 0.134
+==> 65/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.104, acc: 0.847, TP: 0.058, TN: 0.788, FN: 0.018, FP: 0.135
+perfection rate: 0.101, acc: 0.844, TP: 0.060, TN: 0.783, FN: 0.017, FP: 0.140
+==> 66/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.109, acc: 0.849, TP: 0.059, TN: 0.791, FN: 0.018, FP: 0.133
+perfection rate: 0.080, acc: 0.817, TP: 0.062, TN: 0.756, FN: 0.015, FP: 0.167
+==> 67/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.109, acc: 0.867, TP: 0.056, TN: 0.811, FN: 0.020, FP: 0.112
+perfection rate: 0.116, acc: 0.859, TP: 0.059, TN: 0.800, FN: 0.018, FP: 0.123
+==> 68/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.105, acc: 0.859, TP: 0.059, TN: 0.801, FN: 0.018, FP: 0.123
+perfection rate: 0.087, acc: 0.857, TP: 0.058, TN: 0.798, FN: 0.019, FP: 0.125
+==> 69/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.105, acc: 0.868, TP: 0.057, TN: 0.811, FN: 0.019, FP: 0.113
+perfection rate: 0.109, acc: 0.856, TP: 0.058, TN: 0.798, FN: 0.019, FP: 0.125
+==> 70/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.116, acc: 0.868, TP: 0.058, TN: 0.810, FN: 0.018, FP: 0.114
+perfection rate: 0.101, acc: 0.864, TP: 0.058, TN: 0.806, FN: 0.019, FP: 0.117
+==> 71/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.122, acc: 0.871, TP: 0.058, TN: 0.813, FN: 0.019, FP: 0.110
+perfection rate: 0.101, acc: 0.855, TP: 0.060, TN: 0.795, FN: 0.017, FP: 0.128
+==> 72/120 epoch, previous best: 0.923
+loss: 1.2153; perfection rate: 0.113, acc: 0.861, TP: 0.058, TN: 0.803, FN: 0.018, FP: 0.121
+perfection rate: 0.123, acc: 0.864, TP: 0.057, TN: 0.807, FN: 0.020, FP: 0.116
+==> 73/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.111, acc: 0.869, TP: 0.058, TN: 0.811, FN: 0.019, FP: 0.113
+perfection rate: 0.109, acc: 0.867, TP: 0.057, TN: 0.810, FN: 0.020, FP: 0.113
+==> 74/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.116, acc: 0.882, TP: 0.052, TN: 0.830, FN: 0.024, FP: 0.094
+perfection rate: 0.109, acc: 0.867, TP: 0.056, TN: 0.811, FN: 0.021, FP: 0.112
+==> 75/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.129, acc: 0.881, TP: 0.051, TN: 0.830, FN: 0.025, FP: 0.094
+perfection rate: 0.101, acc: 0.874, TP: 0.053, TN: 0.821, FN: 0.024, FP: 0.102
+==> 76/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.096, acc: 0.828, TP: 0.060, TN: 0.768, FN: 0.017, FP: 0.156
+perfection rate: 0.109, acc: 0.836, TP: 0.059, TN: 0.778, FN: 0.018, FP: 0.145
+==> 77/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.124, acc: 0.854, TP: 0.057, TN: 0.797, FN: 0.019, FP: 0.127
+perfection rate: 0.116, acc: 0.843, TP: 0.056, TN: 0.787, FN: 0.021, FP: 0.136
+==> 78/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.115, acc: 0.856, TP: 0.057, TN: 0.799, FN: 0.019, FP: 0.125
+perfection rate: 0.109, acc: 0.868, TP: 0.057, TN: 0.811, FN: 0.020, FP: 0.112
+==> 79/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.124, acc: 0.873, TP: 0.056, TN: 0.816, FN: 0.020, FP: 0.108
+perfection rate: 0.123, acc: 0.866, TP: 0.057, TN: 0.809, FN: 0.020, FP: 0.114
+==> 80/120 epoch, previous best: 0.923
+loss: 1.2153; perfection rate: 0.124, acc: 0.858, TP: 0.058, TN: 0.800, FN: 0.018, FP: 0.124
+perfection rate: 0.101, acc: 0.856, TP: 0.058, TN: 0.799, FN: 0.019, FP: 0.124
+==> 81/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.135, acc: 0.872, TP: 0.058, TN: 0.814, FN: 0.018, FP: 0.109
+perfection rate: 0.109, acc: 0.861, TP: 0.057, TN: 0.803, FN: 0.020, FP: 0.119
+==> 82/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.129, acc: 0.885, TP: 0.052, TN: 0.833, FN: 0.025, FP: 0.090
+perfection rate: 0.116, acc: 0.861, TP: 0.057, TN: 0.805, FN: 0.020, FP: 0.118
+==> 83/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.116, acc: 0.873, TP: 0.057, TN: 0.817, FN: 0.019, FP: 0.107
+perfection rate: 0.094, acc: 0.856, TP: 0.060, TN: 0.796, FN: 0.017, FP: 0.127
+==> 84/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.131, acc: 0.877, TP: 0.057, TN: 0.820, FN: 0.019, FP: 0.104
+perfection rate: 0.109, acc: 0.874, TP: 0.054, TN: 0.821, FN: 0.023, FP: 0.102
+==> 85/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.127, acc: 0.879, TP: 0.056, TN: 0.823, FN: 0.020, FP: 0.100
+perfection rate: 0.116, acc: 0.871, TP: 0.056, TN: 0.816, FN: 0.021, FP: 0.107
+==> 86/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.133, acc: 0.878, TP: 0.057, TN: 0.821, FN: 0.020, FP: 0.102
+perfection rate: 0.109, acc: 0.872, TP: 0.056, TN: 0.816, FN: 0.021, FP: 0.107
+==> 87/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.142, acc: 0.885, TP: 0.055, TN: 0.830, FN: 0.021, FP: 0.094
+perfection rate: 0.123, acc: 0.858, TP: 0.060, TN: 0.797, FN: 0.017, FP: 0.126
+==> 88/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.149, acc: 0.881, TP: 0.056, TN: 0.825, FN: 0.020, FP: 0.099
+perfection rate: 0.101, acc: 0.853, TP: 0.059, TN: 0.794, FN: 0.018, FP: 0.129
+==> 89/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.124, acc: 0.879, TP: 0.055, TN: 0.825, FN: 0.022, FP: 0.099
+perfection rate: 0.109, acc: 0.868, TP: 0.056, TN: 0.812, FN: 0.021, FP: 0.111
+==> 90/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.116, acc: 0.888, TP: 0.053, TN: 0.835, FN: 0.024, FP: 0.088
+perfection rate: 0.109, acc: 0.885, TP: 0.048, TN: 0.836, FN: 0.029, FP: 0.087
+==> 91/120 epoch, previous best: 0.923
+loss: 1.3498; perfection rate: 0.093, acc: 0.909, TP: 0.024, TN: 0.884, FN: 0.052, FP: 0.040
+perfection rate: 0.014, acc: 0.918, TP: 0.006, TN: 0.913, FN: 0.071, FP: 0.010
+==> 92/120 epoch, previous best: 0.923
+loss: 1.3410; perfection rate: 0.087, acc: 0.866, TP: 0.037, TN: 0.829, FN: 0.039, FP: 0.095
+perfection rate: 0.109, acc: 0.877, TP: 0.038, TN: 0.839, FN: 0.039, FP: 0.084
+==> 93/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.118, acc: 0.868, TP: 0.055, TN: 0.813, FN: 0.021, FP: 0.111
+perfection rate: 0.116, acc: 0.854, TP: 0.058, TN: 0.797, FN: 0.019, FP: 0.126
+==> 94/120 epoch, previous best: 0.923
+loss: 1.2152; perfection rate: 0.124, acc: 0.873, TP: 0.057, TN: 0.816, FN: 0.019, FP: 0.108
+perfection rate: 0.123, acc: 0.868, TP: 0.058, TN: 0.811, FN: 0.019, FP: 0.112
+==> 95/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.147, acc: 0.877, TP: 0.058, TN: 0.819, FN: 0.018, FP: 0.105
+perfection rate: 0.130, acc: 0.861, TP: 0.060, TN: 0.801, FN: 0.017, FP: 0.122
+==> 96/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.129, acc: 0.873, TP: 0.058, TN: 0.815, FN: 0.018, FP: 0.109
+perfection rate: 0.145, acc: 0.862, TP: 0.061, TN: 0.800, FN: 0.016, FP: 0.123
+==> 97/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.147, acc: 0.885, TP: 0.055, TN: 0.830, FN: 0.021, FP: 0.093
+perfection rate: 0.130, acc: 0.902, TP: 0.042, TN: 0.860, FN: 0.036, FP: 0.062
+==> 98/120 epoch, previous best: 0.923
+loss: 1.2057; perfection rate: 0.122, acc: 0.880, TP: 0.054, TN: 0.827, FN: 0.023, FP: 0.097
+perfection rate: 0.145, acc: 0.865, TP: 0.060, TN: 0.805, FN: 0.017, FP: 0.118
+==> 99/120 epoch, previous best: 0.923
+loss: 1.2141; perfection rate: 0.124, acc: 0.870, TP: 0.058, TN: 0.812, FN: 0.018, FP: 0.112
+perfection rate: 0.152, acc: 0.859, TP: 0.060, TN: 0.799, FN: 0.017, FP: 0.124
+==> 100/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.149, acc: 0.889, TP: 0.055, TN: 0.833, FN: 0.021, FP: 0.090
+perfection rate: 0.116, acc: 0.894, TP: 0.046, TN: 0.849, FN: 0.032, FP: 0.074
+==> 101/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.116, acc: 0.846, TP: 0.059, TN: 0.787, FN: 0.017, FP: 0.137
+perfection rate: 0.123, acc: 0.836, TP: 0.056, TN: 0.780, FN: 0.021, FP: 0.143
+==> 102/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.124, acc: 0.868, TP: 0.054, TN: 0.813, FN: 0.022, FP: 0.110
+perfection rate: 0.130, acc: 0.897, TP: 0.046, TN: 0.851, FN: 0.032, FP: 0.072
+==> 103/120 epoch, previous best: 0.923
+loss: 1.2150; perfection rate: 0.138, acc: 0.886, TP: 0.053, TN: 0.833, FN: 0.023, FP: 0.091
+perfection rate: 0.138, acc: 0.859, TP: 0.058, TN: 0.801, FN: 0.019, FP: 0.122
+==> 104/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.151, acc: 0.886, TP: 0.056, TN: 0.830, FN: 0.020, FP: 0.094
+perfection rate: 0.123, acc: 0.882, TP: 0.051, TN: 0.831, FN: 0.026, FP: 0.092
+==> 105/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.149, acc: 0.885, TP: 0.056, TN: 0.829, FN: 0.020, FP: 0.095
+perfection rate: 0.123, acc: 0.884, TP: 0.052, TN: 0.832, FN: 0.025, FP: 0.091
+==> 106/120 epoch, previous best: 0.923
+loss: 1.2142; perfection rate: 0.142, acc: 0.874, TP: 0.058, TN: 0.816, FN: 0.018, FP: 0.108
+perfection rate: 0.152, acc: 0.861, TP: 0.060, TN: 0.801, FN: 0.017, FP: 0.122
+==> 107/120 epoch, previous best: 0.923
+loss: 1.1857; perfection rate: 0.149, acc: 0.885, TP: 0.058, TN: 0.827, FN: 0.018, FP: 0.097
+perfection rate: 0.130, acc: 0.831, TP: 0.064, TN: 0.767, FN: 0.013, FP: 0.156
+==> 108/120 epoch, previous best: 0.923
+loss: 1.2139; perfection rate: 0.135, acc: 0.874, TP: 0.059, TN: 0.816, FN: 0.017, FP: 0.108
+perfection rate: 0.188, acc: 0.880, TP: 0.056, TN: 0.823, FN: 0.021, FP: 0.100
+==> 109/120 epoch, previous best: 0.923
+loss: 1.2143; perfection rate: 0.160, acc: 0.892, TP: 0.056, TN: 0.836, FN: 0.020, FP: 0.088
+perfection rate: 0.174, acc: 0.870, TP: 0.060, TN: 0.810, FN: 0.017, FP: 0.113
+==> 110/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.133, acc: 0.885, TP: 0.055, TN: 0.830, FN: 0.021, FP: 0.094
+perfection rate: 0.109, acc: 0.903, TP: 0.046, TN: 0.857, FN: 0.031, FP: 0.066
+==> 111/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.129, acc: 0.888, TP: 0.049, TN: 0.839, FN: 0.027, FP: 0.085
+perfection rate: 0.109, acc: 0.888, TP: 0.045, TN: 0.842, FN: 0.032, FP: 0.081
+==> 112/120 epoch, previous best: 0.923
+loss: 1.2151; perfection rate: 0.125, acc: 0.894, TP: 0.046, TN: 0.848, FN: 0.030, FP: 0.076
+perfection rate: 0.145, acc: 0.909, TP: 0.039, TN: 0.870, FN: 0.038, FP: 0.053
+==> 113/120 epoch, previous best: 0.923
+loss: 1.2215; perfection rate: 0.115, acc: 0.886, TP: 0.048, TN: 0.838, FN: 0.028, FP: 0.086
+perfection rate: 0.094, acc: 0.883, TP: 0.052, TN: 0.832, FN: 0.026, FP: 0.091
+==> 114/120 epoch, previous best: 0.923
+loss: 1.2108; perfection rate: 0.116, acc: 0.876, TP: 0.055, TN: 0.820, FN: 0.021, FP: 0.103
+perfection rate: 0.101, acc: 0.863, TP: 0.056, TN: 0.807, FN: 0.021, FP: 0.116
+==> 115/120 epoch, previous best: 0.923
+loss: 1.2099; perfection rate: 0.131, acc: 0.881, TP: 0.057, TN: 0.824, FN: 0.020, FP: 0.100
+perfection rate: 0.123, acc: 0.870, TP: 0.057, TN: 0.813, FN: 0.020, FP: 0.110
+==> 116/120 epoch, previous best: 0.923
+loss: 1.2130; perfection rate: 0.138, acc: 0.874, TP: 0.058, TN: 0.816, FN: 0.018, FP: 0.108
+perfection rate: 0.123, acc: 0.872, TP: 0.057, TN: 0.815, FN: 0.020, FP: 0.108
+==> 117/120 epoch, previous best: 0.923
+loss: 1.2148; perfection rate: 0.145, acc: 0.878, TP: 0.058, TN: 0.820, FN: 0.019, FP: 0.104
+perfection rate: 0.152, acc: 0.857, TP: 0.061, TN: 0.796, FN: 0.016, FP: 0.127
+==> 118/120 epoch, previous best: 0.923
+loss: 1.2109; perfection rate: 0.145, acc: 0.879, TP: 0.059, TN: 0.820, FN: 0.018, FP: 0.104
+perfection rate: 0.138, acc: 0.870, TP: 0.060, TN: 0.810, FN: 0.017, FP: 0.113
+==> 119/120 epoch, previous best: 0.923
+loss: 1.2013; perfection rate: 0.153, acc: 0.879, TP: 0.059, TN: 0.820, FN: 0.017, FP: 0.104
+perfection rate: 0.159, acc: 0.868, TP: 0.060, TN: 0.807, FN: 0.017, FP: 0.115
+==> 120/120 epoch, previous best: 0.923
+loss: 1.2132; perfection rate: 0.160, acc: 0.881, TP: 0.058, TN: 0.823, FN: 0.018, FP: 0.101
+perfection rate: 0.130, acc: 0.889, TP: 0.050, TN: 0.839, FN: 0.028, FP: 0.084

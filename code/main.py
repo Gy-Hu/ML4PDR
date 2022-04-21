@@ -75,7 +75,7 @@ if __name__ == '__main__':
     '''
     
     
-    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb10^2.B', '-c','-d','off','-n','on','-a','on']) 
+    args = parser.parse_args(['../dataset/aag4train/vis.4-arbit^1.E.aag', '-c','-n','on','-a','on']) 
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
@@ -129,7 +129,8 @@ if __name__ == '__main__':
         if args.c:
             if solver.NN_guide_ig_time_sum != 0:
                 print("TIME CONSUMING IN TOTAL: ",(endTime - startTime) ,"seconds")
-                print("TIME CONSUMING: " ,(endTime - startTime - solver.NN_guide_ig_time_sum) , "seconds")                
+                print("TIME CONSUMING: " ,(endTime - startTime - solver.NN_guide_ig_time_sum) , "seconds")  
+                print("NN-guided inductive generalization success rate: ",(solver.NN_guide_ig_success/(solver.NN_guide_ig_success + solver.NN_guide_ig_fail))*100,"%")             
             else:
                 print("TIME CONSUMING: " ,(endTime - startTime) , "seconds")
 
