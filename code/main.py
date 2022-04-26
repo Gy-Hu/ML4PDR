@@ -1,6 +1,8 @@
 '''
 Main function to run PDR (extract the graph as well)
 '''
+# import line_profiler
+# profile = line_profiler.LineProfiler()
 import argparse
 import os
 from datetime import datetime
@@ -13,6 +15,10 @@ sys.path.append("..")
 import model
 import pdr
 import time
+#import line_profiler
+# import matplotlib as mpl
+# mpl.use('Agg')
+import matplotlib.pyplot as plt
 # from env import QL
 
 # When you need to run all folder, setup this
@@ -74,8 +80,8 @@ if __name__ == '__main__':
     
     '''
     
-    
-    args = parser.parse_args(['../dataset/aag4train/vis.4-arbit^1.E.aag', '-c','-n','on','-a','on']) 
+    #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/nusmv.syncarb5^2.B.aag','-c']) 
+    args = parser.parse_args() 
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
@@ -123,23 +129,29 @@ if __name__ == '__main__':
         elif args.a=='on':
             solver.NN_guide_ig_append = 1
 
-        startTime = time.process_time()
+        startTime = time.time()
         solver.run(agent)
-        endTime = time.process_time()
+        endTime = time.time()
+        print("Finish runing aiger file:"+args.fileName)
         if args.c:
             if solver.NN_guide_ig_time_sum != 0:
                 print("TIME CONSUMING IN TOTAL: ",(endTime - startTime) ,"seconds")
-                print("TIME CONSUMING: " ,(endTime - startTime - solver.NN_guide_ig_time_sum) , "seconds")  
-                print("NN-guided inductive generalization success rate: ",(solver.NN_guide_ig_success/(solver.NN_guide_ig_success + solver.NN_guide_ig_fail))*100,"%")             
+                print("TIME CONSUMING WITH NN, WITHOUT INF TIME: " ,(endTime - startTime - solver.NN_guide_ig_time_sum) , "seconds")  
+                print("TIME CONSUMING IN PUSH LEMMA", solver.pushLemma_time_sum)
+                if solver.test_IG_NN : 
+                    print("NN-guided inductive generalization success rate: ",(solver.NN_guide_ig_success/(solver.NN_guide_ig_success + solver.NN_guide_ig_fail))*100,"%")             
+                    y_nn_ig_pass_ratio, x_nn_ig_pass_ratio = zip(*solver.NN_guide_ig_passed_ratio)
+                    plt.plot(x_nn_ig_pass_ratio,y_nn_ig_pass_ratio)
+                    plt.savefig("../log/NN_guided_IG_pass_ratio.jpg") 
             else:
                 print("TIME CONSUMING: " ,(endTime - startTime) , "seconds")
 
         # Using RL
         # for i in range(20):
-        #     startTime = time.process_time()
+        #     startTime = time.time()
         #     solver = pdr.PDR(*m.parse(file))
         #     solver.run(agent)
-        #     endTime = time.process_time()
+        #     endTime = time.time()
         #     if args.c:
         #         print("TIME CONSUMING: " + str((endTime - startTime).seconds) + "seconds")
 
@@ -181,7 +193,7 @@ if __name__ == '__main__':
                         solver.smt2_gen_IG = 0
                         solver.smt2_gen_GP = 1
 
-                    startTime = time.process_time()
+                    startTime = time.time()
                     timeout = False
 
                     # t = Thread(target=solver.run)
@@ -194,10 +206,11 @@ if __name__ == '__main__':
                     # Wait a maximum of 10 seconds for foo
                     # Usage: join([timeout in seconds])
                     p.join(timeout=int(args.t))
-                    endTime = time.process_time()
+                    endTime = time.time()
                     # If thread is active
                     if p.is_alive():
                         timeout = True
+                        print("Finish runing aiger file:"+args.fileName)
                         print("PDR run out of the time... let's kill it...")
                         # Terminate foo
                         p.terminate()
@@ -207,6 +220,7 @@ if __name__ == '__main__':
                     #     sleep(20)
                     # elif timeout != True:
                     if timeout != True:
+                        print("Finish runing aiger file:"+args.fileName)
                         print("Done in time")
                         #sleep(20)
                         if args.c:

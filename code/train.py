@@ -123,8 +123,8 @@ if __name__ == "__main__":
   datetime_str = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
   writer = SummaryWriter('../log/tensorboard'+'-'+datetime_str.replace(' ','_'))
 
-  args = parser.parse_args(['--task-name', 'neuropdr_no1', '--dim', '128', '--n_rounds', '240', \
-                            '--epochs', '120', \
+  args = parser.parse_args(['--task-name', 'neuropdr_'+datetime_str.replace(' ','_'), '--dim', '128', '--n_rounds', '512', \
+                            '--epochs', '256', \
                             '--gen_log', '../log/data_maker_sr3t10.log', \
                             # '--train-file', '../dataset/GP2graph/train/',\
                             # '--val-file','../dataset/GP2graph/validate/',\
@@ -195,6 +195,7 @@ if __name__ == "__main__":
   sigmoid  = nn.Sigmoid()
 
   best_acc = 0.0
+  best_precision = 0.0
   start_epoch = 0
   #end_epoch = 120
 
@@ -212,15 +213,18 @@ if __name__ == "__main__":
     model = torch.load(args.restore)
     start_epoch = model['epoch']
     best_acc = model['acc']
+    best_precision = model['precision']
     net.load_state_dict(model['state_dict'])
 
   iteration = 0
   #one batch one iteration at first?
   for epoch in range(start_epoch, args.epochs):
-
-    print('==> %d/%d epoch, previous best: %.3f' % (epoch+1, args.epochs, best_acc))
-    print('==> %d/%d epoch, previous best: %.3f' % (epoch+1, args.epochs, best_acc), file=log_file, flush=True)
-    print('==> %d/%d epoch, previous best: %.3f' % (epoch+1, args.epochs, best_acc), file=detail_log_file, flush=True)
+    print('==> %d/%d epoch, previous best precision: %.3f' % (epoch+1, args.epochs, best_precision))
+    print('==> %d/%d epoch, previous best accuracy: %.3f' % (epoch+1, args.epochs, best_acc))
+    print('==> %d/%d epoch, previous best precision: %.3f' % (epoch+1, args.epochs, best_precision), file=log_file, flush=True)
+    print('==> %d/%d epoch, previous best accuracy: %.3f' % (epoch+1, args.epochs, best_acc), file=log_file, flush=True)
+    print('==> %d/%d epoch, previous best precision: %.3f' % (epoch+1, args.epochs, best_precision), file=detail_log_file, flush=True)
+    print('==> %d/%d epoch, previous best accuracy: %.3f' % (epoch+1, args.epochs, best_acc), file=detail_log_file, flush=True)
     '''
     -------------------------------------------------train--------------------------------------------------------------
     '''
@@ -261,6 +265,7 @@ if __name__ == "__main__":
       TOT = TP + TN + FN + FP
 
       desc += 'perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (perfection_rate*1.0/all,(TP.item()+TN.item())*1.0/TOT.item(), TP.item()*1.0/TOT.item(), TN.item()*1.0/TOT.item(), FN.item()*1.0/TOT.item(), FP.item()*1.0/TOT.item())
+      writer.add_scalar('accuracy/train_perfection_ratio', (perfection_rate*1.0/all)*100, iteration)
       
       writer.add_scalar('confusion_matrix/true_possitive', TP.item()*1.0/TOT.item(), iteration)
       writer.add_scalar('confusion_matrix/false_possitive', FP.item()*1.0/TOT.item(), iteration)
@@ -313,7 +318,7 @@ if __name__ == "__main__":
       outputs = sigmoid(outputs)
       torch_select = torch.Tensor(q_index).cuda().int()
       outputs = torch.index_select(outputs, 0, torch_select)
-      preds = torch.where(outputs > 0.5, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+      preds = torch.where(outputs > 0.997, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
 
       # Calulate the perfect accuracy
       all = all + 1
@@ -329,19 +334,32 @@ if __name__ == "__main__":
       perfection_rate*1.0/all,
       (TP.item() + TN.item()) * 1.0 / TOT.item(), TP.item() * 1.0 / TOT.item(), TN.item() * 1.0 / TOT.item(),
       FN.item() * 1.0 / TOT.item(), FP.item() * 1.0 / TOT.item())
+
+      writer.add_scalar('accuracy/predict_perfection_ratio', (perfection_rate*1.0/all)*100, iteration)
+      
       # val_bar.set_description(desc)
       if (_ + 1) % 100 == 0:
         print(desc, file=detail_log_file, flush=True)
     print(desc, file=log_file, flush=True)
 
     acc = (TP.item() + TN.item()) * 1.0 / TOT.item()
+    try:
+      val_precision = TP.item()*1.0/(TP.item()*1.0 + FP.item()*1.0)
+    except:
+      val_precision = 0
+    
     writer.add_scalar('accuracy/validation_accuracy', acc, epoch)
-    torch.save({'epoch': epoch + 1, 'acc': acc, 'state_dict': net.state_dict()},
+    torch.save({'epoch': epoch + 1, 'acc': acc, 'precision': val_precision, 'state_dict': net.state_dict()},
                os.path.join(args.model_dir, args.task_name + '_last.pth.tar'))
+    if val_precision >= best_precision:
+      best_precision = val_precision
+      torch.save({'epoch': epoch + 1, 'acc': acc, 'precision': best_precision, 'state_dict': net.state_dict()},
+                 os.path.join(args.model_dir, args.task_name + '_best_precision.pth.tar'))
+      
     if acc >= best_acc:
       best_acc = acc
-      torch.save({'epoch': epoch + 1, 'acc': best_acc, 'state_dict': net.state_dict()},
-                 os.path.join(args.model_dir, args.task_name + '_best.pth.tar'))
+      # torch.save({'epoch': epoch + 1, 'acc': best_acc, 'precision': val_precision, 'state_dict': net.state_dict()},
+      #            os.path.join(args.model_dir, args.task_name + '_best.pth.tar'))
         
   try:
     writer.close()

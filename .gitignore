@@ -36,4 +36,6 @@ aag4train_bak/
 aag4train/
 not_used/
 log/*
+deps/*
 *.smt2
+*.lprof

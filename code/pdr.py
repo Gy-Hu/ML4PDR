@@ -1,3 +1,4 @@
+import profile
 from z3 import *
 import time
 import sys
@@ -18,6 +19,13 @@ import torch.nn as nn
 import neuro_predessor
 from datetime import datetime
 from operator import itemgetter
+import line_profiler
+import atexit
+profile = line_profiler.LineProfiler()
+atexit.register(profile.print_stats,output_unit=1e-03)
+# from line_profiler import LineProfiler
+# profile = LineProfiler()
+# profile = line_profiler.LineProfiler()
 #from train import extract_q_like, refine_cube
 
 
@@ -254,15 +262,20 @@ class PDR:
         '''
         self.NN_guide_ig_success = 0
         self.NN_guide_ig_fail = 0
+        self.NN_guide_ig_iteration = 0
+        self.NN_guide_ig_passed_ratio = []
         '''
         ---------------Time consuming of NN-guided/MIC inductive generalization------------------
         '''
         self.NN_guide_ig_time_sum = 0
         self.MIC_time_sum = 0
+        self.pushLemma_time_sum = 0
         '''
         ---------------Determine whether append NN-guided ig append to MIC------------------
         '''
         self.NN_guide_ig_append = 0
+        
+
         
     def check_init(self):
         s = Solver()
@@ -280,6 +293,7 @@ class PDR:
             return False
         return True
 
+    #@profile
     def run(self, agent=None):
 
         if not self.check_init():
@@ -368,9 +382,13 @@ class PDR:
 
                 #TODO: Try new way to pushing lemma (like picking >=2 clause at once to add in new frame)
                 for idx in range(1,len(self.frames)-1):
+                    pushLemma_start_time = time.time()
                     self.pushLemma(idx)
+                    pushLemma_consuming_t = time.time() - pushLemma_start_time
+                    self.pushLemma_time_sum += pushLemma_consuming_t
 
-                self._sanity_check_frame()
+                #--------------remove this due to the overhead-------
+                #self._sanity_check_frame()
                 print("Now print out the size of frames")
                 for index in range(len(self.frames)):
                     push_cnt = self.frames[index].pushed.count(True)
@@ -378,7 +396,8 @@ class PDR:
                     assert (len(self.frames[index].Lemma) == len(self.frames[index].pushed))
                 for index in range(1, len(self.frames)):
                     print (f'--------F {index}---------')
-                    self._debug_print_frame(index, skip_pushed=True)
+                    #-----------remove this due to the overhead------
+                    #self._debug_print_frame(index, skip_pushed=True)
                 #input() # pause
 
 
@@ -400,6 +419,7 @@ class PDR:
 
     def pushLemma(self, Fidx:int):
         fi: Frame = self.frames[Fidx]
+
         for lidx, c in enumerate(fi.Lemma):
             if fi.pushed[lidx]:
                 continue
@@ -410,7 +430,7 @@ class PDR:
             if s.check() == unsat:
                 fi.pushed[lidx] = True
                 self.frames[Fidx + 1].add(c)
-
+    
     def frame_trivially_block(self, st: tCube):
         Fidx = st.t
         slv = Solver()
@@ -421,6 +441,8 @@ class PDR:
         return False
 
     #TODO: 解决这边特殊case遇到safe判断成unsafe的问题
+    
+    @profile
     def recBlockCube(self, s0: tCube):
         '''
         :param s0: CTI (counterexample to induction, represented as cube)
@@ -439,7 +461,10 @@ class PDR:
             assert(prevFidx != 0)
             if prevFidx is not None and prevFidx == s.t-1:
                 # local lemma push
+                pushLemma_start_time = time.time()
                 self.pushLemma(prevFidx)
+                pushLemma_consuming_t = time.time() - pushLemma_start_time
+                self.pushLemma_time_sum += pushLemma_consuming_t
             prevFidx = s.t
             # check Frame trivially block
             if self.frame_trivially_block(s):
@@ -457,36 +482,58 @@ class PDR:
                 original_s_1 = s.clone() # For generating ground truth
                 original_s_2 = s.clone() # For testing the NN-guided inductive generalization
                 s_enumerate = self.generate_GT(original_s_1) #Generate ground truth here
-                NN_guide_start_time = time.process_time()
+                # if self.test_IG_NN and self.NN_guide_ig_iteration > 5 and self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail) < 0.5:
+                #     self.test_IG_NN = 0
+                NN_guide_start_time = time.time()
                 s_NN = self.NN_guided_inductive_generalization(original_s_2)
-                NN_guide_consuming_t = time.process_time() - NN_guide_start_time
+                if self.test_IG_NN != 0:
+                    self.NN_guide_ig_passed_ratio.append(((self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail)) * 100, self.NN_guide_ig_iteration))
+
+                NN_guide_consuming_t = time.time() - NN_guide_start_time
                 self.NN_guide_ig_time_sum += NN_guide_consuming_t
-                MIC_start_time = time.process_time()
+
+
+                # -------------------MIC Procedure---------------------
+                MIC_start_time = time.time()
                 s = self.MIC(s)
-                MIC_consuming_t = time.process_time() - MIC_start_time
-                self.MIC_time_sum += MIC_consuming_t
+                self._check_MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
+                MIC_consuming_t = time.time() - MIC_start_time
+                self.MIC_time_sum += MIC_consuming_t
                 self.sum_MIC = self.sum_MIC + s.true_size()
-                
+                self.frames[s.t].add(Not(s.cube()), pushed=False)
+                for i in range(1, s.t):
+                    self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
+
+
+                if s_NN is not None:
+                    print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
+                    if not((len(s_NN.cubeLiterals) == len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):
+                        self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                        for i in range(1, s_NN.t):
+                            self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                #-------------Append the NN-generated cube and MIC to frames------------- 
+                # else: 
+                #     print("NN-guided inductive generalization failed, begin MIC process")
+                #     MIC_start_time = time.time()
+                #     s = self.MIC(s)
+                #     self._check_MIC(s)
+                #     print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
+                #     MIC_consuming_t = time.time() - MIC_start_time
+                #     self.MIC_time_sum += MIC_consuming_t
+                #     self.sum_MIC = self.sum_MIC + s.true_size()
+                #     self.frames[s.t].add(Not(s.cube()), pushed=False)
+                #     for i in range(1, s.t):
+                #         self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
+
                 if s_enumerate is not None: 
                     print ("Enueration find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
                     self.sum_IG_GT = self.sum_IG_GT + s_enumerate.true_size()
                 else:
                     print ("Minimum not found by enueration")
                     self.sum_IG_GT = self.sum_IG_GT + s.true_size()
-                
-                if s_NN is not None:
-                    print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
-                    self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
-                    for i in range(1, s_NN.t):
-                        self.frames[i].add(Not(s_NN.cube()), pushed=True)
-                else:
-                    print ("Minimum not found by NN-guided inductive generalization")
-                    self._check_MIC(s)
-                    self.frames[s.t].add(Not(s.cube()), pushed=False)
-                    for i in range(1, s.t):
-                        self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
-                
+
+
                 '''
                 Determine whether use MIC
                 
@@ -495,7 +542,7 @@ class PDR:
                 for i in range(1, s.t):
                     self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
                 '''
-                
+
                 '''
                 Only Use NN-guided IG
                 
@@ -504,8 +551,8 @@ class PDR:
                 for i in range(1, s_NN.t):
                     self.frames[i].add(Not(s_NN.cube()), pushed=True)
                 '''
-                
-                
+
+
                 '''
                 Add NN-guided inductive generalization generated answer
                 
@@ -523,22 +570,22 @@ class PDR:
                         for i in range(1, s.t):
                             self.frames[i].add(Not(s_NN.cube()), pushed=True)
                 '''
-                
 
-                #Not use unsat core reduce
-                # if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
-                #     self.frames[s.t].add(Not(s_NN.cube()), pushed=False)
-                #     for i in range(1, s.t):
-                #         self.frames[i].add(Not(s_NN.cube()), pushed=True)
-                
 
-                # reQueue : see IC3 PDR Friends
-                #Fmin = original_s.t+1
-                #Fmax = len(self.frames)
-                #if Fmin < Fmax:
-                #    s_copy = original_s #s.clone()
-                #    s_copy.t = Fmin
-                #    Q.put((Fmin, s_copy))
+                        #Not use unsat core reduce
+                        # if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
+                        #     self.frames[s.t].add(Not(s_NN.cube()), pushed=False)
+                        #     for i in range(1, s.t):
+                        #         self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                        
+
+                        # reQueue : see IC3 PDR Friends
+                        #Fmin = original_s.t+1
+                        #Fmax = len(self.frames)
+                        #if Fmin < Fmax:
+                        #    s_copy = original_s #s.clone()
+                        #    s_copy.t = Fmin
+                        #    Q.put((Fmin, s_copy))
 
             else: #SAT condition
                 assert(z.t == s.t-1)
@@ -847,6 +894,7 @@ class PDR:
         '''
         Test the NN-version inductive generalization
         '''
+        self.NN_guide_ig_iteration += 1
 
         # Generate a backup of the original frames -> using unsat core reduce method to reduce
         q4unsatcore = q.clone()
@@ -872,11 +920,11 @@ class PDR:
             assert (s_smt.check() == unsat)
             res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN) #-> this is a list to guide which literals should be kept/throwed
             # Conductive two relative check of the return q-like
-            print('restoring from: ', "../dataset/model/neuropdr_no1_last.pth.tar")
+            print('restoring from: ', "../dataset/model/neuropdr_2022-04-21_19:11:20_last.pth.tar")
             # Load model to predict
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             net = neuro_predessor.NeuroPredessor()
-            model = torch.load("../model/neuropdr_no1_last.pth.tar")
+            model = torch.load("../model/neuropdr_2022-04-21_19:11:20_last.pth.tar")
             net.load_state_dict(model['state_dict'])
             net = net.to(device)
             sigmoid  = nn.Sigmoid()
@@ -893,8 +941,8 @@ class PDR:
             outputs = sigmoid(net(res))
             torch_select = torch.Tensor(q_index).cuda().int() 
             outputs = torch.index_select(outputs, 0, torch_select)
-            top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-5:]
-            preds = torch.where(outputs>0.995, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+            top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-2:]
+            preds = torch.where(outputs>0.997, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
         
             '''
             Generate the new q (which is also q-like) under the NN-given answer
