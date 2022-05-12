@@ -1,6 +1,3 @@
-'''
-Used in PDR
-'''
 from z3 import *
 
 class BMC:

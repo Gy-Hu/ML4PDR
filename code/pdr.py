@@ -1184,7 +1184,7 @@ class PDR:
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
             s.add(prevF)
             s.add(Not(nextcube))
-            s_smt.add(prevF)
+            s_smt.add(prevF)  # TODO: we need to think about it, do we really need to add it? --Hongce
             s_smt.add(Not(nextcube)) 
             assert(s.check() == unsat and s_smt.check() == unsat)
             core = s.unsat_core()
@@ -1267,6 +1267,7 @@ class PDR:
         size_after_unsat_core = len(tcube_cp.cubeLiterals)
         #print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
         #print("After generalization by dropping literal one by one : ", len(index_to_remove))
+        
         # Hongce: this is the beginning of ternary simulation-based variable reduction
         simulator = self.ternary_simulator.clone() # I just don't want to mess up between two ternary simulations for different outputs
         simulator.register_expr(nextcube)
