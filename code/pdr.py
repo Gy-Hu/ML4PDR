@@ -1,3 +1,4 @@
+import profile
 from z3 import *
 import time
 import sys
@@ -10,6 +11,24 @@ import pandas as pd
 from bmc import BMC
 import ternary_sim
 from itertools import combinations
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from scipy.special import comb
+import build_graph_online
+import torch
+import torch.nn as nn
+import neuro_predessor
+from datetime import datetime
+from operator import itemgetter
+# import line_profiler
+# import atexit
+# profile = line_profiler.LineProfiler()
+# atexit.register(profile.print_stats,output_unit=1e-03)
+
+# from line_profiler import LineProfiler
+# profile = LineProfiler()
+# profile = line_profiler.LineProfiler()
+#from train import extract_q_like, refine_cube
 
 
 # 查询接口中每行代码执行的时间
@@ -64,8 +83,7 @@ class tCube:
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中 #TODO: lMap should incudes the v prime and i prime
     def addModel(self, lMap, model, remove_input): # not remove input' when add model
-        no_var_primes = [l for l in model if str(l)[0] == 'i' or not str(l).endswith('_prime')]
-        # Hongce : @Guangyu, the prime variables are now ended with _prime, previously we use '\'' which might be wrong.
+        no_var_primes = [l for l in model if str(l)[0] == 'i' or not str(l).endswith('_prime')]# no_var_prime -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
         if remove_input:
             no_input = [l for l in no_var_primes if str(l)[0] != 'i'] # no_input -> v2, v4, v6
         else:
@@ -154,6 +172,17 @@ class tCube:
     def cube(self): #导致速度变慢的罪魁祸首？
         return simplify(And(self.cubeLiterals))
 
+    # Convert the trans into real cube
+    def cube_remove_equal(self):
+        res = tCube(self.t)
+        for literal in self.cubeLiterals:
+            children = literal.children()
+            assert(len(children) == 2)
+            cube_literal = And(Not(And(children[0],Not(children[1]))), Not(And(children[1],Not(children[0]))))
+            res.add(cube_literal)
+        return res
+
+
     # def ternary_sim(self, index_of_x):
     #     # first extract var,val from cubeLiteral
     #     s = Solver()
@@ -198,7 +227,7 @@ class PDR:
         self.literals = literals
         self.items = self.primary_inputs + self.literals + primes_inp + primes
         self.lMap = {str(l): l for l in self.items}
-        self.post = post
+        self.post = post 
         self.frames = list()
        # self.primaMap_new = [(literals[i], primes[i]) for i in range(len(literals))] #TODO: Map the input to input' (input prime)
         self.primeMap = [(literals[i], primes[i]) for i in range(len(literals))]
@@ -209,13 +238,51 @@ class PDR:
         # for debugging purpose
         self.bmc = BMC(primary_inputs=primary_inputs, literals=literals, primes=primes,
                        init=init, trans=trans, post=post, pv2next=pv2next, primes_inp = primes_inp)
-        self.generaliztion_data = []
+        self.generaliztion_data_GP = []# Store the ground truth data of generalized predecessor
+        self.generaliztion_data_IG = []# Store the ground truth data of inductive generalization 
+        #TODO: Use self.generaliztion_data_IG to store the ground truth data of inductive generalization 
         self.filename = filename
         # create a ternary simulator and buffer the update functions in advance
         self.ternary_simulator = ternary_sim.AIGBuffer()
         for _, updatefun in self.pv2next.items():
             self.ternary_simulator.register_expr(updatefun)
+        '''
+        --------------The following variables are used to calculate the reducing rate--------
+        '''
+        self.sum_MIC = 0 # Sum of the literals produced by MIC
+        self.sum_IG_GT = 0 # Sum of the literals produced by combinations
+        self.sum_GP = 0 # Sum of the literals of predecessor (unsat core or other methods)
+        self.sum_GP_GT = 0 #Sum of the minimum literals of predecessor (MUST, ternary simulation etc.)
+        '''
+        --------------Switch to open/close the ground truth data generation------------------
+        '''
+        self.smt2_gen_IG = 0
+        self.smt2_gen_GP = 0
+        '''
+        --------------Switch to open/close the NN-guided inductive generalization------------------
+        '''
+        self.test_IG_NN = 0
+        self.test_GP_NN = 0
+        '''
+        ---------------Count down the success/fail of NN-guided inductive generalization------------------
+        '''
+        self.NN_guide_ig_success = 0
+        self.NN_guide_ig_fail = 0
+        self.NN_guide_ig_iteration = 0
+        self.NN_guide_ig_passed_ratio = []
+        '''
+        ---------------Time consuming of NN-guided/MIC inductive generalization------------------
+        '''
+        self.NN_guide_ig_time_sum = 0
+        self.MIC_time_sum = 0
+        self.pushLemma_time_sum = 0
+        '''
+        ---------------Determine whether append NN-guided ig append to MIC------------------
+        '''
+        self.NN_guide_ig_append = 0
+        
 
+        
     def check_init(self):
         s = Solver()
         s.add(self.init.cube())
@@ -232,7 +299,8 @@ class PDR:
             return False
         return True
 
-    def run(self, agent):
+    #@profile
+    def run(self, agent=None):
 
         if not self.check_init():
             print("Found trace ending in bad state")
@@ -250,11 +318,29 @@ class PDR:
                 trace = self.recBlockCube(c) # conduct generalize predecessor here (in solve relative process)
                 #TODO: 找出spec3-and-env这个case为什么没有recBlock
                 if trace is not None:
-                    df = pd.DataFrame(self.generaliztion_data)
-                    df = df.fillna(1)
-                    df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    # Generate ground truth of generalized predecessor
+                    if self.generaliztion_data_GP: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_GP)
+                        df = df.fillna(1)
+                        df.to_csv("../dataset/GP2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
+                    # Generate ground truth of inductive generalization
+                    if self.generaliztion_data_IG: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_IG)
+                        df = df.fillna(0)
+                        df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
+                    # Print out the improvement space of inductive generalization
+                    if self.sum_IG_GT != 0:
+                        print("Sum of the literals produced by MIC(): ",self.sum_MIC)
+                        print("Sum of the literals produced by enumeration in indutive generalization: ",self.sum_IG_GT)
+                        print("Reducing ",((self.sum_MIC-self.sum_IG_GT)/self.sum_MIC)*100,"% ")
+                    
                     print("Found trace ending in bad state:")
+                    
+                    
                     self._debug_trace(trace)
+                    # If want to print the trace, remember to comment the _debug_trace() function
                     while not trace.empty():
                         idx, cube = trace.get()
                         print(cube)
@@ -265,10 +351,26 @@ class PDR:
                 inv = self.checkForInduction()
                 if inv != None:
                     print("Found inductive invariant")
-                    df = pd.DataFrame(self.generaliztion_data)
-                    df = df.fillna(1)
-                    #df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
-                    df.to_csv("../dataset/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    # Print out the improvement space of inductive generalization
+                    if self.sum_IG_GT != 0:
+                        print("Sum of the literals produced by MIC(): ",self.sum_MIC)
+                        print("Sum of the literals produced by enumeration in indutive generalization: ",self.sum_IG_GT)
+                        print("Reducing ",((self.sum_MIC-self.sum_IG_GT)/self.sum_MIC)*100,"% ")
+                    
+                    
+                    # Generate ground truth of generalized predecessor
+                    if self.generaliztion_data_GP: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_GP)
+                        df = df.fillna(1)
+                        #df.iloc[:,2:] = df.iloc[:,2:].apply(pd.to_numeric)
+                        df.to_csv("../dataset/GP2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
+                    # Generate ground truth of inductive generalization
+                    if self.generaliztion_data_IG: # When this list is not empty, it return true
+                        df = pd.DataFrame(self.generaliztion_data_IG)
+                        df = df.fillna(0)
+                        df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                    
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
 
@@ -286,9 +388,13 @@ class PDR:
 
                 #TODO: Try new way to pushing lemma (like picking >=2 clause at once to add in new frame)
                 for idx in range(1,len(self.frames)-1):
+                    pushLemma_start_time = time.time()
                     self.pushLemma(idx)
+                    pushLemma_consuming_t = time.time() - pushLemma_start_time
+                    self.pushLemma_time_sum += pushLemma_consuming_t
 
-                self._sanity_check_frame()
+                #--------------remove this due to the overhead-------
+                #self._sanity_check_frame()
                 print("Now print out the size of frames")
                 for index in range(len(self.frames)):
                     push_cnt = self.frames[index].pushed.count(True)
@@ -296,7 +402,8 @@ class PDR:
                     assert (len(self.frames[index].Lemma) == len(self.frames[index].pushed))
                 for index in range(1, len(self.frames)):
                     print (f'--------F {index}---------')
-                    self._debug_print_frame(index, skip_pushed=True)
+                    #-----------remove this due to the overhead------
+                    #self._debug_print_frame(index, skip_pushed=True)
                 #input() # pause
 
 
@@ -318,6 +425,7 @@ class PDR:
 
     def pushLemma(self, Fidx:int):
         fi: Frame = self.frames[Fidx]
+
         for lidx, c in enumerate(fi.Lemma):
             if fi.pushed[lidx]:
                 continue
@@ -328,7 +436,7 @@ class PDR:
             if s.check() == unsat:
                 fi.pushed[lidx] = True
                 self.frames[Fidx + 1].add(c)
-
+    
     def frame_trivially_block(self, st: tCube):
         Fidx = st.t
         slv = Solver()
@@ -339,6 +447,8 @@ class PDR:
         return False
 
     #TODO: 解决这边特殊case遇到safe判断成unsafe的问题
+    
+    #@profile
     def recBlockCube(self, s0: tCube):
         '''
         :param s0: CTI (counterexample to induction, represented as cube)
@@ -357,7 +467,10 @@ class PDR:
             assert(prevFidx != 0)
             if prevFidx is not None and prevFidx == s.t-1:
                 # local lemma push
+                pushLemma_start_time = time.time()
                 self.pushLemma(prevFidx)
+                pushLemma_consuming_t = time.time() - pushLemma_start_time
+                self.pushLemma_time_sum += pushLemma_consuming_t
             prevFidx = s.t
             # check Frame trivially block
             if self.frame_trivially_block(s):
@@ -372,22 +485,113 @@ class PDR:
             z = self.solveRelative(s)
             if z is None:
                 sz = s.true_size()
-                original_s = s.clone()
-                s_enumerate = self.generate_GT(original_s) #Generate ground truth here
+                original_s_1 = s.clone() # For generating ground truth
+                original_s_2 = s.clone() # For testing the NN-guided inductive generalization
+                s_enumerate = self.generate_GT(original_s_1) #Generate ground truth here
+                # if self.test_IG_NN and self.NN_guide_ig_iteration > 5 and self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail) < 0.5:
+                #     self.test_IG_NN = 0
+                NN_guide_start_time = time.time()
+                s_NN = self.NN_guided_inductive_generalization(original_s_2)
+                if self.test_IG_NN != 0:
+                    self.NN_guide_ig_passed_ratio.append(((self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail)) * 100, self.NN_guide_ig_iteration))
+
+                NN_guide_consuming_t = time.time() - NN_guide_start_time
+                self.NN_guide_ig_time_sum += NN_guide_consuming_t
+
+
+                # -------------------MIC Procedure---------------------
+                MIC_start_time = time.time()
                 s = self.MIC(s)
+                self._check_MIC(s)
                 print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
-                if s_enumerate is not None: print ("Find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
+                MIC_consuming_t = time.time() - MIC_start_time
+                self.MIC_time_sum += MIC_consuming_t
+                self.sum_MIC = self.sum_MIC + s.true_size()
+                self.frames[s.t].add(Not(s.cube()), pushed=False)
+                for i in range(1, s.t):
+                    self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
+
+
+                if s_NN is not None:
+                    print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
+                    if not((len(s_NN.cubeLiterals) == len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):
+                        self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                        for i in range(1, s_NN.t):
+                            self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                #-------------Append the NN-generated cube and MIC to frames------------- 
+                # else: 
+                #     print("NN-guided inductive generalization failed, begin MIC process")
+                #     MIC_start_time = time.time()
+                #     s = self.MIC(s)
+                #     self._check_MIC(s)
+                #     print ('MIC ', sz, ' --> ', s.true_size(),  'F', s.t)
+                #     MIC_consuming_t = time.time() - MIC_start_time
+                #     self.MIC_time_sum += MIC_consuming_t
+                #     self.sum_MIC = self.sum_MIC + s.true_size()
+                #     self.frames[s.t].add(Not(s.cube()), pushed=False)
+                #     for i in range(1, s.t):
+                #         self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
+
+                if s_enumerate is not None: 
+                    print ("Enueration find minimum", sz,' --> ', s_enumerate.true_size(),  'F', s_enumerate.t)
+                    self.sum_IG_GT = self.sum_IG_GT + s_enumerate.true_size()
+                else:
+                    print ("Minimum not found by enueration")
+                    self.sum_IG_GT = self.sum_IG_GT + s.true_size()
+
+
+                '''
+                Determine whether use MIC
+                
                 self._check_MIC(s)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
                     self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
-                # reQueue : see IC3 PDR Friends
-                #Fmin = original_s.t+1
-                #Fmax = len(self.frames)
-                #if Fmin < Fmax:
-                #    s_copy = original_s #s.clone()
-                #    s_copy.t = Fmin
-                #    Q.put((Fmin, s_copy))
+                '''
+
+                '''
+                Only Use NN-guided IG
+                
+                self._check_MIC(s_NN)
+                self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                for i in range(1, s_NN.t):
+                    self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                '''
+
+
+                '''
+                Add NN-guided inductive generalization generated answer
+                
+                #Use unsat core reduce
+                if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
+                    original_s_3 = s_NN.clone()
+                    original_s_4 = s.clone()
+                    #self.unsatcore_reduce(original_s_3, trans=self.trans.cube(), frame=self.frames[original_s_3.t-1].cube())
+                    #original_s_3.remove_true()
+                    #if not((len(s_NN.cubeLiterals)== len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):   
+                    original_s_3.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+                    original_s_4.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+                    if not(original_s_3.cubeLiterals == original_s_4.cubeLiterals): 
+                        self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                        for i in range(1, s.t):
+                            self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                '''
+
+
+                        #Not use unsat core reduce
+                        # if (s_NN is not None) and (self.NN_guide_ig_append!=0): 
+                        #     self.frames[s.t].add(Not(s_NN.cube()), pushed=False)
+                        #     for i in range(1, s.t):
+                        #         self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                        
+
+                        # reQueue : see IC3 PDR Friends
+                        #Fmin = original_s.t+1
+                        #Fmax = len(self.frames)
+                        #if Fmin < Fmax:
+                        #    s_copy = original_s #s.clone()
+                        #    s_copy.t = Fmin
+                        #    Q.put((Fmin, s_copy))
 
             else: #SAT condition
                 assert(z.t == s.t-1)
@@ -421,13 +625,38 @@ class PDR:
         return None
 
     def _solveRelative(self, tcube) -> tCube:
-        cubePrime = substitute(tcube.cube(), self.primeMap)
+        '''
+        #FIXME: The inductive relative checking should subtitue input -> input'
+        '''
+        #cubePrime = substitute(tcube.cube(), self.primeMap)
+        cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
         s = Solver()
         s.add(Not(tcube.cube()))
         s.add(self.frames[tcube.t - 1].cube())
         s.add(self.trans.cube())
         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
         return s.check()
+
+    def _solveRelative_upgrade(self, tcube) -> tCube:
+        check_init = sat
+        slv = Solver()
+        slv.add(self.init.cube())
+        slv.add(tcube.cube())
+        check_init = slv.check()
+
+        check_relative = sat
+        cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
+        s = Solver()
+        s.add(Not(tcube.cube()))
+        s.add(self.frames[tcube.t - 1].cube())
+        s.add(self.trans.cube())
+        s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
+        check_relative = s.check()
+
+        if check_init == unsat and check_relative == unsat:
+            return 'pass the check'
+        else:
+            return 'not pass'
 
     def _test_MIC1(self, q: tCube):
         passed_single_q = []
@@ -505,30 +734,57 @@ class PDR:
         #         q = q1
         # return q
     
-    def generate_GT(self,q: tCube,smt2_gen_IG=0): #smt2_gen_IG is a switch to trun on/off .smt file generation
+    #TODO: Add assertion on this to check inductive relative
+    #TODO: Add assertion to check there is no 'True' and 'False' in the cubeLiterals list
+    def generate_GT(self,q: tCube): #smt2_gen_IG is a switch to trun on/off .smt file generation
         
-        if smt2_gen_IG == 0:
-            pass
-        elif smt2_gen_IG == 1:
+        if self.smt2_gen_IG == 0:
+            return None
+        elif self.smt2_gen_IG == 1:
+            assert(q.cubeLiterals.count(True)==0)
+            assert(q.cubeLiterals.count(False)==0)
             '''
             ---------------------Generate .smt2 file (for building graph)--------------
-            '''
+            
+            
             #FIXME: This .smt generation still exists problem, remember to fix this
             s_smt = Solver()  #use to generate SMT-lib2 file
-            cubePrime = substitute(q.cube(), self.primeMap)
-            #This cube is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
+
+            #This "Cube" is a speical circuit of combining two conditions of solve relative (determine inductive generalization)
+
+            # s_smt.add(Not(q.cube()))
+            # s_smt.add(self.frames[q.t - 1].cube())
+            # s_smt.add(self.trans.cube())
+            # s_smt.add(substitute(substitute(q.cube(), self.primeMap),self.inp_map))
+            
             Cube = Not(
                 And(
-                    Not(And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube(),
-                      substitute(substitute(q.cube(), self.primeMap),self.inp_map)))  # Fi-1 ! and not(q) and T and q'
+                    Not(
+                      And(self.frames[q.t-1].cube(), Not(q.cube()), self.trans.cube_remove_equal().cube(),
+                      substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),list(self.pv2next.items())))
+                      #substitute(q.cube(), self.primeMap))
+                      )  # Fi-1 ! and not(q) and T and q'
                 ,
                     Not(And(self.frames[0].cube(),q.cube()))
                     )
             )
-            
+
+            #Cube = substitute(Cube,list(self.pv2next.items()))
+
             for index, literals in enumerate(q.cubeLiterals): 
                 s_smt.add(literals) 
-                s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+                # s_smt.assert_and_track(literals,'p'+str(index))
+            
+            s_smt.add(Cube)  # F[i - 1] and T and Not(badCube) and badCube'
+
+            assert (s_smt.check() == unsat)
+
+            filename = '../dataset/IG2graph/generalize_IG/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_IG)) +'.smt2')
+            with open(filename, mode='w') as f:
+                f.write(s_smt.to_smt2())
+            f.close()
+            '''
+            
 
             '''
             -------------------Generate ground truth--------------
@@ -549,33 +805,199 @@ class PDR:
             passed_minimum_q = []
             is_looping = True
             for i in range(1,len(q.cubeLiterals)+1): #When i==len(q.cubeLiterals), this means it met wrost case
-                tmp_lst = []
                 for c in combinations(q.cubeLiterals, i):
-                    tmp_lst.append(c)
-                end_lst.extend(tmp_lst)
-        
-                for tuble in tmp_lst:
-                    if len(passed_minimum_q) > 0:
+                    if len(end_lst) > 3000:
                         is_looping = False
                         break
-                    elif len(passed_minimum_q) == 0:
-                        qnew = tCube(q.t)
-                        qnew.cubeLiterals = [tcube for tcube in tuble]
-                        if check_init(qnew) == sat:
-                            continue
-                        if self._solveRelative(qnew) == unsat:
-                            passed_minimum_q.append(qnew)
-                    else:
-                        print("Program met bug!")
-                    #ADD: When len(passed_single_q) != 0, break the for loop
-                
-                if not is_looping:
-                    break # break out of outer loop
-            q = passed_minimum_q[0] # Minimum ground truth has been generated
+                    end_lst.append(c)
+                if is_looping==False:
+                    break
+
+            #FIXME: This may cause memory exploration of list (length 2^n, n is the length of original q)
+
+            '''
+            1 -> 0
+            2 -> Cn1
+            3 -> Cn1+Cn2
+            4 -> Cn1+Cn2+Cn3
+            5 -> Cn1+Cn2+Cn3+Cn4
+            ...
+            n -> Cn1+Cn2+Cn3+Cn4+...+Cnn -> 2^n - 1 
+            '''
             
-            return q
+            #TODO: Using multi-thread to handle inductive relative checking
+            # dict_n = {}
+            # dict_n[1] = 0
+            # dict_n[2] = int(comb(len(end_lst),1))
+            # dict_n[3] = int(comb(len(end_lst),1) + comb(len(end_lst),2))
+            # dict_n[4] = int(comb(len(end_lst),1) + comb(len(end_lst),2) \
+            #     + comb(len(end_lst),2)+comb(len(end_lst),3))
+            
+            data = {} # Store ground truth, and output to .csv
+            for tuble in end_lst:
+                if len(passed_minimum_q) > 0:
+                    break
+                elif len(passed_minimum_q) == 0:
+                    qnew = tCube(q.t)
+                    qnew.cubeLiterals = [tcube for tcube in tuble]
+                    if check_init(qnew) == sat:
+                        continue
+                    # if self._solveRelative(qnew) == sat:
+                    #     print("Did not pass inductive relative check")
+                    #     continue
+                    if self._solveRelative(qnew) == unsat:
+                        passed_minimum_q.append(qnew)
+                else:
+                    raise AssertionError
+                #ADD: When len(passed_single_q) != 0, break the for loop
+            if len(passed_minimum_q)!= 0:
+                '''
+                ---------------------Generate .smt2 file (for building graph)--------------
 
+                Not generate the .smt2 file when enumerate combinations of literals could not find ground truth
+                '''
+                
+                s_smt = Solver()
+                Cube = Not(
+                    And(
+                        Not(
+                        And(self.frames[q.t-1].cube(), 
+                        Not(q.cube()), 
+                        substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                        list(self.pv2next.items()))
+                        )),
+                        Not(And(self.frames[0].cube(),q.cube()))
+                        ))
+                for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+                s_smt.add(Cube)
+                assert (s_smt.check() == unsat)
+                filename = '../dataset/IG2graph/generalize_IG/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_IG)) +'.smt2')
+                data['inductive_check'] = filename.split('/')[-1] #Store the name of .smt file
+                with open(filename, mode='w') as f: f.write(s_smt.to_smt2())
+                f.close() 
+                
 
+                '''
+                ---------------------Export the ground truth----------------------
+                '''
+                q_minimum = passed_minimum_q[0] # Minimum ground truth has been generated
+                for idx in range(len(q.cubeLiterals)): # -> ground truth size is q
+                    var, val = _extract(q.cubeLiterals[idx])
+                    data[str(var)] = 0
+                # for idx in range(len(Cube.cubeLiterals)): # -> ground truth size is Cube (combine of two check)
+                #     var, val = _extract(Cube.cubeLiterals[idx])
+                #     data[str(var)] = 0
+                for idx in range(len(q_minimum.cubeLiterals)):
+                    var, val = _extract(q_minimum.cubeLiterals[idx])
+                    data[str(var)] = 1 # Mark q-like as 1
+                self.generaliztion_data_IG.append(data)
+                return q_minimum
+            else:
+                print("The ground truth has not been found")
+                return None
+    
+    def NN_guided_inductive_generalization(self, q: tCube):
+        '''
+        Test the NN-version inductive generalization
+        '''
+        self.NN_guide_ig_iteration += 1
+
+        # Generate a backup of the original frames -> using unsat core reduce method to reduce
+        q4unsatcore = q.clone()
+        self.unsatcore_reduce(q4unsatcore, trans=self.trans.cube(), frame=self.frames[q4unsatcore.t-1].cube())
+        q4unsatcore.remove_true()
+
+        if self.test_IG_NN == 0:
+            pass
+        elif self.test_IG_NN == 1:
+            s_smt = Solver()
+            Cube = Not(
+                And(
+                    Not(
+                    And(self.frames[q.t-1].cube(), 
+                    Not(q.cube()), 
+                    substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                    list(self.pv2next.items()))
+                    )),
+                    Not(And(self.frames[0].cube(),q.cube()))
+                    ))
+            for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+            s_smt.add(Cube)
+            assert (s_smt.check() == unsat)
+            res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN) #-> this is a list to guide which literals should be kept/throwed
+            # Conductive two relative check of the return q-like
+            print('restoring from: ', "../dataset/model/neuropdr_2022-04-25_13:03:40_best_precision.pth.tar")
+            # Load model to predict
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            net = neuro_predessor.NeuroPredessor()
+            model = torch.load("../model/neuropdr_2022-04-25_13:03:40_best_precision.pth.tar")
+            net.load_state_dict(model['state_dict'])
+            net = net.to(device)
+            sigmoid  = nn.Sigmoid()
+            torch.no_grad()
+
+            #q_index = extract_q_like(res)
+            q_index = []
+            tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
+            ig_q = res.ig_q # original q in inductive generalization
+            for q_literal in ig_q: # literals in q (in inductive generalization process)
+                q_index.append(tmp_lst_all_node.index('n_'+str(q_literal.children()[0])))
+
+            q_index.sort() # Fixed the bug of indexing the correct literals
+            outputs = sigmoid(net(res))
+            torch_select = torch.Tensor(q_index).cuda().int() 
+            outputs = torch.index_select(outputs, 0, torch_select)
+            top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-2:]
+            preds = torch.where(outputs>0.997, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+        
+            '''
+            Generate the new q (which is also q-like) under the NN-given answer
+            '''
+            q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+            q_like = tCube(q.t)
+            for idx, preds_ans in enumerate(preds.tolist()):
+                if preds_ans == 1:
+                    for top_outputs in top_k_outputs:
+                        if top_outputs[0] == idx: q_like.cubeLiterals.append(q.cubeLiterals[idx])
+            
+            '''
+            Check whether this answer pass the relative check
+            ''' 
+            def check_init(c: tCube):
+                    slv = Solver()
+                    slv.add(self.init.cube())
+                    slv.add(c.cube())
+                    return slv.check()
+
+            if len(q_like.cubeLiterals)!= 0:
+                if check_init(q_like) == unsat:
+                    s = Solver()
+                    s.add(And(self.frames[q_like.t-1].cube(), Not(q_like.cube()), self.trans.cube(), 
+                                substitute(substitute(q_like.cube(), self.primeMap),self.inp_map)))  
+                    if s.check() == unsat:
+                        # Pass both check
+                        print("Congratulation, the NN-guide inductive generalization is correct")
+                        self.NN_guide_ig_success += 1
+                        return q_like
+                        # if len(q_like.cubeLiterals) > len(q4unsatcore.cubeLiterals) + 1:
+                        #     return q4unsatcore
+                        # else:
+                        #     return q_like
+                    else:
+                        # Not pass the second check
+                        self.NN_guide_ig_fail += 1
+                        return None
+                else:
+                    # Not pass the first check
+                    self.NN_guide_ig_fail += 1
+                    return None
+            else:
+                self.NN_guide_ig_fail += 1
+                return None
+
+        
+
+            
     def unsatcore_reduce(self, q:  tCube, trans, frame):
         # (( not(q) /\ F /\ T ) \/ init' ) /\ q'   is unsat
         slv = Solver()
@@ -754,7 +1176,7 @@ class PDR:
         #s.check()
         #assert(str(s.model().eval(nextcube)) == 'True')
         
-        if smt2_gen_GP==1:
+        if self.smt2_gen_GP==1:
             s = Solver()
             s_smt = Solver()  #use to generate SMT-lib2 file
             for index, literals in enumerate(tcube_cp.cubeLiterals):
@@ -768,13 +1190,13 @@ class PDR:
             core = s.unsat_core()
             core = [str(core[i]) for i in range(0, len(core), 1)] # -> ['p1','p3'], core -> nextcube
 
-            filename = '../dataset/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data)) +'.smt2')
+            filename = '../dataset/GP2graph/generalize_pre/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_GP)) +'.smt2')
             data['nextcube'] = filename.split('/')[-1]
             with open(filename, mode='w') as f:
                 f.write(s_smt.to_smt2())
             f.close()
 
-        elif smt2_gen_GP==0:
+        elif self.smt2_gen_GP==0:
             s = Solver()
             for index, literals in enumerate(tcube_cp.cubeLiterals):
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
@@ -839,12 +1261,13 @@ class PDR:
         # tcube_cp.cubeLiterals = [tcube_cp.cubeLiterals[i] for i in range(0, len(tcube_cp.cubeLiterals), 1) if i not in index_to_remove]
         # return tcube_cp
 
-        self.generaliztion_data.append(data)
+        if self.smt2_gen_GP==1: self.generaliztion_data_GP.append(data)
 
         tcube_cp.remove_true()
+        size_after_unsat_core = len(tcube_cp.cubeLiterals)
         #print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
         #print("After generalization by dropping literal one by one : ", len(index_to_remove))
-
+        
         # Hongce: this is the beginning of ternary simulation-based variable reduction
         simulator = self.ternary_simulator.clone() # I just don't want to mess up between two ternary simulations for different outputs
         simulator.register_expr(nextcube)
@@ -873,7 +1296,7 @@ class PDR:
                 assert simulator.get_val(nextcube) == ternary_sim._TRUE
                 tcube_cp.cubeLiterals[i] = True
         tcube_cp.remove_true()
-
+        size_after_ternary_sim = len(tcube_cp.cubeLiterals)
         return tcube_cp
 
     def solveRelative_RL(self, tcube):

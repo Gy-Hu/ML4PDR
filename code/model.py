@@ -4,7 +4,7 @@ The parser for PDR
 import re
 from z3 import *
 
-from pdr import tCube
+from pdr import * #marked
 from solver import TCube
 
 #TODO: 似乎仅支持六个参数的aag，有无办法解决这个问题？

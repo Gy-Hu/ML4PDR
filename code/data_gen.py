@@ -8,10 +8,11 @@ import re
 import pickle
 from natsort import natsorted
 import os
+import argparse
 
 #TODO: Trace the traversal level of this function and avoid duplicated run getnid -> maybe accelerate?
-class generate_graph:
-    def __init__(self, filename):
+class graph:
+    def __init__(self, filename, mode='gp'):
         self.filename = filename
         self.constraints = z3.parse_smt2_file(filename, sorts={}, decls={})
         self.nid = 0
@@ -22,7 +23,9 @@ class generate_graph:
         self.all_node_var = {}
         self.solver = z3.Solver()
         self.solver_node_val = z3.Solver()
-        self.eval_node_val()
+        self.mode = mode
+        if self.mode == 'gp': 
+            self.eval_node_val()
         #self.single_node = {}
         #self.model4NodeEvl = self.eval_node_val()
 
@@ -51,7 +54,7 @@ class generate_graph:
         self.bfs_queue = remove_duplicated(self.bfs_queue)
 
         nnid = self.getnid(n)
-        self.calculate_node_value(n, nnid)  # calculate all node value ---> map to true/false
+        self.calculate_node_value(n, nnid, self.mode)  # calculate all node value ---> map to true/false
         op = n.decl().kind()
         if op == z3.Z3_OP_AND:
             opstr = 'AND'
@@ -67,6 +70,38 @@ class generate_graph:
         for c in children:
             cnid = self.getnid(c)
             self.edges.add((nnid, cnid))
+
+    def add_upgrade_version(self):
+        remove_duplicated = lambda x: list(dict.fromkeys(x))
+        index = 0
+        while True:
+            #len((self.bfs_queue[index]).children()) != 0
+            old_length = len(self.bfs_queue)
+            self.bfs_queue += list((self.bfs_queue[index]).children())
+            new_length = len(self.bfs_queue)
+            if new_length == old_length and index==(len(self.bfs_queue)-1):
+                break
+            index += 1
+        self.bfs_queue = remove_duplicated(self.bfs_queue)
+
+        for n in self.bfs_queue:
+            nnid = self.getnid(n)
+            self.calculate_node_value(n, nnid)
+            op = n.decl().kind()
+            if op == z3.Z3_OP_AND:
+                opstr = 'AND'
+            elif op == z3.Z3_OP_NOT:
+                opstr = 'NOT'
+            else:
+                opstr = 'OTHER'
+
+            if len(n.children())!= 0:
+                rel = f'{nnid} := {opstr} ( {[self.getnid(c) for c in n.children()]} )'
+                self.relations.add(rel)
+
+            for c in n.children():
+                cnid = self.getnid(c)
+                self.edges.add((nnid, cnid))
 
     def print(self):
         print('-------------------')
@@ -153,7 +188,7 @@ class generate_graph:
         self.solver_node_val.check()
         self.model4evl = self.solver_node_val.model()
 
-    def calculate_node_value(self, node, node_id):
+    def calculate_node_value(self, node, node_id, mode = 'gp'):
         '''
         :return: the node value -> true or false
         '''
@@ -165,76 +200,129 @@ class generate_graph:
         #     self.all_node_var[node_id] = 1 #-->sat so assign 1 as true
         # else:
         #     self.all_node_var[node_id] = 0 #--> unsat so assign 0 as false
-        if self.model4evl.eval(node) == True:
-            self.all_node_var[node_id] = 1
-        else:
-            self.all_node_var[node_id] = 0
+        if mode == 'gp':
+            if self.model4evl.eval(node) == True:
+                self.all_node_var[node_id] = 1
+            else:
+                self.all_node_var[node_id] = 0
+        elif mode == 'ig':
+            self.solver.reset()
+            self.solver.add(self.constraints[:-1])
+            self.solver.add(node)
+            if self.solver.check() == z3.sat:
+                self.all_node_var[node_id] = 1 #-->sat so assign 1 as true
+            else:
+                self.all_node_var[node_id] = 0 #--> unsat so assign 0 as false
+
+        
 
 #TODO: ask question "where to encode the true/false value assignment of the variable"
 
 class problem:
-    def __init__(self, filename): # This class store the graph generated from generalized predessor (with serveral batches)
+    def __init__(self, filename, mode = 'gp'): # This class store the graph generated from generalized predessor (with serveral batches)
+        self.skip = False # determine whether to dump this problem
         # Should contain targets, which used for calculating loss
+        self.mode = mode
         self.filename = filename
         self.unpack_matrix = pd.read_pickle(filename[0])
         self.db_gt = pd.read_csv(filename[1]) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
         self.value_table = pd.read_pickle(filename[2])
         self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
-        self.db_gt = self.db_gt.rename(columns={'nextcube': 'filename_nextcube'})
+        if mode=='gp': self.db_gt = self.db_gt.rename(columns={'nextcube': 'filename_nextcube'})
         self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
+        self.mode = mode
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
         #FIXME: Here has problem, the value is not correct
         #self.n_nodes = self.n_vars - (self.db_gt.shape[1] - 1) #only includes m
         self.n_nodes = self.n_vars - (self.value_table[~self.value_table.index.str.contains('m_')]).shape[0]
         index2list = self.check(str(filename[0]))
-        self.is_flexible = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
-        self.is_flexible = [int(x) for x in self.is_flexible]
+        if index2list != 'not found':
+            self.label = (self.db_gt.values.tolist()[index2list])[1:] #TODO: refine here to locate automatically
+        else: # index2list == 'not found'
+            self.skip = True
+            return
+        self.label = [int(x) for x in self.label]
         self.adj_matrix = self.unpack_matrix.copy()
         self.adj_matrix = self.adj_matrix.T.reset_index(drop=True).T
         self.adj_matrix.drop(self.adj_matrix.columns[0], axis=1, inplace=True)
         with open(filename[3], 'rb') as f:
             self.edges, self.relations, self.node_ref = pickle.load(f)
-        # with open("../dataset/graph/" + filename[2], 'w') as p:
+        
+        # with open("../dataset/GP2graph/graph/" + filename[2], 'w') as p:
         #     g = pickle.load(p)
 
 
     def dump(self, dir, filename):
+        if self.skip:
+            pass
         dataset_filename = dir + (filename.split('/')[-1]).replace('adj_','')
         with open(dataset_filename, 'wb') as f_dump:
             pickle.dump(self, f_dump)
 
     def check(self, val):
-        a = self.db_gt.index[self.db_gt['filename_nextcube'].str.contains(((val.split('/')[-1]).replace('.pkl', '.smt2')).replace('adj_',''),regex=False)]
-        if a.empty:
-            return 'not found'
-        elif len(a) > 1:
-            return a.tolist()
-        else:
-            # only one value - return scalar
-            return a.item()
+        if self.mode == 'gp':
+            a = self.db_gt.index[self.db_gt['filename_nextcube'].str.contains(((val.split('/')[-1]).replace('.pkl', '.smt2')).replace('adj_',''),regex=False)]
+            if a.empty:
+                return 'not found'
+            elif len(a) > 1:
+                return a.tolist()
+            else:
+                # only one value - return scalar
+                return a.item()
+        elif self.mode == 'ig':
+            a = self.db_gt.index[self.db_gt['inductive_check'].str.contains(((val.split('/')[-1]).replace('.pkl', '.smt2')).replace('adj_',''),regex=False)]
+            if a.empty:
+                return 'not found'
+            elif len(a) > 1:
+                return a.tolist()
+            else:
+                # only one value - return scalar
+                return a.item()
 
 #FIXME: Missing Prime Variable! -> huge bug, making NN's hidden layer cannot match the input data size
-def mk_adj_matrix(filename):
-    #filename = "../dataset/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
-    new_graph = generate_graph(filename)
-    while len(new_graph.bfs_queue) != 0:
-        new_graph.add()
-    new_graph.print()
-    new_graph.to_matrix()
-    # with open("../dataset/graph/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'w') as p:
-    #     pickle.dump(new_graph, p)
-    new_graph.adj_matrix.to_pickle("../dataset/tmp/generalize_adj_matrix/"+"adj_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
-    new_graph.all_node_vt.to_pickle("../dataset/tmp/all_node_value_table/"+"vt_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
-    node_ref = {}
-    for key,value in new_graph.node2nid.items():
-        node_ref[value] = key.sexpr()
+def mk_adj_matrix(filename, mode='gp'):
+    if mode == 'gp':
+        #filename = "../dataset/GP2graph/generalize_pre/nusmv.syncarb5^2.B_0.smt2"
+        
+        # Old method to generate graph
+        # new_graph = graph(filename)
+        # while len(new_graph.bfs_queue) != 0:
+        #     new_graph.add()
+        
+        #New method to generate graph
+        new_graph = graph(filename)
+        new_graph.add_upgrade_version()
+            
+        new_graph.print()
+        new_graph.to_matrix()
+        # with open("../dataset/GP2graph/graph/"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'w') as p:
+        #     pickle.dump(new_graph, p)
+        new_graph.adj_matrix.to_pickle("../dataset/GP2graph/tmp/generalize_adj_matrix/"+"adj_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+        new_graph.all_node_vt.to_pickle("../dataset/GP2graph/tmp/all_node_value_table/"+"vt_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+        node_ref = {}
+        for key,value in new_graph.node2nid.items():
+            node_ref[value] = key.sexpr()
 
-    #FIXME: Incomplete
-    #TODO: Incomplete part. Plan to extract a list of node/var in graph or not in graph
+        #FIXME: Incomplete
+        #TODO: Incomplete part. Plan to extract a list of node/var in graph or not in graph
 
 
-    with open("../dataset/tmp/edges_and_relation/"+"er_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'wb') as f:
-        pickle.dump((new_graph.edges, new_graph.relations, node_ref), f)
+        with open("../dataset/GP2graph/tmp/edges_and_relation/"+"er_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'wb') as f:
+            pickle.dump((new_graph.edges, new_graph.relations, node_ref), f)
+    elif mode == 'ig':
+        new_graph = graph(filename, mode=mode)
+        while len(new_graph.bfs_queue) != 0:
+            new_graph.add()
+        new_graph.print()
+        new_graph.to_matrix()
+        new_graph.adj_matrix.to_pickle("../dataset/IG2graph/tmp/generalize_adj_matrix/"+"adj_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+        new_graph.all_node_vt.to_pickle("../dataset/IG2graph/tmp/all_node_value_table/"+"vt_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'))
+        node_ref = {}
+        for key,value in new_graph.node2nid.items():
+            node_ref[value] = key.sexpr()
+        with open("../dataset/IG2graph/tmp/edges_and_relation/"+"er_"+(filename.split('/')[-1]).replace('.smt2', '.pkl'), 'wb') as f:
+            pickle.dump((new_graph.edges, new_graph.relations, node_ref), f)
+        
 
 def walkFile(dir):
     for root, _, files in os.walk(dir):
@@ -246,7 +334,7 @@ def walkFile(dir):
 
 #TODO: Refine ground truth data with MUST tool
 def refine_GT():
-    filename = "../dataset/generalization/nusmv.syncarb5^2.B.csv"
+    filename = "../dataset/GP2graph/generalization/nusmv.syncarb5^2.B.csv"
 
 #TODO: ask question "how to set up the batch size"
 def dump(self, dir):
@@ -256,45 +344,100 @@ def dump(self, dir):
 
 #TODO: Generate validation file here
 def generate_val():
-    filename = "../dataset/generalization/nusmv.syncarb5^2.B.csv"
+    filename = "../dataset/GP2graph/generalization/nusmv.syncarb5^2.B.csv"
 
 #TODO: Collect more data for training
 #TODO: one time to generate all data -> generalized the file name with enumerate
 if __name__ == '__main__':
-    #TODO: Add function to auto-skip the generated file
-    #TODO: Try aigfuzz or AIGGEN to generate aiger
+    parser = argparse.ArgumentParser(description="Generate graph from SMT2 file")
+    # help_info = "Usage: python generate_aag.py <aig-dir>"
+    parser.add_argument('-d', type=str, default=None, help='Input the smt file directory name for converting to graph')
+    parser.add_argument('-m',type=str,help='choose the mode to run the program, 0 means run for generalizaed predecessor, 1 means run for inductive generalization',default=None)
+    parser.add_argument('-s',type=str,help='select the particular aiger to generate graph',default=None)
+    args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG/','-m', 'ig','-s','texas.ifetch1^5.E'])
+    #args = parser.parse_args(['-d','../dataset/GP2graph/generalize_pre/','-m', 'gp'])
+    #args = parser.parse_args()
 
-    smt2_file_list = walkFile("../dataset/generalize_pre/")
+    if args.m == 'gp':
+        #TODO: Add function to auto-skip the generated file
+        #TODO: Try aigfuzz or AIGGEN to generate aiger
 
-    for smt2_file in smt2_file_list[:2]:
-        mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
+        smt2_file_list = walkFile(args.d)
+        
 
-    #FIXME: here still incomplete
-    #refine_GT() # refine the ground truth by MUST tool
+        for smt2_file in smt2_file_list[:]:
+            mk_adj_matrix(smt2_file) # dump pkl with the adj_matrix -> should be refined later in problem class
 
-    adj_matrix_pkl_list = walkFile("../dataset/tmp/generalize_adj_matrix/")
-    GT_table_csv_list = walkFile("../dataset/generalization/")
-    vt_all_node_pkl_list = walkFile("../dataset/tmp/all_node_value_table/")
-    edge_and_relation_pkl_list = walkFile("../dataset/tmp/edges_and_relation/")
+        #FIXME: here still incomplete
+        #refine_GT() # refine the ground truth by MUST tool
 
-    #TODO: Optimize the procedure of generate graph, for some smt2 file the graph generation is time consuming
+        adj_matrix_pkl_list = walkFile("../dataset/GP2graph/tmp/generalize_adj_matrix/")
+        GT_table_csv_list = walkFile("../dataset/GP2graph/generalization/")
+        vt_all_node_pkl_list = walkFile("../dataset/GP2graph/tmp/all_node_value_table/")
+        edge_and_relation_pkl_list = walkFile("../dataset/GP2graph/tmp/edges_and_relation/")
 
-    zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))
-    raw_str_lst = []
-    for raw in GT_table_csv_list:
-        raw_str = (raw.split('/')[-1]).replace(".csv","")
-        if any(raw_str in s for s in adj_matrix_pkl_list):
-            raw_str_lst.append(raw_str)
-    matching = []
-    zipped_lst = list(map(lambda x: list(x), zipped))
-    for substr in raw_str_lst:
-        for item in zipped_lst:
-            if any(substr in str_ for str_ in item):
-                item.insert(1 , "../dataset/generalization/" + substr + ".csv")
+        #TODO: Optimize the procedure of generate graph, for some smt2 file the graph generation is time consuming
 
-    matching = [s for s in zipped_lst if len(s)!=3]
-    # filename4prb = ["../dataset/tmp/generalize_adj_matrix/adj_nusmv.syncarb5^2.B_0.pkl","../dataset/generalization/nusmv.syncarb5^2.B.csv","../dataset/tmp/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl","../dataset/tmp/edges_and_relation/er_nusmv.syncarb5^2.B_0.pkl"]
-    for filename4prb in matching:
-        prob = problem(filename4prb)
-        prob.dump("../dataset/train/", filename4prb[0])
-    #print(new_graph.adj_matrix)
+        zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))
+        raw_str_lst = []
+        for raw in GT_table_csv_list:
+            raw_str = (raw.split('/')[-1]).replace(".csv","")
+            if any(raw_str in s for s in adj_matrix_pkl_list):
+                raw_str_lst.append(raw_str)
+        matching = []
+        zipped_lst = list(map(lambda x: list(x), zipped))
+        for substr in raw_str_lst:
+            for item in zipped_lst:
+                if any(substr in str_ for str_ in item):
+                    item.insert(1 , "../dataset/GP2graph/generalization/" + substr + ".csv")
+
+        matching = [s for s in zipped_lst if len(s)==4]
+        # filename4prb = ["../dataset/GP2graph/tmp/generalize_adj_matrix/adj_nusmv.syncarb5^2.B_0.pkl","../dataset/GP2graph/generalization/nusmv.syncarb5^2.B.csv","../dataset/GP2graph/tmp/all_node_value_table/vt_nusmv.syncarb5^2.B_0.pkl","../dataset/GP2graph/tmp/edges_and_relation/er_nusmv.syncarb5^2.B_0.pkl"]
+        for filename4prb in matching:
+            prob = problem(filename4prb)
+            prob.dump("../dataset/GP2graph/train/", filename4prb[0])
+        #print(new_graph.adj_matrix)
+    
+    elif args.m == 'ig':
+        smt2_file_list = walkFile(args.d)
+        
+        if args.s is not None:
+            smt2_file_list = [smt2_file for smt2_file in smt2_file_list if args.s in smt2_file]
+
+        for smt2_file in smt2_file_list[:]: #FIXME: Remember to change this index to generate all
+            mk_adj_matrix(smt2_file,args.m)
+        
+        
+        adj_matrix_pkl_list = walkFile("../dataset/IG2graph/tmp/generalize_adj_matrix/")
+        GT_table_csv_list = walkFile("../dataset/IG2graph/generalization/")
+        vt_all_node_pkl_list = walkFile("../dataset/IG2graph/tmp/all_node_value_table/")
+        edge_and_relation_pkl_list = walkFile("../dataset/IG2graph/tmp/edges_and_relation/")
+        
+        if args.s is not None:
+            adj_matrix_pkl_list = [adj_matrix_pkl for adj_matrix_pkl in adj_matrix_pkl_list if args.s in adj_matrix_pkl]
+            GT_table_csv_list = [GT_table_csv for GT_table_csv in GT_table_csv_list if args.s in GT_table_csv]
+            vt_all_node_pkl_list = [vt_all_node_pkl for vt_all_node_pkl in vt_all_node_pkl_list if args.s in vt_all_node_pkl]
+            edge_and_relation_pkl_list = [edge_and_relation_pkl for edge_and_relation_pkl in edge_and_relation_pkl_list if args.s in edge_and_relation_pkl]
+
+        # The number of tmp file should equal to .smt file
+        assert(len(adj_matrix_pkl_list) == len(vt_all_node_pkl_list) == len(edge_and_relation_pkl_list)==len(smt2_file_list))
+        zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))       
+        raw_str_lst = []
+        for raw in GT_table_csv_list:
+            raw_str = (raw.split('/')[-1]).replace(".csv","")
+            if any(raw_str in s for s in adj_matrix_pkl_list):
+                raw_str_lst.append(raw_str)
+        matching = []
+        # When zip the list, the list will be converted to tuple, so we need to convert it back to list
+        zipped_lst = list(map(lambda x: list(x), zipped))
+        for substr in raw_str_lst:
+            for item in zipped_lst:
+                if any(substr in str_ for str_ in item):
+                    item.insert(1 , "../dataset/IG2graph/generalization/" + substr + ".csv")
+        matching = [s for s in zipped_lst if len(s)==4]
+        for filename4prb in matching:
+            prob = problem(filename4prb,mode=args.m)
+            if prob is not None:
+                prob.dump("../dataset/IG2graph/train/", filename4prb[0])
+
+
