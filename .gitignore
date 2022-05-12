@@ -39,3 +39,6 @@ log/*
 deps/*
 *.smt2
 *.lprof
+*.cnf
+output.json
+output.cnf

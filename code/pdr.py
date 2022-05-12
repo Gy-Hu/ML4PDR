@@ -9,6 +9,7 @@ from queue import PriorityQueue
 from functools import wraps
 import pandas as pd
 from bmc import BMC
+import ternary_sim
 from itertools import combinations
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -19,10 +20,11 @@ import torch.nn as nn
 import neuro_predessor
 from datetime import datetime
 from operator import itemgetter
-import line_profiler
-import atexit
-profile = line_profiler.LineProfiler()
-atexit.register(profile.print_stats,output_unit=1e-03)
+# import line_profiler
+# import atexit
+# profile = line_profiler.LineProfiler()
+# atexit.register(profile.print_stats,output_unit=1e-03)
+
 # from line_profiler import LineProfiler
 # profile = LineProfiler()
 # profile = line_profiler.LineProfiler()
@@ -81,7 +83,7 @@ class tCube:
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中 #TODO: lMap should incudes the v prime and i prime
     def addModel(self, lMap, model, remove_input): # not remove input' when add model
-        no_var_primes = [l for l in model if str(l)[0] == 'i' or str(l)[-1] != '\''] # no_var_prime -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
+        no_var_primes = [l for l in model if str(l)[0] == 'i' or not str(l).endswith('_prime')]# no_var_prime -> i2, i4, i6, i8, i2', i4', i6' or v2, v4, v6
         if remove_input:
             no_input = [l for l in no_var_primes if str(l)[0] != 'i'] # no_input -> v2, v4, v6
         else:
@@ -240,6 +242,10 @@ class PDR:
         self.generaliztion_data_IG = []# Store the ground truth data of inductive generalization 
         #TODO: Use self.generaliztion_data_IG to store the ground truth data of inductive generalization 
         self.filename = filename
+        # create a ternary simulator and buffer the update functions in advance
+        self.ternary_simulator = ternary_sim.AIGBuffer()
+        for _, updatefun in self.pv2next.items():
+            self.ternary_simulator.register_expr(updatefun)
         '''
         --------------The following variables are used to calculate the reducing rate--------
         '''
@@ -442,7 +448,7 @@ class PDR:
 
     #TODO: 解决这边特殊case遇到safe判断成unsafe的问题
     
-    @profile
+    #@profile
     def recBlockCube(self, s0: tCube):
         '''
         :param s0: CTI (counterexample to induction, represented as cube)
@@ -920,11 +926,11 @@ class PDR:
             assert (s_smt.check() == unsat)
             res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN) #-> this is a list to guide which literals should be kept/throwed
             # Conductive two relative check of the return q-like
-            print('restoring from: ', "../dataset/model/neuropdr_2022-04-21_19:11:20_last.pth.tar")
+            print('restoring from: ', "../dataset/model/neuropdr_2022-04-25_13:03:40_best_precision.pth.tar")
             # Load model to predict
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             net = neuro_predessor.NeuroPredessor()
-            model = torch.load("../model/neuropdr_2022-04-21_19:11:20_last.pth.tar")
+            model = torch.load("../model/neuropdr_2022-04-25_13:03:40_best_precision.pth.tar")
             net.load_state_dict(model['state_dict'])
             net = net.to(device)
             sigmoid  = nn.Sigmoid()
@@ -1118,7 +1124,7 @@ class PDR:
             print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
             self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
-            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube())  # c = get_predecessor(i-1, s')
+            generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube(), prevF=self.frames[tcube.t-1].cube())  # c = get_predecessor(i-1, s')
             print(len(generalized_p.cubeLiterals))
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
@@ -1136,7 +1142,7 @@ class PDR:
     #     x = Not(x)
 
 #TODO: Get bad cude should generalize as well!
-    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr): #smt2_gen_GP is a switch to trun on/off .smt file generation
+    def generalize_predecessor(self, prev_cube:tCube, next_cube_expr, prevF, smt2_gen_GP=0): #smt2_gen_GP is a switch to trun on/off .smt file generation
         '''
         :param prev_cube: sat model of CTI (v1 == xx , v2 == xx , v3 == xxx ...)
         :param next_cube_expr: bad state (or CTI), like !P ( ? /\ ? /\ ? /\ ? .....)
@@ -1151,7 +1157,7 @@ class PDR:
 
         tcube_cp = prev_cube.clone() #TODO: Solve the z3 exception warning
         ground_true = prev_cube.clone()
-        #print("original size of !P (or CTI): ", len(tcube_cp.cubeLiterals))
+        print("original size of !P (or CTI): ", len(tcube_cp.cubeLiterals))
         #print("Begin to generalize predessor")
 
         #replace the state as the next state (by trans) -> !P (s')
@@ -1176,7 +1182,9 @@ class PDR:
             for index, literals in enumerate(tcube_cp.cubeLiterals):
                 s_smt.add(literals) 
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+            s.add(prevF)
             s.add(Not(nextcube))
+            s_smt.add(prevF)
             s_smt.add(Not(nextcube)) 
             assert(s.check() == unsat and s_smt.check() == unsat)
             core = s.unsat_core()
@@ -1192,6 +1200,7 @@ class PDR:
             s = Solver()
             for index, literals in enumerate(tcube_cp.cubeLiterals):
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+            s.add(prevF)
             s.add(Not(nextcube))
             assert(s.check() == unsat)
             core = s.unsat_core()
@@ -1255,8 +1264,38 @@ class PDR:
         if self.smt2_gen_GP==1: self.generaliztion_data_GP.append(data)
 
         tcube_cp.remove_true()
+        size_after_unsat_core = len(tcube_cp.cubeLiterals)
         #print("After generalization by using unsat core : ",len(tcube_cp.cubeLiterals))
         #print("After generalization by dropping literal one by one : ", len(index_to_remove))
+        # Hongce: this is the beginning of ternary simulation-based variable reduction
+        simulator = self.ternary_simulator.clone() # I just don't want to mess up between two ternary simulations for different outputs
+        simulator.register_expr(nextcube)
+        simulator.set_initial_var_assignment(dict([_extract(c) for c in tcube_cp.cubeLiterals]))
+
+        out = simulator.get_val(nextcube)
+        if out == ternary_sim._X:  # this is possible because we already remove once according to the unsat core
+            return tcube_cp
+        assert out == ternary_sim._TRUE
+        for i in range(len(tcube_cp.cubeLiterals)):
+            v, val = _extract(tcube_cp.cubeLiterals[i])
+            simulator.set_Li(v, ternary_sim._X)
+            out = simulator.get_val(nextcube)
+            if out == ternary_sim._X:
+                simulator.set_Li(v, ternary_sim.encode(val))  # set to its original value
+                if simulator.get_val(nextcube) != ternary_sim._TRUE:
+                    # This is just to help print debug info in case I made mistakes in coding
+                    simulator._check_consistency()
+                # after you recover the original input value, the output node should be true again
+                assert simulator.get_val(nextcube) == ternary_sim._TRUE
+            else: # the literal is removable
+                # we should never get _FALSE
+                if simulator.get_val(nextcube) != ternary_sim._TRUE:
+                    # This is just to help print debug info in case I made mistakes in coding
+                    simulator._check_consistency()
+                assert simulator.get_val(nextcube) == ternary_sim._TRUE
+                tcube_cp.cubeLiterals[i] = True
+        tcube_cp.remove_true()
+        size_after_ternary_sim = len(tcube_cp.cubeLiterals)
         return tcube_cp
 
     def solveRelative_RL(self, tcube):
@@ -1289,10 +1328,10 @@ class PDR:
             res.addModel(self.lMap, s.model(), remove_input=False)  # res = sat_model
             print("get bad cube size:", len(res.cubeLiterals), end=' --> ') # Print the result
             # sanity check - why?
-            self._debug_c_is_predecessor(res.cube(), self.trans.cube(), True, substitute(substitute(self.post.cube(), self.primeMap),self.inp_map)) #TODO: Here has bug
-            new_model = self.generalize_predecessor(res, Not(self.post.cube())) #new_model: predecessor of !P extracted from SAT witness
+            self._debug_c_is_predecessor(res.cube(), self.trans.cube(), self.frames[-1].cube(), substitute(substitute(self.post.cube(), self.primeMap),self.inp_map)) #TODO: Here has bug
+            new_model = self.generalize_predecessor(res, Not(self.post.cube()), self.frames[-1].cube()) #new_model: predecessor of !P extracted from SAT witness
             print(len(new_model.cubeLiterals)) # Print the result
-            self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), True, substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
+            self._debug_c_is_predecessor(new_model.cube(), self.trans.cube(), self.frames[-1].cube(), substitute(substitute(self.post.cube(), self.primeMap),self.inp_map))
             new_model.remove_input()
             return new_model
         else:
