@@ -1,4 +1,6 @@
+from math import fabs
 import profile
+import string
 from z3 import *
 import time
 import sys
@@ -15,11 +17,13 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from scipy.special import comb
 import build_graph_online
+from deps.pydimacs_changed.formula import CNFFormula
 import torch
 import torch.nn as nn
 import neuro_predessor
 from datetime import datetime
 from operator import itemgetter
+import deps.PyMiniSolvers.minisolvers as minisolvers
 # import line_profiler
 # import atexit
 # profile = line_profiler.LineProfiler()
@@ -46,6 +50,7 @@ from operator import itemgetter
 #TODO: Using Z3 to check the 3 properties of init, trans, safe, inductive invariant
 
 # conjunction of literals.
+
 class Frame:
     def __init__(self, lemmas):
         self.Lemma = lemmas
@@ -433,7 +438,18 @@ class PDR:
             s.add(fi.cube())
             s.add(self.trans.cube())
             s.add(substitute(Not(substitute(c, self.primeMap)),self.inp_map))
-            if s.check() == unsat:
+
+            # f = CNFFormula.from_z3(s.assertions())
+            # cnf_string_lst = f.to_dimacs_string()
+            # n, iclauses = self.parse_dimacs(cnf_string_lst)
+            # minisolver = minisolvers.MinisatSolver()
+            # for i in range(n): minisolver.new_var(dvar=True)
+            # for iclause in iclauses: minisolver.add_clause(iclause)
+            # is_sat = minisolver.solve()
+            # assert((is_sat==False and s.check()==unsat) or (is_sat==True and s.check()==sat))
+
+            #if is_sat==False:
+            if s.check()==unsat:
                 fi.pushed[lidx] = True
                 self.frames[Fidx + 1].add(c)
     
@@ -1103,6 +1119,34 @@ class PDR:
         s.add(cubePrime)
         assert (s.check() == unsat)
 
+    def parse_dimacs(self,filename):
+        # Check this variable is string type or not
+        if(isinstance(filename, list)):
+            assert len(filename) == 1
+            lines = [line for line in filename[0].strip().split("\n")]
+            for line in lines:
+                if "c" == line.strip().split(" ")[0]:
+                    index_c = lines.index(line)
+                    break
+            header = lines[0].strip().split(" ")
+            assert(header[0] == "p")
+            n_vars = int(header[2])
+            iclauses = [[int(s) for s in line.strip().split(" ")[:-1]] for line in lines[1:index_c]]
+            return n_vars, iclauses
+        elif(isinstance(filename, str)):
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+            # Find the first index of line that contains string "c"
+            for line in lines:
+                if "c" == line.strip().split(" ")[0]:
+                    index_c = lines.index(line)
+                    break
+            header = lines[0].strip().split(" ")
+            assert(header[0] == "p")
+            n_vars = int(header[2])
+            iclauses = [[int(s) for s in line.strip().split(" ")[:-1]] for line in lines[1:index_c]]
+            return n_vars, iclauses
+
     # for tcube, check if cube is blocked by R[t-1] AND trans (check F[i−1]/\!s/\T/\s′ is sat or not)
     def solveRelative(self, tcube) -> tCube:
         '''
@@ -1116,19 +1160,36 @@ class PDR:
         s.add(self.frames[tcube.t - 1].cube())
         s.add(self.trans.cube())
         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
-        if s.check() == sat: # F[i-1] & !s & T & s' is sat!!
+
+        f = CNFFormula.from_z3(s.assertions())
+        cnf_string_lst = f.to_dimacs_string()
+        n, iclauses = self.parse_dimacs(cnf_string_lst)
+        minisolver = minisolvers.MinisatSolver()
+        for _ in range(n): minisolver.new_var(dvar=True)
+        for iclause in iclauses: minisolver.add_clause(iclause)
+        is_sat = minisolver.solve()
+        # assert((is_sat==False and s.check()==unsat) or (is_sat==True and s.check()==sat))
+        
+        if is_sat==True: # F[i-1] & !s & T & s' is sat!!
+            s.check()
             model = s.model()
             c = tCube(tcube.t - 1)
             c.addModel(self.lMap, model, remove_input=False)  # c = sat_model, get the partial model of c
             #return c
             print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
-            self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
+
+            #Comment out this line to check if the cube is blocked by R[t-1]
+            #self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
+            
             generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube(), prevF=self.frames[tcube.t-1].cube())  # c = get_predecessor(i-1, s')
             print(len(generalized_p.cubeLiterals))
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
-            self._debug_c_is_predecessor(generalized_p.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
+            
+            #Comment out this line to check if the cube is blocked by R[t-1]
+            #self._debug_c_is_predecessor(generalized_p.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
+            
             generalized_p.remove_input()
             return generalized_p #TODO: Using z3 eval() to conduct tenary simulation
         return None

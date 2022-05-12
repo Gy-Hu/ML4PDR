@@ -42,3 +42,4 @@ deps/*
 *.cnf
 output.json
 output.cnf
+pydimacs/
