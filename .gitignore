@@ -44,3 +44,18 @@ output.json
 output.cnf
 pydimacs/
 .history/
+
+# ignore others
+*.o
+*.csv
+*.json
+*.cnf
+*.txt
+build/
+aiger/
+ensmallen/
+minisat/
+mlpack/
+.vscode/
+minisat_bak2/
+.history/
