@@ -616,29 +616,29 @@ class PDR:
         return None
 
 
-    def recBlockCube_RL(self, s0: tCube):
-        print("recBlockCube now...")
-        Q = [s0]
-        while len(Q) > 0:
-            s = Q[-1]
-            if s.t == 0:
-                return Q
+    # def recBlockCube_RL(self, s0: tCube):
+    #     print("recBlockCube now...")
+    #     Q = [s0]
+    #     while len(Q) > 0:
+    #         s = Q[-1]
+    #         if s.t == 0:
+    #             return Q
 
-            # solve if cube s was blocked by the image of the frame before it
-            z, u = self.solveRelative_RL(s)
+    #         # solve if cube s was blocked by the image of the frame before it
+    #         z, u = self.solveRelative_RL(s)
 
-            if (z == None):
-                # Cube 's' was blocked by image of predecessor:
-                # block cube in all previous frames
-                Q.pop()  # remove cube s from Q
-                for i in range(1, s.t + 1):
-                    # if not self.isBlocked(s, i):
-                    self.R[i] = And(self.R[i], Not(u))
-            else:
-                # Cube 's' was not blocked by image of predecessor
-                # it will stay on the stack, and z (the model which allowed transition to s) will we added on top
-                Q.append(z)
-        return None
+    #         if (z == None):
+    #             # Cube 's' was blocked by image of predecessor:
+    #             # block cube in all previous frames
+    #             Q.pop()  # remove cube s from Q
+    #             for i in range(1, s.t + 1):
+    #                 # if not self.isBlocked(s, i):
+    #                 self.R[i] = And(self.R[i], Not(u))
+    #         else:
+    #             # Cube 's' was not blocked by image of predecessor
+    #             # it will stay on the stack, and z (the model which allowed transition to s) will we added on top
+    #             Q.append(z)
+    #     return None
 
     def _solveRelative(self, tcube) -> tCube:
         '''
@@ -1160,18 +1160,18 @@ class PDR:
         s.add(self.frames[tcube.t - 1].cube())
         s.add(self.trans.cube())
         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
-
-        f = CNFFormula.from_z3(s.assertions())
-        cnf_string_lst = f.to_dimacs_string()
-        n, iclauses = self.parse_dimacs(cnf_string_lst)
-        minisolver = minisolvers.MinisatSolver()
-        for _ in range(n): minisolver.new_var(dvar=True)
-        for iclause in iclauses: minisolver.add_clause(iclause)
-        is_sat = minisolver.solve()
+        
+        # Use minisat
+        # f = CNFFormula.from_z3(s.assertions())
+        # cnf_string_lst = f.to_dimacs_string()
+        # n, iclauses = self.parse_dimacs(cnf_string_lst)
+        # minisolver = minisolvers.MinisatSolver()
+        # for _ in range(n): minisolver.new_var(dvar=True)
+        # for iclause in iclauses: minisolver.add_clause(iclause)
+        # is_sat = minisolver.solve()
         # assert((is_sat==False and s.check()==unsat) or (is_sat==True and s.check()==sat))
         
-        if is_sat==True: # F[i-1] & !s & T & s' is sat!!
-            s.check()
+        if s.check()==sat: # F[i-1] & !s & T & s' is sat!!
             model = s.model()
             c = tCube(tcube.t - 1)
             c.addModel(self.lMap, model, remove_input=False)  # c = sat_model, get the partial model of c
@@ -1192,7 +1192,13 @@ class PDR:
             
             generalized_p.remove_input()
             return generalized_p #TODO: Using z3 eval() to conduct tenary simulation
-        return None
+        else:
+            # Get the unsat core from s
+            # s_unsat = Solver()
+            # for index, literals in enumerate(tcube.cubeLiterals):
+            #     s_unsat.add(literals) 
+            #     s_unsat.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
+            return None
 
     #(X ∧ 0 = 0), (X ∧ 1 = X), (X ∧ X = X), (¬X = X).
     # def ternary_operation(self, ternary_candidate):
@@ -1360,22 +1366,22 @@ class PDR:
         size_after_ternary_sim = len(tcube_cp.cubeLiterals)
         return tcube_cp
 
-    def solveRelative_RL(self, tcube):
-            cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
-            s = Solver()
-            s.add(self.frames[tcube.t - 1].cube())
-            s.add(self.trans.cube())
-            s.add(Not(tcube.cube()))
-            s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
-            if (s.check() != unsat):  # cube was not blocked, return new tcube containing the model
-                model = s.model()
-                # c = tCube(tcube.t - 1) #original verison
-                # c.addModel(self.lMap, model)  # c = sat_model, original verison
-                # return c #original verison
-                return tCube(model, self.lMap, tcube.t - 1), None
-            else:
-                res,h= self.RL(tcube)
-                return None, res
+    # def solveRelative_RL(self, tcube):
+    #         cubePrime = substitute(substitute(tcube.cube(), self.primeMap),self.inp_map)
+    #         s = Solver()
+    #         s.add(self.frames[tcube.t - 1].cube())
+    #         s.add(self.trans.cube())
+    #         s.add(Not(tcube.cube()))
+    #         s.add(cubePrime)  # F[i - 1] and T and Not(badCube) and badCube'
+    #         if (s.check() != unsat):  # cube was not blocked, return new tcube containing the model
+    #             model = s.model()
+    #             # c = tCube(tcube.t - 1) #original verison
+    #             # c.addModel(self.lMap, model)  # c = sat_model, original verison
+    #             # return c #original verison
+    #             return tCube(model, self.lMap, tcube.t - 1), None
+    #         else:
+    #             res,h= self.RL(tcube)
+    #             return None, res
 
     def getBadCube(self):
         print("seek for bad cube...")
@@ -1399,95 +1405,95 @@ class PDR:
         else:
             return None
 
-    def RandL(self, tcube):
-        STEPS = self.agent.action_size
-        done = False
-        M = tcube.M
-        orig = np.array([i for i in tcube.M if '\'' not in str(i)])
-        cp = np.copy(orig)
-        for ti in range(STEPS):
-            action = np.random.randint(STEPS) % len(cp)
-            cp = np.delete(cp, action);
-            cubeprime = substitute(substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap),self.inp_map)
-            s = Solver()
-            s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
-            s.add(self.R[tcube.t - 1])
-            s.add(self.trans.cube())
-            s.add(cubeprime)
-            start = time.time()
-            SAT = s.check();
-            interv = time.time() - start
-            if SAT != unsat:
-                break
-            else:
-                if (self.isInitial(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.init)):
-                    break
-                else:
-                    orig = np.copy(cp)
-        return And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig]), None
+    # def RandL(self, tcube):
+    #     STEPS = self.agent.action_size
+    #     done = False
+    #     M = tcube.M
+    #     orig = np.array([i for i in tcube.M if '\'' not in str(i)])
+    #     cp = np.copy(orig)
+    #     for ti in range(STEPS):
+    #         action = np.random.randint(STEPS) % len(cp)
+    #         cp = np.delete(cp, action);
+    #         cubeprime = substitute(substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap),self.inp_map)
+    #         s = Solver()
+    #         s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
+    #         s.add(self.R[tcube.t - 1])
+    #         s.add(self.trans.cube())
+    #         s.add(cubeprime)
+    #         start = time.time()
+    #         SAT = s.check();
+    #         interv = time.time() - start
+    #         if SAT != unsat:
+    #             break
+    #         else:
+    #             if (self.isInitial(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.init)):
+    #                 break
+    #             else:
+    #                 orig = np.copy(cp)
+    #     return And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig]), None
 
-    def RL(self, tcube):
-        '''
-        :param tcube:
-        :return: res -> generalized q (q-like) , h -> None
-        '''
-        STEPS = self.agent.action_size
-        # agent.load("./save/cartpole-ddqn.h5")
-        done = False
-        batch_size = 10
-        history_QL = [0]
-        state = [-1] * 10
-        state = np.reshape(state, [1, self.agent.state_size])
+    # def RL(self, tcube):
+    #     '''
+    #     :param tcube:
+    #     :return: res -> generalized q (q-like) , h -> None
+    #     '''
+    #     STEPS = self.agent.action_size
+    #     # agent.load("./save/cartpole-ddqn.h5")
+    #     done = False
+    #     batch_size = 10
+    #     history_QL = [0]
+    #     state = [-1] * 10
+    #     state = np.reshape(state, [1, self.agent.state_size])
 
-        M = tcube.M
-        orig = np.array([i for i in tcube.M if '\'' not in str(i)])
-        cp = np.copy(orig)
-        for ti in range(STEPS):
-            # env.render()
-            action = self.agent.act(state) % len(cp) # MLP return back the index of throwing literal
-            cp = np.delete(cp, action);
-            cubeprime = substitute(substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap),self.inp_map)
-            s = Solver()
-            s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
-            s.add(self.R[tcube.t - 1])
-            s.add(self.trans.cube())
-            s.add(cubeprime)
-            start = time.time()
-            SAT = s.check();
-            interv = time.time() - start
-            if SAT != unsat:
-                reward = -1
-                done = True
-            else:
-                if (self.isInitial(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.init)):
-                    reward = 0
-                    done = True
-                else:
-                    reward = max(10 / interv, 1)
-                    orig = np.copy(cp)
+    #     M = tcube.M
+    #     orig = np.array([i for i in tcube.M if '\'' not in str(i)])
+    #     cp = np.copy(orig)
+    #     for ti in range(STEPS):
+    #         # env.render()
+    #         action = self.agent.act(state) % len(cp) # MLP return back the index of throwing literal
+    #         cp = np.delete(cp, action);
+    #         cubeprime = substitute(substitute(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.primeMap),self.inp_map)
+    #         s = Solver()
+    #         s.add(Not(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp])))
+    #         s.add(self.R[tcube.t - 1])
+    #         s.add(self.trans.cube())
+    #         s.add(cubeprime)
+    #         start = time.time()
+    #         SAT = s.check();
+    #         interv = time.time() - start
+    #         if SAT != unsat:
+    #             reward = -1
+    #             done = True
+    #         else:
+    #             if (self.isInitial(And(*[self.lMap[str(l)] == M.get_interp(l) for l in cp]), self.init)):
+    #                 reward = 0
+    #                 done = True
+    #             else:
+    #                 reward = max(10 / interv, 1)
+    #                 orig = np.copy(cp)
 
-            next_state = [b for (a, b) in s.statistics()][:-4]
-            if (len(next_state) > 10):
-                next_state = next_state[0:10]
-            else:
-                i = len(next_state)
-                while (i < 10):
-                    next_state = np.append(next_state, -1)
-                    i += 1
-            # print(next_state)
-            history_QL[-1] += reward
-            next_state = np.reshape(next_state, [1, self.agent.state_size])
-            self.agent.remember(state, action, reward, next_state, done)
-            state = next_state
-            if done:
-                history_QL.append(0)
-                self.agent.update_target_model()
-                break
-            if len(self.agent.memory) > batch_size:
-                self.agent.replay(batch_size)
-        # And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig])-> generlization (when unsat core not exists)
-        tmp_cube = And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig])
-        return And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig]), history_QL
+    #         next_state = [b for (a, b) in s.statistics()][:-4]
+    #         if (len(next_state) > 10):
+    #             next_state = next_state[0:10]
+    #         else:
+    #             i = len(next_state)
+    #             while (i < 10):
+    #                 next_state = np.append(next_state, -1)
+    #                 i += 1
+    #         # print(next_state)
+    #         history_QL[-1] += reward
+    #         next_state = np.reshape(next_state, [1, self.agent.state_size])
+    #         self.agent.remember(state, action, reward, next_state, done)
+    #         state = next_state
+    #         if done:
+    #             history_QL.append(0)
+    #             self.agent.update_target_model()
+    #             break
+    #         if len(self.agent.memory) > batch_size:
+    #             self.agent.replay(batch_size)
+    #     # And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig])-> generlization (when unsat core not exists)
+    #     tmp_cube = And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig])
+    #     return And(*[self.lMap[str(l)] == M.get_interp(l) for l in orig]), history_QL
 
     def _debug_trace(self, trace: PriorityQueue):
         prev_fidx = 0

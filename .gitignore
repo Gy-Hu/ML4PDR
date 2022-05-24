@@ -43,3 +43,4 @@ deps/*
 output.json
 output.cnf
 pydimacs/
+.history/
