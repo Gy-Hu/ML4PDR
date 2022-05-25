@@ -559,7 +559,7 @@ namespace IC3 {
       for(int i=0;i<latches.size();i++){
         latches_list.push_back(latches[i].x);
       }
-      if(handle_obl==true){
+      if(handle_obl==true && latches_list.size()>5){
         json j;
         j["type"] = "consecution";
         j["latch"] = latches_list;

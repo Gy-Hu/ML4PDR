@@ -22,7 +22,8 @@ if __name__ == '__main__':
         m = model.Model()
         solver = pdr.PDR(*m.parse(file))
     
-    with open('../dataset/json_graph/try_store_latch.json', 'r') as f: 
+    #with open('../dataset/json_graph/try_store_latch.json', 'r') as f: 
+    with open('IC3ref/try_store_latch.json', 'r') as f: 
         latches = json.load(f)
     
     latches_lst = []
@@ -47,6 +48,17 @@ if __name__ == '__main__':
         latches_prime_lst.append(pvs[it])
     for i in range(len(latches_prime_lst)):
         s_lp.add(latches_prime_lst[i]==True)
+
+    s = pdr.tCube(0)
+    for latch in s_l.assertions():
+        s.add(latch)
+
+    CTI = simplify(And(s.cubeLiterals))
+    CTI_prime = substitute(substitute(substitute(simplify(And(s.cubeLiterals)), solver.primeMap),solver.inp_map),
+                list(solver.pv2next.items()))
+
+    pre_graph = And(Not(CTI),CTI_prime)
+    
     
     print(latches_lst)
     print(latches_prime_lst)
