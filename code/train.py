@@ -112,8 +112,9 @@ def refine_target(problem):
     if element not in tmp.index.tolist():
       single_node_index.append(i)
 
-  for index in reversed(single_node_index):
-    problem.label.pop(index)
+  problem.label = [e[1] for e in enumerate(problem.label) if e[0] not in single_node_index]
+  # for index in reversed(single_node_index):
+  #   problem.label.pop(index)
 
 
 if __name__ == "__main__":

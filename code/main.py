@@ -44,6 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', type=str, help='switch to do data generation in generalized predecessor or inductive generalization', default='off')
     parser.add_argument('-n', type=str, help='switch to use neural network in inductive generalization or generalized predecessor', default='off')
     parser.add_argument('-a', type=str, help='Use NN-guided IG and append to MIC', default='off')
+    parser.add_argument('-s', type=str, help='Save the inductive invariant', default='off')
 
     # TODO: Add abstract & craig interpolation?
     # TODO: Solve the issue on this case (cannot run in time)
@@ -80,7 +81,7 @@ if __name__ == '__main__':
     
     '''
     
-    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c']) 
+    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-d','ig']) 
     #args = parser.parse_args() 
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
@@ -128,6 +129,12 @@ if __name__ == '__main__':
             solver.NN_guide_ig_append = 0
         elif args.a=='on':
             solver.NN_guide_ig_append = 1
+
+        # On/off the collection of inductive invariant
+        if args.s=='off':
+            solver.collect_inductive_invariant = 0
+        elif args.s=='on':
+            solver.collect_inductive_invariant = 1
 
         startTime = time.time()
         solver.run(agent)

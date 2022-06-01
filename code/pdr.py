@@ -285,6 +285,11 @@ class PDR:
         ---------------Determine whether append NN-guided ig append to MIC------------------
         '''
         self.NN_guide_ig_append = 0
+        '''
+        ---------------Collect the inductive invariant
+        '''
+        self.collect_inductive_invariant = 0
+        
         
 
         
@@ -333,7 +338,11 @@ class PDR:
                     if self.generaliztion_data_IG: # When this list is not empty, it return true
                         df = pd.DataFrame(self.generaliztion_data_IG)
                         df = df.fillna(0)
-                        df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                        # Enumerate the inductive clauses
+                        # df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                        
+                        # Data from the result of inductive invariant
+                        df.to_csv("../dataset/IG2graph/generalization_no_enumerate/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
                     
                     # Print out the improvement space of inductive generalization
                     if self.sum_IG_GT != 0:
@@ -374,8 +383,14 @@ class PDR:
                     if self.generaliztion_data_IG: # When this list is not empty, it return true
                         df = pd.DataFrame(self.generaliztion_data_IG)
                         df = df.fillna(0)
-                        df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
-                    
+
+                        # Enumerate the inductive clauses
+                        # df.to_csv("../dataset/IG2graph/generalization/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+                        
+                        # Data from the result of inductive invariant
+                        df.to_csv("../dataset/IG2graph/generalization_no_enumerate/" + (self.filename.split('/')[-1]).replace('.aag', '.csv'))
+
+
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
 
@@ -503,7 +518,7 @@ class PDR:
                 sz = s.true_size()
                 original_s_1 = s.clone() # For generating ground truth
                 original_s_2 = s.clone() # For testing the NN-guided inductive generalization
-                s_enumerate = self.generate_GT(original_s_1) #Generate ground truth here
+                s_enumerate = self.generate_GT_no_enumerate(original_s_1) #Generate ground truth here
                 # if self.test_IG_NN and self.NN_guide_ig_iteration > 5 and self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail) < 0.5:
                 #     self.test_IG_NN = 0
                 NN_guide_start_time = time.time()
@@ -903,6 +918,80 @@ class PDR:
                 # for idx in range(len(Cube.cubeLiterals)): # -> ground truth size is Cube (combine of two check)
                 #     var, val = _extract(Cube.cubeLiterals[idx])
                 #     data[str(var)] = 0
+                for idx in range(len(q_minimum.cubeLiterals)):
+                    var, val = _extract(q_minimum.cubeLiterals[idx])
+                    data[str(var)] = 1 # Mark q-like as 1
+                self.generaliztion_data_IG.append(data)
+                return q_minimum
+            else:
+                print("The ground truth has not been found")
+                return None
+
+    def generate_GT_no_enumerate(self,q: tCube): #smt2_gen_IG is a switch to trun on/off .smt file generation 
+        if self.smt2_gen_IG == 0:
+            return None
+        elif self.smt2_gen_IG == 1:
+            assert(q.cubeLiterals.count(True)==0)
+            assert(q.cubeLiterals.count(False)==0)
+
+            def check_init(c: tCube):
+                slv = Solver()
+                slv.add(self.init.cube())
+                slv.add(c.cube())
+                return slv.check()
+
+            file_path_prefix = "/data/hongcezh/clause-learning/data-collect/hwmcc07-7200-result/output/tip/"
+            file_suffix = self.filename.split('/')[-1].replace('.aag', '')
+            inv_cnf = file_path_prefix + file_suffix + "/inv.cnf"
+            with open(inv_cnf, 'r') as f:
+                lines = f.readlines()
+                f.close()
+            lines = [(line.strip()).split() for line in lines]
+            q_list_cnf = [str(_extract(literal)[0]).replace('v','') if _extract(literal)[1] == True else str(int(str(_extract(literal)[0]).replace('v',''))+1) for literal in q.cubeLiterals]
+            
+            data = {} # Store ground truth, and output to .csv
+            passed_minimum_q = []
+            for clause in lines[1:]: #scan every clause
+                if(all(x in q_list_cnf for x in clause)): #the clause is subset of q
+                    qnew = tCube(q.t)
+                    ref_lst = [x in clause for x in q_list_cnf]
+                    qnew.cubeLiterals = [q.cubeLiterals[i] for i in range(len(q.cubeLiterals)) if ref_lst[i] == True]
+                    if check_init(qnew) == unsat and self._solveRelative(qnew) == unsat:
+                        passed_minimum_q.append(qnew)
+                    
+            #q_list_cnf = [_extract(literals)[1]==True?_extract(literals)[0]:Not(_extract(literals)[0]) for literals in q.cubeLiterals]
+
+
+            if len(passed_minimum_q)!= 0:
+                '''
+                ---------------------Generate .smt2 file (for building graph)--------------
+
+                Not generate the .smt2 file when enumerate combinations of literals could not find ground truth
+                '''
+                
+                s_smt = Solver()
+                Cube = Not(
+                    And(
+                        Not(q.cube()), 
+                        substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                        list(self.pv2next.items()))
+                        ))
+                for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+                s_smt.add(Cube)
+                #assert (s_smt.check() == unsat)
+                filename = '../dataset/IG2graph/generalize_IG_no_enumerate/' + (self.filename.split('/')[-1]).replace('.aag', '_'+ str(len(self.generaliztion_data_IG)) +'.smt2')
+                data['inductive_check'] = filename.split('/')[-1] #Store the name of .smt file
+                with open(filename, mode='w') as f: f.write(s_smt.to_smt2())
+                f.close() 
+                
+
+                '''
+                ---------------------Export the ground truth----------------------
+                '''
+                q_minimum = passed_minimum_q[0] # Minimum ground truth has been generated
+                for idx in range(len(q.cubeLiterals)): # -> ground truth size is q
+                    var, val = _extract(q.cubeLiterals[idx])
+                    data[str(var)] = 0
                 for idx in range(len(q_minimum.cubeLiterals)):
                     var, val = _extract(q_minimum.cubeLiterals[idx])
                     data[str(var)] = 1 # Mark q-like as 1

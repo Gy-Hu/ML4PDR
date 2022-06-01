@@ -221,10 +221,13 @@ class graph:
 
 
 class problem:
-    def __init__(self, raw_data, aigname): 
+    def __init__(self, raw_data, aigname, mode=1): 
         self.raw_data = raw_data
 
-        self.filename = "../dataset/IG2graph/generalization/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
+        if mode==1:
+            self.filename = "../dataset/IG2graph/generalization/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
+        elif mode==2:
+             self.filename = "../dataset/IG2graph/generalization_no_enumerate/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
         self.db_gt = pd.read_csv(self.filename) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
         self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
         self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
@@ -252,4 +255,13 @@ def run(solver,aigname,mode=0):
         raw_data = [adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list, q_literal_lst]
         prob = problem(raw_data,aigname)
         return prob
-
+    elif mode == 2: # mode == 'inductive generalization upgrade verison, only consider !s & s''
+        res, node_ref = mk_adj_matrix(solver,mode)
+        adj_matrix_pkl_list = res.adj_matrix
+        vt_all_node_pkl_list = res.all_node_vt
+        edge_and_relation_pkl_list = [res.edges, res.relations, node_ref]
+        q_literal_lst = res.q_lst
+        raw_data = [adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list, q_literal_lst]
+        prob = problem(raw_data,aigname)
+        return prob
+        
