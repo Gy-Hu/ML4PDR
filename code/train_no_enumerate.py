@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from config import parser
-from neuro_predessor import NeuroPredessor
+from neuro_inductive_generalization import NeuroPredessor
 from data_gen import problem, walkFile
 import pandas as pd
 from pathlib import Path
@@ -174,7 +174,8 @@ if __name__ == "__main__":
         train_file, 'adj_matrix')]
 
     if args.mode == 'test':
-        train, val = train_test_split(train, test_size=0.2, random_state=42)
+        #train, val = train_test_split(train, test_size=0.2, random_state=42)
+        train, val = train_test_split(train, test_size=0.2, random_state=0)
     elif args.mode == 'train':
         val_lst = walkFile(args.val_file)
         for val_file in val_lst:
@@ -204,10 +205,11 @@ if __name__ == "__main__":
     #loss_fn = nn.SmoothL1Loss()
     #loss_fn = nn.CrossEntropyLoss()
     #loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5]).cuda())
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([2]).cuda(),reduction='sum')
+    #loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([2]).cuda(),reduction='sum')
+    loss_fn = nn.BCELoss(reduction='sum')
     #optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
     #optim = optim.Adam(net.parameters(), lr=0.00001, weight_decay=1e-10)
-    optim = optim.Adam(net.parameters(), lr=0.001, weight_decay=1e-10)
+    optim = optim.Adam(net.parameters(), lr=0.0001, weight_decay=1e-10)
     #optim = optim.SGD(net.parameters(), lr=0.00001, momentum=0.9, weight_decay=1e-10)
     # optim = optim.Adam(net.parameters(), lr=0.0002, weight_decay=1e-10) #TODO: Try to figure out what parameter is optimal
     sigmoid = nn.Sigmoid()
@@ -356,8 +358,10 @@ if __name__ == "__main__":
             outputs = sigmoid(outputs)
             torch_select = torch.Tensor(q_index).cuda().int()
             outputs = torch.index_select(outputs, 0, torch_select)
-            preds = torch.where(outputs > 0.997, torch.ones(
+            preds = torch.where(outputs > 0.9, torch.ones(
                 outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+
+            loss = loss_fn(outputs, target)
 
             # Calulate the perfect accuracy
             all = all + 1
@@ -370,7 +374,8 @@ if __name__ == "__main__":
             FP += (preds.eq(1) & target.eq(0)).cpu().sum()
             TOT = TP + TN + FN + FP
 
-            desc = 'perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (
+            desc = 'validation loss: %.3f, perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (
+                loss,
                 perfection_rate*1.0/all,
                 (TP.item() + TN.item()) * 1.0 / TOT.item(), TP.item() *
                 1.0 / TOT.item(), TN.item() * 1.0 / TOT.item(),

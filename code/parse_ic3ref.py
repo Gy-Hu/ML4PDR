@@ -79,3 +79,4 @@ if __name__ == '__main__':
 
     build_graph_online.run(s_graph,"unknown",mode=1)
 
+# Remember to add the refined_out to online data generation
