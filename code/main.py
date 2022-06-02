@@ -81,8 +81,8 @@ if __name__ == '__main__':
     
     '''
     
-    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on']) 
-    #args = parser.parse_args() 
+    #args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on']) 
+    args = parser.parse_args() 
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
@@ -217,7 +217,7 @@ if __name__ == '__main__':
                     # If thread is active
                     if p.is_alive():
                         timeout = True
-                        print("Finish runing aiger file:"+args.fileName)
+                        print("Finish runing aiger file:"+str(name))
                         print("PDR run out of the time... let's kill it...")
                         # Terminate foo
                         p.terminate()
@@ -227,7 +227,7 @@ if __name__ == '__main__':
                     #     sleep(20)
                     # elif timeout != True:
                     if timeout != True:
-                        print("Finish runing aiger file:"+args.fileName)
+                        print("Finish runing aiger file:"+str(name))
                         print("Done in time")
                         #sleep(20)
                         if args.c:
