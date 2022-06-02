@@ -519,10 +519,11 @@ class PDR:
                 original_s_1 = s.clone() # For generating ground truth
                 original_s_2 = s.clone() # For testing the NN-guided inductive generalization
                 s_enumerate = self.generate_GT_no_enumerate(original_s_1) #Generate ground truth here
+                #s_enumerate = self.generate_GT(original_s_1)
                 # if self.test_IG_NN and self.NN_guide_ig_iteration > 5 and self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail) < 0.5:
                 #     self.test_IG_NN = 0
                 NN_guide_start_time = time.time()
-                s_NN = self.NN_guided_inductive_generalization(original_s_2)
+                s_NN = self.NN_guided_inductive_generalization(original_s_2,no_enumerate=True)
                 if self.test_IG_NN != 0:
                     self.NN_guide_ig_passed_ratio.append(((self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail)) * 100, self.NN_guide_ig_iteration))
 
@@ -1001,7 +1002,7 @@ class PDR:
                 print("The ground truth has not been found")
                 return None
     
-    def NN_guided_inductive_generalization(self, q: tCube):
+    def NN_guided_inductive_generalization(self, q: tCube, no_enumerate=False):
         '''
         Test the NN-version inductive generalization
         '''
@@ -1015,55 +1016,148 @@ class PDR:
         if self.test_IG_NN == 0:
             pass
         elif self.test_IG_NN == 1:
-            s_smt = Solver()
-            Cube = Not(
-                And(
-                    Not(
-                    And(self.frames[q.t-1].cube(), 
-                    Not(q.cube()), 
-                    substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
-                    list(self.pv2next.items()))
-                    )),
-                    Not(And(self.frames[0].cube(),q.cube()))
-                    ))
-            for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
-            s_smt.add(Cube)
-            assert (s_smt.check() == unsat)
-            res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN) #-> this is a list to guide which literals should be kept/throwed
-            # Conductive two relative check of the return q-like
-            print('restoring from: ', "../dataset/model/neuropdr_2022-04-25_13:03:40_best_precision.pth.tar")
-            # Load model to predict
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            net = neuro_predessor.NeuroPredessor()
-            model = torch.load("../model/neuropdr_2022-04-25_13:03:40_best_precision.pth.tar")
-            net.load_state_dict(model['state_dict'])
-            net = net.to(device)
-            sigmoid  = nn.Sigmoid()
-            torch.no_grad()
+            # s_smt = Solver()
+            # Cube = Not(
+            #     And(
+            #         Not(
+            #         And(self.frames[q.t-1].cube(), 
+            #         Not(q.cube()), 
+            #         substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+            #         list(self.pv2next.items()))
+            #         )),
+            #         Not(And(self.frames[0].cube(),q.cube()))
+            #         ))
+            # for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+            # s_smt.add(Cube)
+            # assert (s_smt.check() == unsat)
+            # res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
+            # # Conductive two relative check of the return q-like
+            # print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+            # # Load model to predict
+            # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            # net = neuro_predessor.NeuroPredessor()
+            # model = torch.load("../model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+            # net.load_state_dict(model['state_dict'])
+            # net = net.to(device)
+            # sigmoid  = nn.Sigmoid()
+            # torch.no_grad()
 
-            #q_index = extract_q_like(res)
-            q_index = []
-            tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
-            ig_q = res.ig_q # original q in inductive generalization
-            for q_literal in ig_q: # literals in q (in inductive generalization process)
-                q_index.append(tmp_lst_all_node.index('n_'+str(q_literal.children()[0])))
+            if no_enumerate == False:
+                s_smt = Solver()
+                Cube = Not(
+                    And(
+                        Not(
+                        And(self.frames[q.t-1].cube(), 
+                        Not(q.cube()), 
+                        substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                        list(self.pv2next.items()))
+                        )),
+                        Not(And(self.frames[0].cube(),q.cube()))
+                        ))
+                for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+                s_smt.add(Cube)
+                assert (s_smt.check() == unsat)
+                res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
+                # Conductive two relative check of the return q-like
+                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                # Load model to predict
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                net = neuro_predessor.NeuroPredessor()
+                model = torch.load("../model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                net.load_state_dict(model['state_dict'])
+                net = net.to(device)
+                sigmoid  = nn.Sigmoid()
+                torch.no_grad()
+                #q_index = extract_q_like(res)
+                q_index = []
+                tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
+                ig_q = res.ig_q # original q in inductive generalization
+                for q_literal in ig_q: # literals in q (in inductive generalization process)
+                    q_index.append(tmp_lst_all_node.index('n_'+str(q_literal.children()[0])))
 
-            q_index.sort() # Fixed the bug of indexing the correct literals
-            outputs = sigmoid(net(res))
-            torch_select = torch.Tensor(q_index).cuda().int() 
-            outputs = torch.index_select(outputs, 0, torch_select)
-            top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-2:]
-            preds = torch.where(outputs>0.997, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
-        
-            '''
-            Generate the new q (which is also q-like) under the NN-given answer
-            '''
-            q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
-            q_like = tCube(q.t)
-            for idx, preds_ans in enumerate(preds.tolist()):
-                if preds_ans == 1:
-                    for top_outputs in top_k_outputs:
-                        if top_outputs[0] == idx: q_like.cubeLiterals.append(q.cubeLiterals[idx])
+                q_index.sort() # Fixed the bug of indexing the correct literals
+                outputs = sigmoid(net(res))
+                torch_select = torch.Tensor(q_index).cuda().int() 
+                outputs = torch.index_select(outputs, 0, torch_select)
+                top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-2:]
+                preds = torch.where(outputs>0.997, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+
+                '''
+                Generate the new q (which is also q-like) under the NN-given answer
+                '''
+                q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+                q_like = tCube(q.t)
+                for idx, preds_ans in enumerate(preds.tolist()):
+                    if preds_ans == 1:
+                        for top_outputs in top_k_outputs:
+                            if top_outputs[0] == idx: q_like.cubeLiterals.append(q.cubeLiterals[idx])
+            elif no_enumerate == True:
+                s_smt = Solver()
+                Cube = Not(
+                    And(
+                        Not(q.cube()), 
+                        substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
+                        list(self.pv2next.items()))
+                        ))
+                for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
+                s_smt.add(Cube)
+                res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
+                # Conductive two relative check of the return q-like
+                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                # Load model to predict
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                net = neuro_predessor.NeuroPredessor()
+                model = torch.load("../model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                net.load_state_dict(model['state_dict'])
+                net = net.to(device)
+                sigmoid  = nn.Sigmoid()
+                torch.no_grad()
+                tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
+                ig_q = res.ig_q # original q in inductive generalization
+
+                single_node_index = []  # store the index
+                var_list = list(res.db_gt)
+                var_list.pop(0)  # remove "filename_nextcube"
+                tmp = res.value_table[~res.value_table.index.str.contains('m_')]
+                tmp.index = tmp.index.str.replace("n_", "")
+
+                for i, element in enumerate(var_list):
+                    if element not in tmp.index.tolist():
+                        single_node_index.append(i)
+
+                '''
+                now try to refine the output 
+                '''
+                var_index = [] # Store the index that is in the graph and in the ground truth table
+                q_index = []
+                tmp_lst_var = list(res.db_gt)[1:]
+                # The groud truth we need to focus on
+                #focus_gt = [e[1] for e in enumerate(tmp_lst_var) if e[0] not in single_node_index]
+                # The q that we need to focus on 
+                focus_q = [_extract(e[1])[0] for e in enumerate(ig_q)]
+                # Try to fetch the index of the variable in the value table (variable in db_gt)
+                tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
+                for element in focus_q:
+                    #var_index.append(tmp_lst_all_node.index('n_'+str(element)))
+                    q_index.append(tmp_lst_all_node.index('n_'+str(element)))
+                #res.refined_output = var_index
+                #res.refined_output = q_index
+                
+                #q_index = var_index
+                q_index.sort() # Fixed the bug of indexing the correct literals
+                outputs = sigmoid(net(res))
+                torch_select = torch.Tensor(q_index).cuda().int() 
+                outputs = torch.index_select(outputs, 0, torch_select)
+                top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[:]
+                preds = torch.where(outputs>0.9, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+                '''
+                Generate the new q (which is also q-like) under the NN-given answer
+                '''
+                q.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+                q_like = tCube(q.t)
+                for idx, preds_ans in enumerate(preds.tolist()):
+                    if preds_ans == 1:
+                        q_like.cubeLiterals.append(q.cubeLiterals[idx])
             
             '''
             Check whether this answer pass the relative check

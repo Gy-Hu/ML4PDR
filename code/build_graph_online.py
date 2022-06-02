@@ -16,7 +16,7 @@ import argparse
 def mk_adj_matrix(solver, mode=0):
     if mode == 0:
        pass
-    elif mode == 1:
+    elif mode == 1 or 2:
         # Old method to generate graph
         # new_graph = graph(solver, mode=mode)
         # while len(new_graph.bfs_queue) != 0:
@@ -241,6 +241,7 @@ class problem:
         self.adj_matrix.drop(self.adj_matrix.columns[0], axis=1, inplace=True)
         self.edges, self.relations, self.node_ref = raw_data[2][0],raw_data[2][1],raw_data[2][2]
         self.ig_q = raw_data[3]
+        self.refined_output = []
 
 
 def run(solver,aigname,mode=0):
@@ -256,12 +257,12 @@ def run(solver,aigname,mode=0):
         prob = problem(raw_data,aigname)
         return prob
     elif mode == 2: # mode == 'inductive generalization upgrade verison, only consider !s & s''
-        res, node_ref = mk_adj_matrix(solver,mode)
+        res, node_ref = mk_adj_matrix(solver,mode=1)
         adj_matrix_pkl_list = res.adj_matrix
         vt_all_node_pkl_list = res.all_node_vt
         edge_and_relation_pkl_list = [res.edges, res.relations, node_ref]
         q_literal_lst = res.q_lst
         raw_data = [adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list, q_literal_lst]
-        prob = problem(raw_data,aigname)
+        prob = problem(raw_data,aigname,mode=2)
         return prob
         

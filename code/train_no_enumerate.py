@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from config import parser
-from neuro_inductive_generalization import NeuroPredessor
+from neuro_ig_no_enumerate import NeuroPredessor
 from data_gen import problem, walkFile
 import pandas as pd
 from pathlib import Path

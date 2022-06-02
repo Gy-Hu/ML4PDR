@@ -81,7 +81,7 @@ if __name__ == '__main__':
     
     '''
     
-    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-d','ig']) 
+    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on']) 
     #args = parser.parse_args() 
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
