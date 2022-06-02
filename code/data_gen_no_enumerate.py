@@ -355,9 +355,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', type=str, default=None, help='Input the smt file directory name for converting to graph')
     parser.add_argument('-m',type=str,help='choose the mode to run the program, 0 means run for generalizaed predecessor, 1 means run for inductive generalization',default=None)
     parser.add_argument('-s',type=str,help='select the particular aiger to generate graph',default=None)
-    args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG_no_enumerate/','-m', 'ig','-s','nusmv.syncarb5^2.B'])
+    #args = parser.parse_args(['-d','../dataset/IG2graph/generalize_IG_no_enumerate/','-m', 'ig','-s','nusmv.syncarb5^2.B'])
     #args = parser.parse_args(['-d','../dataset/GP2graph/generalize_pre/','-m', 'gp'])
-    #args = parser.parse_args()
+    args = parser.parse_args()
 
     if args.m == 'gp':
         #TODO: Add function to auto-skip the generated file
