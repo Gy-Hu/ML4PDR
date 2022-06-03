@@ -942,6 +942,7 @@ class PDR:
                 return slv.check()
 
             file_path_prefix = "/data/hongcezh/clause-learning/data-collect/hwmcc07-7200-result/output/tip/"
+            #file_path_prefix = "/data/guangyuh/coding_env/IC3ref_zhang/"
             file_suffix = self.filename.split('/')[-1].replace('.aag', '')
             inv_cnf = file_path_prefix + file_suffix + "/inv.cnf"
             with open(inv_cnf, 'r') as f:
@@ -1032,11 +1033,11 @@ class PDR:
             # assert (s_smt.check() == unsat)
             # res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
             # # Conductive two relative check of the return q-like
-            # print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+            # print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
             # # Load model to predict
             # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             # net = neuro_predessor.NeuroPredessor()
-            # model = torch.load("../model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+            # model = torch.load("../model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
             # net.load_state_dict(model['state_dict'])
             # net = net.to(device)
             # sigmoid  = nn.Sigmoid()
@@ -1059,11 +1060,12 @@ class PDR:
                 assert (s_smt.check() == unsat)
                 res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
-                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
                 # Load model to predict
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                device = torch.device("cuda")
                 net = neuro_predessor.NeuroPredessor()
-                model = torch.load("../model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                model = torch.load("../model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
@@ -1077,10 +1079,10 @@ class PDR:
 
                 q_index.sort() # Fixed the bug of indexing the correct literals
                 outputs = sigmoid(net(res))
-                torch_select = torch.Tensor(q_index).cuda().int() 
+                torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
                 top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[-2:]
-                preds = torch.where(outputs>0.997, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+                preds = torch.where(outputs>0.997, torch.ones(outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
 
                 '''
                 Generate the new q (which is also q-like) under the NN-given answer
@@ -1103,11 +1105,12 @@ class PDR:
                 s_smt.add(Cube)
                 res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
-                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
                 # Load model to predict
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                device = torch.device("cuda")
                 net = neuro_predessor.NeuroPredessor()
-                model = torch.load("../model/neuropdr_2022-06-02_02:41:05_last.pth.tar")
+                model = torch.load("../model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
@@ -1146,10 +1149,10 @@ class PDR:
                 #q_index = var_index
                 q_index.sort() # Fixed the bug of indexing the correct literals
                 outputs = sigmoid(net(res))
-                torch_select = torch.Tensor(q_index).cuda().int() 
+                torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
                 top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[:]
-                preds = torch.where(outputs>0.9, torch.ones(outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+                preds = torch.where(outputs>0.5, torch.ones(outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
                 '''
                 Generate the new q (which is also q-like) under the NN-given answer
                 '''

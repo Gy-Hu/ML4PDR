@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from tqdm import tqdm
 import sys
 import torch
@@ -62,7 +63,7 @@ label of the minimum q (q-like) -> inductive generalization
 #   for index in single_node_index:
 #     output_lst.insert(index,1)
 
-#   return torch.Tensor(output_lst).cuda().float()
+#   return torch.Tensor(output_lst).to('cuda').float()
 
 # def del_tensor_ele(arr,index):
 #     arr1 = arr[0:index]
@@ -117,6 +118,9 @@ def refine_target_and_output(problem):
 
     problem.label = [e[1] for e in enumerate(
         problem.label) if e[0] not in single_node_index]
+    
+    # assert the label will not be all zero
+    assert(sum(problem.label) != 0)
 
     '''
     Finish refine the target, now try to refine the output 
@@ -133,8 +137,11 @@ def refine_target_and_output(problem):
 
 
 if __name__ == "__main__":
-
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    #torch.backends.cudnn.enabled = False 
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    #torch.device_count()
+    # Training loss backward() -> RuntimeError: cuDNN error: CUDNN_STATUS_EXECUTION_FAILED
+    # torch.backends.cudnn.enabled = False 
     # Set up the tensorboard log directory
     datetime_str = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
     writer = SummaryWriter('../log/tensorboard'+'-' +
@@ -157,6 +164,7 @@ if __name__ == "__main__":
     #data = "../dataset/tmp/generalize_adj_matrix/adj_ken.flash^12.C_5.pkl"
 
     # TODO: make val part works here
+    all_train = []
     train = []
     val = []
     # train, val = None, None
@@ -167,15 +175,15 @@ if __name__ == "__main__":
         train_lst = walkFile(args.train_file)
         for train_file in train_lst:
             with open(train_file, 'rb') as f:
-                train.append(pickle.load(f))
+                all_train.append(pickle.load(f))
 
     # Remove the train file which exists bug (has no adj_matrix generated)
-    train = [train_file for train_file in train if hasattr(
+    all_train = [train_file for train_file in all_train if hasattr(
         train_file, 'adj_matrix')]
 
     if args.mode == 'test':
         #train, val = train_test_split(train, test_size=0.2, random_state=42)
-        train, val = train_test_split(train, test_size=0.2, random_state=0)
+        train, val = train_test_split(all_train, test_size=0.2)
     elif args.mode == 'train':
         val_lst = walkFile(args.val_file)
         for val_file in val_lst:
@@ -193,7 +201,7 @@ if __name__ == "__main__":
     # if train is not None: q_index = refine_cube(train[0])
 
     net = NeuroPredessor(args)
-    net = net.cuda()  # TODO: modify to accept both CPU and GPU version
+    net = net.to('cuda')  # TODO: modify to accept both CPU and GPU version
 
     # task_name = args.task_name + '_sr' + str(args.min_n) + 'to' + str(args.max_n) + '_ep' + str(
     #   args.epochs) + '_nr' + str(args.n_rounds) + '_d' + str(args.dim)
@@ -204,8 +212,8 @@ if __name__ == "__main__":
     # loss_fn = nn.BCELoss() #TODO: Try to modify this part
     #loss_fn = nn.SmoothL1Loss()
     #loss_fn = nn.CrossEntropyLoss()
-    #loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5]).cuda())
-    #loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([2]).cuda(),reduction='sum')
+    #loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5]).to('cuda'))
+    #loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([2]).to('cuda'),reduction='sum')
     loss_fn = nn.BCELoss(reduction='sum')
     #optim = optim.Adam(net.parameters(), lr=0.00002, weight_decay=1e-10)
     #optim = optim.Adam(net.parameters(), lr=0.00001, weight_decay=1e-10)
@@ -222,11 +230,13 @@ if __name__ == "__main__":
     if train is not None:
         for problem in train:
             refine_target_and_output(problem)
+            assert(len(problem.refined_output) == len(problem.label))
         print('num of train batches: ', len(train), file=log_file, flush=True)
 
     if val is not None:
         for val_file in val:
             refine_target_and_output(val_file)
+            assert(len(problem.refined_output) == len(problem.label))
 
     if args.restore is not None:
         print('restoring from', args.restore, file=log_file, flush=True)
@@ -267,10 +277,10 @@ if __name__ == "__main__":
             optim.zero_grad()
             outputs = net(prob)
             # TODO: update the loss function here
-            target = torch.Tensor(prob.label).cuda().float()
+            target = torch.Tensor(prob.label).to('cuda').float()
             outputs = sigmoid(outputs)
 
-            torch_select = torch.Tensor(q_index).cuda().int()
+            torch_select = torch.Tensor(q_index).to('cuda').int()
             outputs = torch.index_select(outputs, 0, torch_select)
 
             #outputs = refine_output(prob, outputs)
@@ -281,7 +291,7 @@ if __name__ == "__main__":
             optim.step()
 
             preds = torch.where(outputs > 0.5, torch.ones(
-                outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+                outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
 
             # Calulate the perfect accuracy
             all = all + 1
@@ -352,14 +362,14 @@ if __name__ == "__main__":
             q_index = prob.refined_output
             optim.zero_grad()
             outputs = net(prob)
-            target = torch.Tensor(prob.label).cuda().float()
+            target = torch.Tensor(prob.label).to('cuda').float()
             # print(outputs.shape, target.shape)
             # print(outputs, target)
             outputs = sigmoid(outputs)
-            torch_select = torch.Tensor(q_index).cuda().int()
+            torch_select = torch.Tensor(q_index).to('cuda').int()
             outputs = torch.index_select(outputs, 0, torch_select)
             preds = torch.where(outputs > 0.9, torch.ones(
-                outputs.shape).cuda(), torch.zeros(outputs.shape).cuda())
+                outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
 
             loss = loss_fn(outputs, target)
 
@@ -380,6 +390,8 @@ if __name__ == "__main__":
                 (TP.item() + TN.item()) * 1.0 / TOT.item(), TP.item() *
                 1.0 / TOT.item(), TN.item() * 1.0 / TOT.item(),
                 FN.item() * 1.0 / TOT.item(), FP.item() * 1.0 / TOT.item())
+
+            writer.add_scalar('loss/validation_loss', loss.item(), epoch)
 
             writer.add_scalar('accuracy/predict_perfection_ratio',
                               (perfection_rate*1.0/all)*100, iteration)

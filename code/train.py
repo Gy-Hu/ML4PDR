@@ -142,6 +142,7 @@ if __name__ == "__main__":
   #data = "../dataset/tmp/generalize_adj_matrix/adj_ken.flash^12.C_5.pkl"
 
   # TODO: make val part works here
+  all_train = []
   train = []
   val = []
   # train, val = None, None
@@ -154,13 +155,13 @@ if __name__ == "__main__":
     train_lst = walkFile(args.train_file)
     for train_file in train_lst:
       with open(train_file,'rb') as f:
-        train.append(pickle.load(f))
+        all_train.append(pickle.load(f))
   
   # Remove the train file which exists bug (has no adj_matrix generated)
-  train = [train_file for train_file in train if hasattr(train_file,'adj_matrix')]
+  all_train = [train_file for train_file in all_train if hasattr(train_file,'adj_matrix')]
 
   if args.mode=='test':
-    train, val = train_test_split(train, test_size=0.2, random_state=42)
+    train, val = train_test_split(all_train, test_size=0.2)
   elif args.mode=='train':
     val_lst = walkFile(args.val_file)
     for val_file in val_lst:

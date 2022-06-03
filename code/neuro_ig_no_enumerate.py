@@ -12,10 +12,10 @@ class MLP(nn.Module):
   def __init__(self, in_dim, hidden_dim, out_dim):
     super(MLP, self).__init__()
     self.l1 = nn.Linear(in_dim, hidden_dim)
-    self.l1_dropout = nn.Dropout(0.5)
+    self.l1_dropout = nn.Dropout(0.3)
     self.f1 = nn.ReLU()
     self.l2 = nn.Linear(hidden_dim, hidden_dim)
-    self.l2_dropout = nn.Dropout(0.5)
+    self.l2_dropout = nn.Dropout(0.3)
     self.f2 = nn.ReLU()
     self.l3 = nn.Linear(hidden_dim, out_dim)
 
@@ -65,16 +65,16 @@ class NeuroPredessor(nn.Module):
         n_node = problem.n_nodes #TODO: Refine here (modify in data_gen.py)
         # ts_var_unpack_indices = torch.Tensor(problem.adj_matrix).t().long() #TODO: refine the adj matrix here
         # unpack = torch.sparse.FloatTensor(ts_var_unpack_indices, torch.ones(problem.n_cells), #TODO: refine the n_cells.. here
-                                          # torch.Size([n_var, n_node])).to_dense().cuda()
-        unpack = (torch.from_numpy(problem.adj_matrix.astype(np.float32).values)).cuda()
-        init_ts = self.init_ts.cuda()
+                                          # torch.Size([n_var, n_node])).to_dense().to('cuda')
+        unpack = (torch.from_numpy(problem.adj_matrix.astype(np.float32).values)).to('cuda')
+        init_ts = self.init_ts.to('cuda')
 
         # TODO: change the init part to true/false init
         dict_vt = dict(zip((problem.value_table).index, (problem.value_table).Value))
 
-        #true_tensor = torch.tensor([]).cuda()
-        #false_tensor = torch.tensor([]).cuda()
-        all_init = torch.tensor([]).cuda()
+        #true_tensor = torch.tensor([]).to('cuda')
+        #false_tensor = torch.tensor([]).to('cuda')
+        all_init = torch.tensor([]).to('cuda')
         for key, value in dict_vt.items():
             if value == 1:
                 tmp_tensor = self.true_init(init_ts).view(1, 1, -1) #<-assign true init tensor
@@ -91,7 +91,7 @@ class NeuroPredessor(nn.Module):
         # var_init = var_init.repeat(1, n_var, 1)
         # node_init = node_init.repeat(1, n_node, 1)
 
-        var_state = (all_init[:], torch.zeros(1, n_var, self.dim).cuda()) # resize for LSTM, (ht, ct)
+        var_state = (all_init[:], torch.zeros(1, n_var, self.dim).to('cuda')) # resize for LSTM, (ht, ct)
         '''
         var_state[:] -> all node includes input, input_prime, variable
         var_state[:?] -> node exclude input, input_prime, variable
