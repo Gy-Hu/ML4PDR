@@ -3,7 +3,7 @@ import pickle
 import os
 
 from zmq import device
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from tqdm import tqdm
 import sys
 import torch
@@ -21,6 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+import torch.nn.functional as F
 
 class ReloadedInt(int):
     def __truediv__(self, other):
@@ -33,6 +34,39 @@ class ReloadedInt(int):
             return 0
         else:
             return super().__truediv__(other)
+
+class BCEFocalLoss(nn.Module):
+    def __init__(self, alpha=.25, gamma=2):
+        super(BCEFocalLoss, self).__init__()
+        self.alpha = torch.tensor([alpha, 1-alpha]).cuda()
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        targets = targets.type(torch.long)
+        at = self.alpha.gather(0, targets.data.view(-1))
+        pt = torch.exp(-BCE_loss)
+        F_loss = at*(1-pt)**self.gamma * BCE_loss
+        return F_loss.sum()
+
+class WeightedBCELosswithLogits(nn.Module):
+    def __init__(self, pos_weight=8, reduction='sum'):
+        super(WeightedBCELosswithLogits, self).__init__()
+        self.pos_weight = pos_weight
+        self.reduction = reduction
+
+    def forward(self, logits, target):
+        # logits: [N, *], target: [N, *]
+        logits = torch.sigmoid(logits)
+        logits = torch.clamp(logits, min=1e-7, max=1-1e-7)
+        loss = - self.pos_weight * target * torch.log(logits) - \
+               (1 - target) * torch.log(1 - logits)
+        if self.reduction == 'mean':
+            loss = loss.mean()
+        elif self.reduction == 'sum':
+            loss = loss.sum()
+        return loss
+
 
 class GraphDataset(Dataset):
     def __init__(self,data_root):
@@ -111,10 +145,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args(['--task-name', 'neuropdr_'+datetime_str.replace(' ', '_'), '--dim', '128', '--n_rounds', '512',
                               '--epochs', '256',
-                              '--log-dir', str(Path(__file__).parent.parent /'log/tmp/'), \
+                              #'--log-dir', str(Path(__file__).parent.parent /'log/tmp/'), \
                               '--train-file', '../dataset/IG2graph/train_no_enumerate/',\
                               '--val-file', '../dataset/IG2graph/validate_no_enumerate/',\
-                              '--mode', 'debug'
+                              '--mode', 'test'
                               ])
 
     if args.mode == 'debug':
@@ -130,15 +164,13 @@ if __name__ == "__main__":
 
     
     if args.mode == 'test' or args.mode == 'debug':
-        
-       
-
         train_size = int(0.6 * len(all_graph))
         validation_size = int(0.2 * len(all_graph))
         test_size = len(all_graph) - train_size - validation_size
 
         # Randomly
-        train_dataset, validation_dataset, test_dataset = torch.utils.data.random_split(all_graph, [train_size, validation_size, test_size])
+        train_dataset, test_dataset = torch.utils.data.random_split(all_graph, [train_size + validation_size, test_size])
+        _ , validation_dataset = torch.utils.data.random_split(train_dataset, [train_size, len(all_graph) - train_size])
 
         # Sequentially
         #train_dataset = torch.utils.data.Subset(all_graph, range(train_size))
@@ -147,7 +179,7 @@ if __name__ == "__main__":
 
         train_loader = DataLoader(
         dataset=train_dataset,
-        batch_size=5,
+        batch_size=2,
         shuffle=False,
         collate_fn=collate_wrapper,
         num_workers=0)
@@ -168,13 +200,17 @@ if __name__ == "__main__":
 
     net = NeuroPredessor(args)
     net = net.to('cuda')  # TODO: modify to accept both CPU and GPU version
+    # if torch.cuda.device_count() > 1:
+    #     net = torch.nn.DataParallel(net)
 
     log_file = open(os.path.join(args.log_dir, args.task_name + '.log'), 'a+')
     detail_log_file = open(os.path.join(
         args.log_dir, args.task_name + '_detail.log'), 'a+')
 
-    loss_fn = nn.BCELoss(reduction='sum')
-    optim = optim.Adam(net.parameters(), lr=0.00001, weight_decay=1e-10)
+    #loss_fn = nn.BCELoss(reduction='sum')
+    #loss_fn = BCEFocalLoss()
+    loss_fn = WeightedBCELosswithLogits()
+    optim = optim.Adam(net.parameters(), lr=0.0001, weight_decay=1e-10)
     sigmoid = nn.Sigmoid()
 
     best_acc = 0.0
@@ -226,7 +262,7 @@ if __name__ == "__main__":
                 outputs = net((prob[prob_index],vt_dict[prob_index]))
                 # TODO: update the loss function here
                 target = torch.Tensor(prob[prob_index]['label']).to('cuda').float()
-                outputs = sigmoid(outputs)
+                #outputs = sigmoid(outputs)
 
                 torch_select = torch.Tensor(q_index).to('cuda').int()
                 outputs = torch.index_select(outputs, 0, torch_select)
@@ -290,7 +326,7 @@ if __name__ == "__main__":
             optim.zero_grad()
             outputs = net((prob[0],vt_dict[0]))
             target = torch.Tensor(prob[0]['label']).to('cuda').float()
-            outputs = sigmoid(outputs)
+            #outputs = sigmoid(outputs)
             torch_select = torch.Tensor(q_index).to('cuda').int()
             outputs = torch.index_select(outputs, 0, torch_select)
             preds = torch.where(outputs > 0.5, torch.ones(
@@ -348,7 +384,7 @@ if __name__ == "__main__":
             optim.zero_grad()
             outputs = net((prob[0],vt_dict[0]))
             target = torch.Tensor(prob[0]['label']).to('cuda').float()
-            outputs = sigmoid(outputs)
+            #outputs = sigmoid(outputs)
             torch_select = torch.Tensor(q_index).to('cuda').int()
             outputs = torch.index_select(outputs, 0, torch_select)
             preds = torch.where(outputs > 0.5, torch.ones(

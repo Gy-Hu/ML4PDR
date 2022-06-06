@@ -14,10 +14,10 @@ class MLP(nn.Module):
   def __init__(self, in_dim, hidden_dim, out_dim):
     super(MLP, self).__init__()
     self.l1 = nn.Linear(in_dim, hidden_dim)
-    self.l1_dropout = nn.Dropout(0.3)
+    self.l1_dropout = nn.Dropout(0.5)
     self.f1 = nn.ReLU()
     self.l2 = nn.Linear(hidden_dim, hidden_dim)
-    self.l2_dropout = nn.Dropout(0.3)
+    self.l2_dropout = nn.Dropout(0.5)
     self.f2 = nn.ReLU()
     self.l3 = nn.Linear(hidden_dim, out_dim)
 
