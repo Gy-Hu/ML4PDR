@@ -4,6 +4,8 @@ import z3
 import numpy as np
 import pandas as pd
 
+#from code.data_gen import problem
+
 
 '''
 -----------------Non-linear MLP--------------------
@@ -60,17 +62,13 @@ class NeuroPredessor(nn.Module):
         self.denom = torch.sqrt(torch.Tensor([self.dim]))
 
 
-    def forward(self, problem):
-        n_var = problem.n_vars #TODO: Refine here (modify in data_gen.py)
-        n_node = problem.n_nodes #TODO: Refine here (modify in data_gen.py)
-        # ts_var_unpack_indices = torch.Tensor(problem.adj_matrix).t().long() #TODO: refine the adj matrix here
-        # unpack = torch.sparse.FloatTensor(ts_var_unpack_indices, torch.ones(problem.n_cells), #TODO: refine the n_cells.. here
-                                          # torch.Size([n_var, n_node])).to_dense().to('cuda')
-        unpack = (torch.from_numpy(problem.adj_matrix.astype(np.float32).values)).to('cuda')
+    def forward(self, wrapper):
+        problem = wrapper[0]
+        dict_vt = wrapper[1]
         init_ts = self.init_ts.to('cuda')
 
         # TODO: change the init part to true/false init
-        dict_vt = dict(zip((problem.value_table).index, (problem.value_table).Value))
+        # dict_vt = dict(zip((problem.value_table).index, (problem.value_table).Value))
 
         #true_tensor = torch.tensor([]).to('cuda')
         #false_tensor = torch.tensor([]).to('cuda')
@@ -91,7 +89,7 @@ class NeuroPredessor(nn.Module):
         # var_init = var_init.repeat(1, n_var, 1)
         # node_init = node_init.repeat(1, n_node, 1)
 
-        var_state = (all_init[:], torch.zeros(1, n_var, self.dim).to('cuda')) # resize for LSTM, (ht, ct)
+        var_state = (all_init[:], torch.zeros(1, problem['n_vars'], self.dim).to('cuda')) # resize for LSTM, (ht, ct)
         '''
         var_state[:] -> all node includes input, input_prime, variable
         var_state[:?] -> node exclude input, input_prime, variable
@@ -105,23 +103,23 @@ class NeuroPredessor(nn.Module):
         for _ in range(self.n_rounds): #TODO: Using LSTM to eliminate the error brought by symmetry
 
             var_pre_msg = self.children_msg(var_state[:][0].squeeze(0))
-            child_to_par_msg = torch.matmul(unpack, var_pre_msg) #TODO: ask question "two embedding of m here"
+            child_to_par_msg = torch.matmul(problem['unpack'], var_pre_msg) #TODO: ask question "two embedding of m here"
             #FIXME: Expected hidden[0] size (1, 204, 128), got (1, 231, 128), fix the size in adj_matrix (where's prime needed?) , and re-run this
             #var_state_slice = ((var_state[0])[:,:problem.n_nodes,:], (var_state[1])[:,:problem.n_nodes,:])
-            var_node_state = ((var_state[0])[:, :problem.n_nodes, :], (var_state[1])[:, :problem.n_nodes, :])
-            var_rest_state = ((var_state[0])[:, problem.n_nodes: , :], (var_state[1])[:, problem.n_nodes: , :])
+            var_node_state = ((var_state[0])[:, :problem['n_nodes'], :], (var_state[1])[:, :problem['n_nodes'], :])
+            var_rest_state = ((var_state[0])[:, problem['n_nodes']: , :], (var_state[1])[:, problem['n_nodes']: , :])
             _, var_node_state = self.var_update(child_to_par_msg.unsqueeze(0), var_node_state)
             #_, ((var_state[0])[:, :problem.n_nodes, :], (var_state[1])[:, :problem.n_nodes, :]) = self.var_update(child_to_par_msg.unsqueeze(0), ((var_state[0])[:, :problem.n_nodes, :], (var_state[1])[:, :problem.n_nodes, :]))
             #_, var_state = self.var_update(torch.cat(child_to_par_msg.unsqueeze(0), ((var_state[0])[:,:problem.n_nodes,:], (var_state[1])[:,:problem.n_nodes,:])))  #TODO: replace node_state with the partial var_state
             var_state = (torch.cat((var_node_state[0],var_rest_state[0]),dim=1),torch.cat((var_node_state[1],var_rest_state[1]),dim=1))
 
-            node_pre_msg = self.parent_msg(((var_state[0])[:,:problem.n_nodes,:]).squeeze(0))
-            par_to_child_msg = torch.matmul(unpack.t(), node_pre_msg)
+            node_pre_msg = self.parent_msg(((var_state[0])[:,:problem['n_nodes'],:]).squeeze(0))
+            par_to_child_msg = torch.matmul(problem['unpack'].t(), node_pre_msg)
             _, var_state = self.node_update(par_to_child_msg.unsqueeze(0), var_state)
 
         logits = var_state[0].squeeze(0)
         #TODO: update here with the correct number
-        vote = self.var_vote(logits[problem.n_nodes:,:]) # (a+b) * dim -> a * dim
+        vote = self.var_vote(logits[problem['n_nodes']:,:]) # (a+b) * dim -> a * dim
         #vote_mean = torch.mean(vote, dim=1)
         return vote.squeeze()
 
