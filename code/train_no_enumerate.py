@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
         # Randomly
         train_dataset, test_dataset = torch.utils.data.random_split(all_graph, [train_size + validation_size, test_size])
-        _ , validation_dataset = torch.utils.data.random_split(train_dataset, [train_size, len(all_graph) - train_size])
+        _ , validation_dataset = torch.utils.data.random_split(train_dataset, [train_size, validation_size])
 
         # Sequentially
         #train_dataset = torch.utils.data.Subset(all_graph, range(train_size))

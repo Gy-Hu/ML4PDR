@@ -20,6 +20,7 @@ import time
 # import matplotlib as mpl
 # mpl.use('Agg')
 import matplotlib.pyplot as plt
+import csv
 # from env import QL
 
 # When you need to run all folder, setup this
@@ -46,6 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', type=str, help='switch to use neural network in inductive generalization or generalized predecessor', default='off')
     parser.add_argument('-a', type=str, help='Use NN-guided IG and append to MIC', default='off')
     parser.add_argument('-s', type=str, help='Save the inductive invariant', default='off')
+    parser.add_argument('-r', type=str, help='Record the result', default='off')
 
     # TODO: Add abstract & craig interpolation?
     # TODO: Solve the issue on this case (cannot run in time)
@@ -82,15 +84,16 @@ if __name__ == '__main__':
     
     '''
     
-    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec1-and-env.aag','-c','-n','on','-a','on']) 
-    #args = parser.parse_args() 
+    #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec1-and-env.aag','-c','-n','off','-a','off']) 
+    #args = parser.parse_args(['--mode', '1' , '-t', '900' , '-p', '../dataset/aag4train/subset_0', '-c', '-r','on','-n','on','-a','on']) 
+    args = parser.parse_args()
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
 
-        state_size = 10  # set up RL
-        action_size = 8  # set up RL
-        agent = None #QL(state_size, action_size)  # set up RL
+        # state_size = 10  # set up RL
+        # action_size = 8  # set up RL
+        # agent = None #QL(state_size, action_size)  # set up RL
 
         print("============= Running test ===========")
 
@@ -137,8 +140,17 @@ if __name__ == '__main__':
         elif args.s=='on':
             solver.collect_inductive_invariant = 1
 
+        # On/off the recording of result
+        if args.r=='off':
+            solver.record_result = 0
+        elif args.r=='on':
+            solver.record_result = 1
+
+            
+
+
         startTime = time.time()
-        solver.run(agent)
+        solver.run()
         endTime = time.time()
         print("Finish runing aiger file:"+args.fileName)
         if args.c:
@@ -201,8 +213,29 @@ if __name__ == '__main__':
                         solver.smt2_gen_IG = 0
                         solver.smt2_gen_GP = 1
 
+                    # On/off the NN-guided ig append to MIC
+                    if args.a=='off':
+                        solver.NN_guide_ig_append = 0
+                    elif args.a=='on':
+                        solver.NN_guide_ig_append = 1
+
+                    # On/off the collection of inductive invariant
+                    if args.s=='off':
+                        solver.collect_inductive_invariant = 0
+                    elif args.s=='on':
+                        solver.collect_inductive_invariant = 1
+
+                    # On/off the recording of result
+                    if args.r=='off':
+                        solver.record_result = 0
+                    elif args.r=='on':
+                        solver.record_result = 1
+
                     startTime = time.time()
                     timeout = False
+
+                    # Record start time
+                    solver.start_time = time.time()
 
                     # t = Thread(target=solver.run)
                     # t.daemon = True
@@ -228,11 +261,13 @@ if __name__ == '__main__':
                     #     sleep(20)
                     # elif timeout != True:
                     if timeout != True:
+                        solve_time = (endTime - startTime)
                         print("Finish runing aiger file:"+str(name))
                         print("Done in time")
                         #sleep(20)
                         if args.c:
-                            print("TIME CONSUMING: ", (endTime - startTime), "seconds")
+                            print("TIME CONSUMING: ", solve_time, "seconds")
+                        
     else:
         print("Wrong input, please give a vaild input or check the document")
 

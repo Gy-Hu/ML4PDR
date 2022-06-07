@@ -4,6 +4,7 @@ import string
 from z3 import *
 import time
 import sys
+import csv
 import numpy as np
 import copy
 from queue import PriorityQueue
@@ -289,6 +290,17 @@ class PDR:
         ---------------Collect the inductive invariant
         '''
         self.collect_inductive_invariant = 0
+        '''
+        ---------------Collect the result
+        
+        '''
+        self.record_result = 0
+        self.record_result_dict = {}
+        '''
+        --------------Set the prediction thershold------------------
+        '''
+        self.prediction_threshold = 0.5
+
         
         
 
@@ -393,6 +405,44 @@ class PDR:
 
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
+
+                    if self.record_result == 1:
+                        if self.test_IG_NN == 0 and self.NN_guide_ig_append == 0:
+                            # Add info to the result recorder
+                            self.record_result_dict['filename'] = self.filename
+                            self.record_result_dict['Total Frame'] = len(self.frames)
+                            self.record_result_dict['Number of clauses'] = len(self.frames[-1].Lemma)
+                            self.record_result_dict["Time Consuming"] = time.time() - self.start_time
+                            print("Export the result to csv file")
+                            root = '/data/guangyuh/coding_env/ML4PDR/log/'
+                            name = 'small_subset_without_NN'
+                            file_exists = os.path.isfile(root+name+".csv")
+                            with open(os.path.join(root, name+".csv"), 'a+', newline='') as csvfile:
+                                fieldnames = ['filename', 'Total Frame', 'Number of clauses', 'Time Consuming']
+                                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                                if not file_exists: writer.writeheader() 
+                                writer.writerow(self.record_result_dict)
+                                csvfile.close()
+                        elif self.test_IG_NN == 1 and self.NN_guide_ig_append == 1:
+                            self.record_result_dict['filename'] = self.filename
+                            self.record_result_dict['Total Frame'] = len(self.frames)
+                            self.record_result_dict['Number of clauses'] = len(self.frames[-1].Lemma)
+                            self.record_result_dict["Time Consuming"] = time.time() - self.start_time
+                            self.record_result_dict["Time reduce INF time"] = self.record_result_dict["Time Consuming"] - self.NN_guide_ig_time_sum
+                            self.record_result_dict["Prediction Thershold"] = self.prediction_threshold
+                            self.record_result_dict["Passing Ratio"] = str((self.NN_guide_ig_success/(self.NN_guide_ig_success + self.NN_guide_ig_fail))*100)+"%"
+                            print("Export the result to csv file")
+                            root = '/data/guangyuh/coding_env/ML4PDR/log/'
+                            name = 'small_subset_experiment_with_NN'
+                            file_exists = os.path.isfile(root+name+".csv")
+                            with open(os.path.join(root, name+".csv"), 'a+', newline='') as csvfile:
+                                fieldnames = ['filename', 'Total Frame', 'Number of clauses', 'Time Consuming',"Time reduce INF time","Prediction Thershold","Passing Ratio"]
+                                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                                if not file_exists: writer.writeheader()  # file doesn't exist yet, write a header
+                                writer.writerow(self.record_result_dict)
+                                csvfile.close()
+                
+                    
 
                     return True
                 print("Did not find invariant, adding frame " + str(len(self.frames)) + "...")
@@ -1152,7 +1202,7 @@ class PDR:
                 torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
                 top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[:]
-                preds = torch.where(outputs>0.5, torch.ones(outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
+                preds = torch.where(outputs>self.prediction_threshold, torch.ones(outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
                 '''
                 Generate the new q (which is also q-like) under the NN-given answer
                 '''
