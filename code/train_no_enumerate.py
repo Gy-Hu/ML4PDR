@@ -320,33 +320,34 @@ if __name__ == "__main__":
         all = 0  # Used to record the number of all samples in the validation set
         loss = torch.zeros(1).to(device)
         #loss_cpu = torch.zeros(1).to('cpu')
-        for batch_index, (prob,vt_dict) in enumerate(val_bar):
-            q_index = prob[0]['refined_output']
-            #optim.zero_grad()
-            with torch.no_grad: outputs = net((prob[0],vt_dict[0]))
-            target = torch.Tensor(prob[0]['label']).to('cuda').float()
-            torch_select = torch.Tensor(q_index).to('cuda').int()
-            outputs = torch.index_select(outputs, 0, torch_select)
-            
-            this_loss = loss_fn(outputs, target)
-            #loss += this_loss
-            loss = torch.sum(torch.cat([loss, this_loss], 0))
-            loss = loss.unsqueeze(0)
+        with torch.no_grad():
+            for batch_index, (prob,vt_dict) in enumerate(val_bar):
+                q_index = prob[0]['refined_output']
+                #optim.zero_grad()
+                outputs = net((prob[0],vt_dict[0]))
+                target = torch.Tensor(prob[0]['label']).to('cuda').float()
+                torch_select = torch.Tensor(q_index).to('cuda').int()
+                outputs = torch.index_select(outputs, 0, torch_select)
+                
+                this_loss = loss_fn(outputs, target)
+                #loss += this_loss
+                loss = torch.sum(torch.cat([loss, this_loss.unsqueeze(0)], 0))
+                loss = loss.unsqueeze(0)
 
-            outputs = sigmoid(outputs)
-            preds = torch.where(outputs > 0.7, torch.ones(
-                outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
+                outputs = sigmoid(outputs)
+                preds = torch.where(outputs > 0.7, torch.ones(
+                    outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
 
-            # Calulate the perfect accuracy
-            all = all + 1
-            if target.equal(preds):
-                perfection_rate = perfection_rate + 1
+                # Calulate the perfect accuracy
+                all = all + 1
+                if target.equal(preds):
+                    perfection_rate = perfection_rate + 1
 
-            TP += (preds.eq(1) & target.eq(1)).cpu().sum()
-            TN += (preds.eq(0) & target.eq(0)).cpu().sum()
-            FN += (preds.eq(0) & target.eq(1)).cpu().sum()
-            FP += (preds.eq(1) & target.eq(0)).cpu().sum()
-            #torch.cuda.empty_cache()
+                TP += (preds.eq(1) & target.eq(1)).cpu().sum()
+                TN += (preds.eq(0) & target.eq(0)).cpu().sum()
+                FN += (preds.eq(0) & target.eq(1)).cpu().sum()
+                FP += (preds.eq(1) & target.eq(0)).cpu().sum()
+                #torch.cuda.empty_cache()
         
         # Write log for every epoch
         TOT = TP + TN + FN + FP
@@ -376,33 +377,34 @@ if __name__ == "__main__":
         perfection_rate = 0  # Used to record the perfection ratio of the validation set
         all = 0  # Used to record the number of all samples in the validation set
         loss = torch.zeros(1).to(device)
-        for batch_index , (prob,vt_dict) in enumerate(test_bar):
-            q_index = prob[0]['refined_output']
-            #optim.zero_grad()
-            with torch.no_grad: outputs = net((prob[0],vt_dict[0]))
-            target = torch.Tensor(prob[0]['label']).to('cuda').float()
-            torch_select = torch.Tensor(q_index).to('cuda').int()
-            outputs = torch.index_select(outputs, 0, torch_select)
+        with torch.no_grad():
+            for batch_index , (prob,vt_dict) in enumerate(test_bar):
+                q_index = prob[0]['refined_output']
+                #optim.zero_grad()
+                outputs = net((prob[0],vt_dict[0]))
+                target = torch.Tensor(prob[0]['label']).to('cuda').float()
+                torch_select = torch.Tensor(q_index).to('cuda').int()
+                outputs = torch.index_select(outputs, 0, torch_select)
 
-            # Calculate loss
-            this_loss = loss_fn(outputs, target)
-            loss = torch.sum(torch.cat([loss, this_loss], 0))
-            loss = loss.unsqueeze(0)
+                # Calculate loss
+                this_loss = loss_fn(outputs, target)
+                loss = torch.sum(torch.cat([loss, this_loss.unsqueeze(0)], 0))
+                loss = loss.unsqueeze(0)
 
-            outputs = sigmoid(outputs)
-            preds = torch.where(outputs > 0.8, torch.ones(
-                outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
+                outputs = sigmoid(outputs)
+                preds = torch.where(outputs > 0.8, torch.ones(
+                    outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
 
-            # Calulate the perfect accuracy
-            all = all + 1
-            if target.equal(preds):
-                perfection_rate = perfection_rate + 1
+                # Calulate the perfect accuracy
+                all = all + 1
+                if target.equal(preds):
+                    perfection_rate = perfection_rate + 1
 
-            # For every batch (for every file if batch size = 1)
-            TP += (preds.eq(1) & target.eq(1)).cpu().sum()
-            TN += (preds.eq(0) & target.eq(0)).cpu().sum()
-            FN += (preds.eq(0) & target.eq(1)).cpu().sum()
-            FP += (preds.eq(1) & target.eq(0)).cpu().sum()
+                # For every batch (for every file if batch size = 1)
+                TP += (preds.eq(1) & target.eq(1)).cpu().sum()
+                TN += (preds.eq(0) & target.eq(0)).cpu().sum()
+                FN += (preds.eq(0) & target.eq(1)).cpu().sum()
+                FP += (preds.eq(1) & target.eq(0)).cpu().sum()
 
         # Write log for every epoch
         TOT = TP + TN + FN + FP
