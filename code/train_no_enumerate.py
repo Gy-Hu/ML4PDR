@@ -295,7 +295,7 @@ if __name__ == "__main__":
             #assert(all_train_loss_cpu>all_train_loss_cpu_old) #Assert that loss is increasing
 
             # Check this will affect training or not?
-            torch.cuda.empty_cache() #Assume that all_train_loss is not equal to zero
+            #torch.cuda.empty_cache() #Assume that all_train_loss is not equal to zero
         
         # For every epoch
         desc = 'training loss: %.3f, perfection rate: %.3f, acc: %.3f, TP: %.5f, TN: %.5f, FN: %.5f, FP: %.5f' % (
