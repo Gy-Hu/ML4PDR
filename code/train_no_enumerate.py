@@ -242,13 +242,13 @@ if __name__ == "__main__":
         
         # For every batch
         for batch_index, (prob,vt_dict) in enumerate(train_bar):
+            optim.zero_grad() # set this for every batch
             assert(len(prob) == len(vt_dict))
             loss = torch.zeros(1).to(device)
             iteration += 1
             # For every problem in one batch
             for prob_index in range(len(prob)):
                 q_index = prob[prob_index]['refined_output']
-                optim.zero_grad()
                 outputs = net((prob[prob_index],vt_dict[prob_index]))
                 target = torch.Tensor(prob[prob_index]['label']).to('cuda').float()
 
@@ -282,14 +282,24 @@ if __name__ == "__main__":
             writer.add_scalar('accuracy_per_iteration/training_accuracy',(TP.item()+TN.item())*1.0/TOT.item(), iteration)
             writer.add_scalar('loss_per_iteration/training_loss', loss.item(), iteration)
 
-            all_train_loss+=loss # Sum up the loss of every batch -> loss for every epoch
+            # Sum up the loss of every batch -> loss for every epoch
+            #all_train_loss+=loss 
+            all_train_loss=torch.sum(torch.cat([loss, all_train_loss], 0))
+            all_train_loss=all_train_loss.unsqueeze(0) # Add one dimension
+            
+            # Backward and step
             loss.backward()
             optim.step()
-            torch.cuda.empty_cache()
+            #all_train_loss_cpu_old = all_train_loss_cpu
+            #all_train_loss_cpu = all_train_loss.cpu().item()
+            #assert(all_train_loss_cpu>all_train_loss_cpu_old) #Assert that loss is increasing
+
+            # Check this will affect training or not?
+            torch.cuda.empty_cache() #Assume that all_train_loss is not equal to zero
         
         # For every epoch
         desc = 'training loss: %.3f, perfection rate: %.3f, acc: %.3f, TP: %.5f, TN: %.5f, FN: %.5f, FP: %.5f' % (
-        all_train_loss, # Loss for every epoch
+        all_train_loss.item(), # Loss for every epoch
         perfection_rate*1.0/all, (TP.item()+TN.item())*1.0/TOT.item(), TP.item()*1.0/TOT.item(), 
         TN.item()*1.0/TOT.item(), 
         FN.item()*1.0/TOT.item(), 
@@ -309,16 +319,19 @@ if __name__ == "__main__":
         perfection_rate = 0  # Used to record the perfection ratio of the validation set
         all = 0  # Used to record the number of all samples in the validation set
         loss = torch.zeros(1).to(device)
+        #loss_cpu = torch.zeros(1).to('cpu')
         for batch_index, (prob,vt_dict) in enumerate(val_bar):
             q_index = prob[0]['refined_output']
-            optim.zero_grad()
-            outputs = net((prob[0],vt_dict[0]))
+            #optim.zero_grad()
+            with torch.no_grad: outputs = net((prob[0],vt_dict[0]))
             target = torch.Tensor(prob[0]['label']).to('cuda').float()
             torch_select = torch.Tensor(q_index).to('cuda').int()
             outputs = torch.index_select(outputs, 0, torch_select)
             
             this_loss = loss_fn(outputs, target)
-            loss += this_loss
+            #loss += this_loss
+            loss = torch.sum(torch.cat([loss, this_loss], 0))
+            loss = loss.unsqueeze(0)
 
             outputs = sigmoid(outputs)
             preds = torch.where(outputs > 0.7, torch.ones(
@@ -333,13 +346,14 @@ if __name__ == "__main__":
             TN += (preds.eq(0) & target.eq(0)).cpu().sum()
             FN += (preds.eq(0) & target.eq(1)).cpu().sum()
             FP += (preds.eq(1) & target.eq(0)).cpu().sum()
+            #torch.cuda.empty_cache()
         
         # Write log for every epoch
         TOT = TP + TN + FN + FP
         val_precision = ReloadedInt(TP.item()*1.0)/(TP.item()*1.0 + FP.item()*1.0)
         acc =  (TP.item() + TN.item()) * 1.0 / TOT.item()
         desc = 'validation loss: %.3f, perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (
-            loss,
+            loss.item(),
             perfection_rate*1.0/all,
             acc, TP.item() *
             1.0 / TOT.item(), TN.item() * 1.0 / TOT.item(),
@@ -361,14 +375,19 @@ if __name__ == "__main__":
         net.eval()
         perfection_rate = 0  # Used to record the perfection ratio of the validation set
         all = 0  # Used to record the number of all samples in the validation set
+        loss = torch.zeros(1).to(device)
         for batch_index , (prob,vt_dict) in enumerate(test_bar):
             q_index = prob[0]['refined_output']
-            optim.zero_grad()
-            outputs = net((prob[0],vt_dict[0]))
+            #optim.zero_grad()
+            with torch.no_grad: outputs = net((prob[0],vt_dict[0]))
             target = torch.Tensor(prob[0]['label']).to('cuda').float()
             torch_select = torch.Tensor(q_index).to('cuda').int()
             outputs = torch.index_select(outputs, 0, torch_select)
-            loss = loss_fn(outputs, target)
+
+            # Calculate loss
+            this_loss = loss_fn(outputs, target)
+            loss = torch.sum(torch.cat([loss, this_loss], 0))
+            loss = loss.unsqueeze(0)
 
             outputs = sigmoid(outputs)
             preds = torch.where(outputs > 0.8, torch.ones(
@@ -388,7 +407,7 @@ if __name__ == "__main__":
         # Write log for every epoch
         TOT = TP + TN + FN + FP
         desc = 'testing loss: %.3f, perfection rate: %.3f, acc: %.3f, TP: %.3f, TN: %.3f, FN: %.3f, FP: %.3f' % (
-            loss,
+            loss.item(),
             perfection_rate*1.0/all,
             (TP.item() + TN.item()) * 1.0 / TOT.item(), TP.item() *
             1.0 / TOT.item(), TN.item() * 1.0 / TOT.item(),
