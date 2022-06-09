@@ -48,6 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', type=str, help='Use NN-guided IG and append to MIC', default='off')
     parser.add_argument('-s', type=str, help='Save the inductive invariant', default='off')
     parser.add_argument('-r', type=str, help='Record the result', default='off')
+    parser.add_argument('-th', type=float, help='threshold for the inductive invariant', default=0.5)
 
     # TODO: Add abstract & craig interpolation?
     # TODO: Solve the issue on this case (cannot run in time)
@@ -86,6 +87,7 @@ if __name__ == '__main__':
     
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec1-and-env.aag','-c','-n','off','-a','off']) 
     #args = parser.parse_args(['--mode', '1' , '-t', '900' , '-p', '../dataset/aag4train/subset_0', '-c', '-r','on','-n','on','-a','on']) 
+    #args = parser.parse_args(['../dataset/aag4train/subset_1/vis.emodel.E.aag','-c','-n','on','-a','on','-r','on'])
     args = parser.parse_args()
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
@@ -146,10 +148,12 @@ if __name__ == '__main__':
         elif args.r=='on':
             solver.record_result = 1
 
-            
-
+        # Set the thershold of prediction
+        solver.prediction_threshold = args.th
 
         startTime = time.time()
+        # Record start time
+        solver.start_time = time.time()
         solver.run()
         endTime = time.time()
         print("Finish runing aiger file:"+args.fileName)
@@ -230,6 +234,9 @@ if __name__ == '__main__':
                         solver.record_result = 0
                     elif args.r=='on':
                         solver.record_result = 1
+                    
+                    # Set the thershold of prediction
+                    solver.prediction_threshold = args.th
 
                     startTime = time.time()
                     timeout = False

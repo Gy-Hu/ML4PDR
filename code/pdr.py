@@ -1,3 +1,4 @@
+from logging import exception
 from math import fabs
 import profile
 import string
@@ -430,7 +431,10 @@ class PDR:
                             self.record_result_dict["Time Consuming"] = time.time() - self.start_time
                             self.record_result_dict["Time reduce INF time"] = self.record_result_dict["Time Consuming"] - self.NN_guide_ig_time_sum
                             self.record_result_dict["Prediction Thershold"] = self.prediction_threshold
-                            self.record_result_dict["Passing Ratio"] = str((self.NN_guide_ig_success/(self.NN_guide_ig_success + self.NN_guide_ig_fail))*100)+"%"
+                            try:
+                                self.record_result_dict["Passing Ratio"] = str((self.NN_guide_ig_success/(self.NN_guide_ig_success + self.NN_guide_ig_fail))*100)+"%"
+                            except: # Check this
+                                self.record_result_dict["Passing Ratio"] = "nan"
                             print("Export the result to csv file")
                             root = '/data/guangyuh/coding_env/ML4PDR/log/'
                             name = 'small_subset_experiment_with_NN'
@@ -1083,11 +1087,11 @@ class PDR:
             # assert (s_smt.check() == unsat)
             # res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
             # # Conductive two relative check of the return q-like
-            # print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
+            # print('restoring from: ', "../dataset/model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
             # # Load model to predict
             # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             # net = neuro_predessor.NeuroPredessor()
-            # model = torch.load("../model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
+            # model = torch.load("../model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
             # net.load_state_dict(model['state_dict'])
             # net = net.to(device)
             # sigmoid  = nn.Sigmoid()
@@ -1110,12 +1114,12 @@ class PDR:
                 assert (s_smt.check() == unsat)
                 res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
-                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
+                print('restoring from: ', "../dataset/model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
                 # Load model to predict
                 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 device = torch.device("cuda")
                 net = neuro_predessor.NeuroPredessor()
-                model = torch.load("../model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar",map_location=device)
+                model = torch.load("../model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
@@ -1155,12 +1159,12 @@ class PDR:
                 s_smt.add(Cube)
                 res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
-                print('restoring from: ', "../dataset/model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar")
+                print('restoring from: ', "../dataset/model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
                 # Load model to predict
                 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 device = torch.device("cuda")
                 net = neuro_predessor.NeuroPredessor()
-                model = torch.load("../model/neuropdr_2022-06-02_22:00:49_last_copy.pth.tar",map_location=device)
+                model = torch.load("../model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
