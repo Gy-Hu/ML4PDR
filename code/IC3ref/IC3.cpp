@@ -517,7 +517,7 @@ namespace IC3 {
     // predecessor(s).
     bool consecution(size_t fi, const LitVec & latches, size_t succ = 0,
                      LitVec * core = NULL, size_t * pred = NULL, 
-                     bool orderedCore = false, bool handle_obl = false, bool ind_gen = false){
+                     bool orderedCore = false, bool handle_obl = false, bool ind_gen = false) {
       
       if(ind_gen==true){
           cout<<"Entering consecution from CTGdowm"<<endl;
@@ -599,6 +599,9 @@ namespace IC3 {
         ofstream file("try_store_latch.json");
         file<<j<< endl;
       }
+
+      // Assign latches to core_without_unsat
+      // left some empty...
 
       // extract unsat core
       if (core) {
@@ -874,7 +877,7 @@ namespace IC3 {
 
     // ~cube was found to be inductive relative to level; now see if
     // we can do better.
-    size_t generalize(size_t level, LitVec cube) {
+    size_t generalize(size_t level, LitVec cube, const LitVec & cube_without_unsat) {
       cout<<"Begin inductive generalization"<<endl;  
       // generalize
       int cube_size_prev = cube.size();
@@ -904,6 +907,19 @@ namespace IC3 {
         }
       }
       file_cube.close();
+
+      ofstream file_cube_without_unsat;
+      // write to file, append to last line
+      file_cube_without_unsat.open("cube_before_generalization_without_unsat.txt", ios::app);
+      for(int i=0;i < cube_without_unsat.size();i++){
+        if(i!=cube_without_unsat.size()-1){
+          file_cube_without_unsat << ((cube_without_unsat)[i]).x << ",";
+        }
+        else{
+          file_cube_without_unsat << ((cube_without_unsat)[i]).x << endl;
+        }
+      }
+      file_cube_without_unsat.close();
 
       int cube_size_after_random = -1;
       // copy the vector cube for experiment （only do this for the large cube)
@@ -981,7 +997,7 @@ namespace IC3 {
           // this is the one of the most important property we focus on
           obls.erase(obli);
           // Generalized bad cube to cube-like things
-          size_t n = generalize(obl.level, core);
+          size_t n = generalize(obl.level, core, state(obl.state).latches);
           if (n <= k)
             obls.insert(Obligation(obl.state, n, obl.depth));
         }
