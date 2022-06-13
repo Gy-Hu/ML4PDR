@@ -31,6 +31,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Solver.h"
 #include "Vec.h"
 #include "json.hpp"
+#include <climits>
 
 using json = nlohmann::json;
 
@@ -138,7 +139,7 @@ namespace IC3 {
       verbose(0), random(false), model(_model), k(1), nextState(0),
       litOrder(), slimLitOrder(),
       numLits(0), numUpdates(0), maxDepth(1), maxCTGs(3),
-      maxJoins(1<<20), micAttempts(3), cexState(0), nQuery(0), nCTI(0), nCTG(0),
+      maxJoins(1<<20), micAttempts(INT_MAX), cexState(0), nQuery(0), nCTI(0), nCTG(0),
       nmic(0), satTime(0), nCoreReduced(0), nAbortJoin(0), nAbortMic(0)
     {
       slimLitOrder.heuristicLitOrder = &litOrder;
@@ -345,6 +346,7 @@ namespace IC3 {
       }
     } litOrder;
 
+    // Order the literals in a cube by their frequency
     struct SlimLitOrder {
       HeuristicLitOrder *heuristicLitOrder;
 
@@ -368,9 +370,39 @@ namespace IC3 {
       litOrder.count(cube);
     }
 
+    // Order the literals in a cube by their number (cast to int)
+    struct NumberLitOrder {
+      NumberLitOrder() {}
+      bool operator()(const Minisat::Lit & l1, const Minisat::Lit & l2) const {
+        // l1, l2 must be unprimed
+        size_t i2 = (size_t) Minisat::toInt(Minisat::var(l2));
+        size_t i1 = (size_t) Minisat::toInt(Minisat::var(l1));
+        return(i1 < i2);
+      }
+    } NumberLitOrder;
+
+    // float numLits, numUpdates;
+    // void updateLitOrder(const LitVec & cube, size_t level) {
+    //   litOrder.decay();
+    //   numUpdates += 1;
+    //   numLits += cube.size();
+    //   litOrder.count(cube);
+    // }
+
     // order according to preference
     void orderCube(LitVec & cube) {
       stable_sort(cube.begin(), cube.end(), slimLitOrder);
+    }
+
+    // order according to preference
+    void orderCube_random(LitVec & cube) {
+      //stable_sort(cube.begin(), cube.end(), slimLitOrder);
+      random_shuffle(cube.begin(), cube.end());
+    }
+
+    // order according to the number of literals
+    void orderCube_by_number(LitVec & cube){
+      stable_sort(cube.begin(), cube.end(), NumberLitOrder);
     }
 
     typedef Minisat::vec<Minisat::Lit> MSLitVec;
@@ -770,9 +802,52 @@ namespace IC3 {
       }
     }
 
+    // Extracts minimal inductive (relative to level) subclause from
+    // ~cube --- at least that's where the name comes from.  With
+    // ctgDown, it's not quite a MIC anymore, but what's returned is
+    // inductive relative to the possibly modifed level.
+    void mic_random_order(size_t level, LitVec & cube, size_t recDepth) {
+      ++nmic;  // stats
+      // try dropping each literal in turn
+      size_t attempts = micAttempts;
+      orderCube_random(cube);
+      for (size_t i = 0; i < cube.size();) {
+        LitVec cp(cube.begin(), cube.begin() + i);
+        cp.insert(cp.end(), cube.begin() + i+1, cube.end());
+        if (ctgDown(level, cp, i, recDepth)) {
+          // maintain original order
+          LitSet lits(cp.begin(), cp.end());
+          LitVec tmp;
+          for (LitVec::const_iterator j = cube.begin(); j != cube.end(); ++j)
+            if (lits.find(*j) != lits.end())
+              tmp.push_back(*j);
+          cube.swap(tmp);
+          // reset attempts
+          attempts = micAttempts;
+        }
+        else {
+          if (!--attempts) {
+            // Limit number of attempts: if micAttempts literals in a
+            // row cannot be dropped, conclude that the cube is just
+            // about minimal.  Definitely improves mics/second to use
+            // a low micAttempts, but does it improve overall
+            // performance?
+            ++nAbortMic;  // stats
+            return;
+          }
+          ++i;
+        }
+      }
+    }
+
     // wrapper to start inductive generalization
     void mic(size_t level, LitVec & cube) {
       mic(level, cube, 1);
+    }
+
+    // wrapper to start inductive generalization
+    void mic_random_order(size_t level, LitVec & cube) {
+      mic_random_order(level, cube, 1);
     }
 
     size_t earliest;  // track earliest modified level in a major iteration
@@ -803,13 +878,83 @@ namespace IC3 {
       cout<<"Begin inductive generalization"<<endl;  
       // generalize
       int cube_size_prev = cube.size();
+
+      vector<int> cube_int_list;
+      for(int i=0;i<cube.size();i++){
+        cube_int_list.push_back(((cube)[i]).x);
+      }
+  
+      for(int i=0;i < cube.size();++i){
+        cout<<"literals in bad cube before generalization: " << ((cube)[i]).x << endl;
+      }
+
+      // record this to .json
+      // json j_cube;
+      // j_cube["type"] = "before_generalization";
+      // j_cube["latch"] = cube_int_list;
+      ofstream file_cube;
+      // write to file, append to last line
+      file_cube.open("cube_before_generalization.txt", ios::app);
+      for(int i=0;i < cube.size();i++){
+        if(i!=cube.size()-1){
+          file_cube << ((cube)[i]).x << ",";
+        }
+        else{
+          file_cube << ((cube)[i]).x << endl;
+        }
+      }
+      file_cube.close();
+
+      int cube_size_after_random = -1;
+      // copy the vector cube for experiment （only do this for the large cube)
+      LitVec cube_test(cube);
+      if(cube.size() >= 5){
+        mic_random_order(level,cube_test);
+        cube_size_after_random = cube_test.size();
+      }
+
       mic(level, cube);
       int cube_size_after = cube.size();
+      
       cout<<"cube size before and after MIC: "<<cube_size_prev<<" ---> "<<cube_size_after<<endl;
+      
+      for(int i=0;i < cube.size();++i){
+        cout<<"literals in generalized bad cube: " << ((cube)[i]).x << endl;
+      }
+      
+      // if the previous cube has been copied to random mic, print this
+      if(cube_size_after_random!=-1){
+        cout<<"cube size before and after random MIC: "<<cube_size_prev<<" ---> "<<cube_size_after_random<<endl; 
+        for(int i=0;i < cube_test.size();++i){
+        cout<<"literals in generalized bad cube: " << ((cube_test)[i]).x << endl;
+        }
+      }
+
+      // compare the cube sent to mic() and random mic()
+      bool compare_different_mic = cube_compare(cube, cube_test);
+
       // push
       do { ++level; } while (level <= k && consecution(level, cube));
       addCube(level, cube);
       return level;
+    }
+
+    // This function is only used to compare two cubes
+    // which are generated by different odering methods of mic()
+    bool cube_compare(LitVec & cube, LitVec & cube_test){
+      LitVec cube4sort(cube);
+      LitVec cube_test4compare(cube_test);
+      orderCube_by_number(cube4sort);
+      orderCube_by_number(cube_test4compare);
+      if(cube4sort.size() != cube_test4compare.size()){
+        return false;
+      }
+      for(int i=0;i < cube4sort.size();++i){
+        if((cube4sort)[i] != (cube_test4compare)[i]){
+          return false;
+        }
+      }
+      return true;
     }
 
     size_t cexState;  // beginning of counterexample trace

@@ -189,7 +189,7 @@ if __name__ == "__main__":
         args.log_dir, args.task_name + '_detail.log'), 'a+')
 
     #loss_fn = nn.BCELoss(reduction='sum')
-    loss_fn = nn.BCEWithLogitsLoss(reduction='sum',pos_weight=torch.Tensor([2]).cuda())
+    loss_fn = nn.BCEWithLogitsLoss(reduction='sum',pos_weight=torch.Tensor([4]).cuda())
     #loss_fn = BCEFocalLoss()
     #loss_fn = WeightedBCELosswithLogits()
     optim = optim.Adam(net.parameters(), lr=0.0001, weight_decay=1e-10)
@@ -210,7 +210,6 @@ if __name__ == "__main__":
     iteration = 0
     # one batch one iteration at first?
     for epoch in range(start_epoch, args.epochs):
-
         # Print on terminal
         print('==> %d/%d epoch, previous best precision: %.3f' %
               (epoch+1, args.epochs, best_precision))

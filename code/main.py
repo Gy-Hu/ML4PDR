@@ -49,6 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', type=str, help='Save the inductive invariant', default='off')
     parser.add_argument('-r', type=str, help='Record the result', default='off')
     parser.add_argument('-th', type=float, help='threshold for the inductive invariant', default=0.5)
+    parser.add_argument('-mn', type=str, help='model name of NN', default=None)
 
     # TODO: Add abstract & craig interpolation?
     # TODO: Solve the issue on this case (cannot run in time)
@@ -151,6 +152,9 @@ if __name__ == '__main__':
         # Set the thershold of prediction
         solver.prediction_threshold = args.th
 
+        # Set the model name to predict
+        solver.model_name = args.mn
+
         startTime = time.time()
         # Record start time
         solver.start_time = time.time()
@@ -237,6 +241,9 @@ if __name__ == '__main__':
                     
                     # Set the thershold of prediction
                     solver.prediction_threshold = args.th
+
+                    # Set the model name to predict
+                    solver.model_name = args.mn
 
                     startTime = time.time()
                     timeout = False

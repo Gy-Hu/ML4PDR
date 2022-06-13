@@ -301,10 +301,10 @@ class PDR:
         --------------Set the prediction thershold------------------
         '''
         self.prediction_threshold = 0.5
-
-        
-        
-
+        '''
+        --------------Set the model name of NN to predict-----------
+        '''
+        self.model_name = None
         
     def check_init(self):
         s = Solver()
@@ -1114,12 +1114,12 @@ class PDR:
                 assert (s_smt.check() == unsat)
                 res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
-                print('restoring from: ', "../dataset/model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
+                print('restoring from: ', "../dataset/model/"+self.model_name+".pth.tar")
                 # Load model to predict
                 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 device = torch.device("cuda")
                 net = neuro_predessor.NeuroPredessor()
-                model = torch.load("../model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar",map_location=device)
+                model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
@@ -1159,12 +1159,12 @@ class PDR:
                 s_smt.add(Cube)
                 res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
-                print('restoring from: ', "../dataset/model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
+                print('restoring from: ', "../dataset/model/"+self.model_name+".pth.tar")
                 # Load model to predict
                 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 device = torch.device("cuda")
                 net = neuro_predessor.NeuroPredessor()
-                model = torch.load("../model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar",map_location=device)
+                model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
