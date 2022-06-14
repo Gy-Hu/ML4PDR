@@ -29,6 +29,8 @@ print(cube_lines[:3])
 # Record the sucess rate of finding the inductive clauses in inv.cnf
 subset_success = 0
 subset_fail = 0
+subset_fail_normal = 0
+subset_fail_wrost = 0
 
 # Record the unsat pass ratio
 unsat_success = 0
@@ -36,14 +38,15 @@ unsat_fail = 0
 unsat_fail_normal = 0
 unsat_fail_wrost = 0
 for cube_line in cube_lines:
-    this_fail = 0
+    this_unsat_fail = 0
+    this_subset_fail = 0
     for clause in inv_lines[1:]: #scan every clause in inv.cnf
         # Test if the s is subset of the invariant clauses 
         if(all(x in cube_line for x in clause)):
             #print("clause: ", clause)
             subset_success += 1
         else:
-            subset_fail += 1
+            this_subset_fail += 1
         # Test if the s.cube & clauses from inv is unsat
         s_clause = z3.Solver()
         s_cube = z3.Solver()
@@ -70,17 +73,31 @@ for cube_line in cube_lines:
         if s.check()==z3.unsat:
             unsat_success += 1
         elif s.check()==z3.sat:
-            this_fail += 1
+            this_unsat_fail += 1
         else:
             AssertionError
-    if this_fail == len(inv_lines) - 1:
+    
+    # Check subset fail
+    if this_subset_fail == len(inv_lines) -1 :
+        subset_fail += 1
+    elif this_subset_fail == len(inv_lines) -2:
+        subset_fail_wrost += 1
+    elif this_subset_fail < len(inv_lines)*0.9:
+        subset_fail_normal += 1
+
+    # Check unsat fail
+    if this_unsat_fail == len(inv_lines) - 1:
         unsat_fail += 1
-    elif this_fail == len(inv_lines) - 2:
+    elif this_unsat_fail == len(inv_lines) - 2:
         unsat_fail_wrost += 1
-    elif this_fail < len(inv_lines)*0.9:
+    elif this_unsat_fail < len(inv_lines)*0.9:
         unsat_fail_normal += 1
         
 print("subset success ratio:", subset_success/(subset_success + subset_fail) * 100, "%")
+print("wrost subset success ratio:", subset_fail_wrost/len(cube_lines) * 100, "%")
+print("normal subset success ratio:", subset_fail_normal/len(cube_lines) * 100, "%")
+print("subset success in all combinations:", subset_success/(len(cube_lines)*(len(inv_cnf)-1)) * 100, "%")
+
 print("unsat success ratio:", unsat_success/(unsat_success + unsat_fail) * 100, "%")
 print("wrost unsat success ratio:", unsat_fail_wrost/len(cube_lines) * 100, "%")
 print("normal unsat success ratio:", unsat_fail_normal/len(cube_lines) * 100, "%")
