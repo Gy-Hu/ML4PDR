@@ -50,6 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', type=str, help='Record the result', default='off')
     parser.add_argument('-th', type=float, help='threshold for the inductive invariant', default=0.5)
     parser.add_argument('-mn', type=str, help='model name of NN', default=None)
+    parser.add_argument('-tm', type=str, help='test mic', default='off')
 
     # TODO: Add abstract & craig interpolation?
     # TODO: Solve the issue on this case (cannot run in time)
@@ -85,11 +86,12 @@ if __name__ == '__main__':
     print(lst)
     
     '''
-    
+    #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/cmu.dme1.B.aag','-c','-n','off','-a','off','-tm','on']) 
+    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/eijk.S208o.S.aag','-c','-n','off','-a','off','-tm','on']) 
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec1-and-env.aag','-c','-n','off','-a','off']) 
     #args = parser.parse_args(['--mode', '1' , '-t', '900' , '-p', '../dataset/aag4train/subset_0', '-c', '-r','on','-n','on','-a','on']) 
     #args = parser.parse_args(['../dataset/aag4train/subset_1/vis.emodel.E.aag','-c','-n','on','-a','on','-r','on'])
-    args = parser.parse_args()
+    #args = parser.parse_args()
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
@@ -155,6 +157,12 @@ if __name__ == '__main__':
         # Set the model name to predict
         solver.model_name = args.mn
 
+        # Set the switch to test mic
+        if args.tm=='off':
+            solver.test_mic = 0
+        elif args.tm=='on':
+            solver.test_mic = 1
+
         startTime = time.time()
         # Record start time
         solver.start_time = time.time()
@@ -166,6 +174,7 @@ if __name__ == '__main__':
                 print("TIME CONSUMING IN TOTAL: ",(endTime - startTime) ,"seconds")
                 print("TIME CONSUMING WITH NN, WITHOUT INF TIME: " ,(endTime - startTime - solver.NN_guide_ig_time_sum) , "seconds")  
                 print("TIME CONSUMING IN PUSH LEMMA", solver.pushLemma_time_sum)
+                print("TIME CONSUMING WITHOUT RANDOM MIC TIME: ",(endTime - startTime - solver.test_random_mic_time_sum) , "seconds")
                 if solver.test_IG_NN : 
                     print("NN-guided inductive generalization success rate: ",(solver.NN_guide_ig_success/(solver.NN_guide_ig_success + solver.NN_guide_ig_fail))*100,"%")             
                     y_nn_ig_pass_ratio, x_nn_ig_pass_ratio = zip(*solver.NN_guide_ig_passed_ratio)
@@ -244,6 +253,12 @@ if __name__ == '__main__':
 
                     # Set the model name to predict
                     solver.model_name = args.mn
+
+                    # Set the switch to test mic
+                    if args.tm=='off':
+                        solver.test_mic = 0
+                    elif args.tm=='on':
+                        solver.test_mic = 1
 
                     startTime = time.time()
                     timeout = False

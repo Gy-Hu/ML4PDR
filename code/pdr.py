@@ -19,13 +19,16 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from scipy.special import comb
 import build_graph_online
-from deps.pydimacs_changed.formula import CNFFormula
+#from deps.pydimacs_changed.formula import CNFFormula
 import torch
 import torch.nn as nn
 import neuro_predessor
 from datetime import datetime
 from operator import itemgetter
 import deps.PyMiniSolvers.minisolvers as minisolvers
+import random
+import collections
+from scipy.spatial.distance import hamming
 # import line_profiler
 # import atexit
 # profile = line_profiler.LineProfiler()
@@ -305,6 +308,15 @@ class PDR:
         --------------Set the model name of NN to predict-----------
         '''
         self.model_name = None
+        '''
+        --------------Test mic?------------------------------------
+        '''
+        self.test_mic = 0
+        '''
+        -------------- Time consuming of random MIC-------------------
+        '''
+        self.test_random_mic_time_sum = 0
+
         
     def check_init(self):
         s = Solver()
@@ -572,6 +584,8 @@ class PDR:
                 sz = s.true_size()
                 original_s_1 = s.clone() # For generating ground truth
                 original_s_2 = s.clone() # For testing the NN-guided inductive generalization
+                original_s_3 = s.clone() # For random ordering MIC
+                original_s_4 = s.clone() # for calculate the hamming distance
                 s_enumerate = self.generate_GT_no_enumerate(original_s_1) #Generate ground truth here
                 #s_enumerate = self.generate_GT(original_s_1)
                 # if self.test_IG_NN and self.NN_guide_ig_iteration > 5 and self.NN_guide_ig_success / (self.NN_guide_ig_success + self.NN_guide_ig_fail) < 0.5:
@@ -584,7 +598,21 @@ class PDR:
                 NN_guide_consuming_t = time.time() - NN_guide_start_time
                 self.NN_guide_ig_time_sum += NN_guide_consuming_t
 
-
+                # -------------------Random MIC Procedure--------------
+                Random_MIC_start_time = time.time()
+                s_random = self.Random_MIC(original_s_3)
+                # Remove duplicated tcubes according to the list of tcubes.cubeLiterals
+                if s_random is not None:
+                    s_random = [list(t) for t in set(tuple(sorted(cube.cubeLiterals,key=lambda x: int(str(_extract(x)[0]).replace('v','')))) for cube in s_random)]
+                    #s_random = [tCube(original_s_3.t, cube_lt_lst) for cube_lt_lst in s_random]
+                    s_random_converter = []
+                    for _ in s_random:
+                        res = tCube(original_s_3.t)
+                        res.cubeLiterals = _.copy()
+                        s_random_converter.append(res)
+                    s_random = s_random_converter
+                Random_MIC_consuming_t = time.time() - Random_MIC_start_time
+                self.test_random_mic_time_sum += Random_MIC_consuming_t
                 # -------------------MIC Procedure---------------------
                 MIC_start_time = time.time()
                 s = self.MIC(s)
@@ -600,10 +628,56 @@ class PDR:
 
                 if s_NN is not None:
                     print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
-                    if not((len(s_NN.cubeLiterals) == len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):
+                    #if not((len(s_NN.cubeLiterals) == len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):
+                    if not (collections.Counter(s_NN.cubeLiterals) == collections.Counter(s.cubeLiterals)):
                         self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
                         for i in range(1, s_NN.t):
                             self.frames[i].add(Not(s_NN.cube()), pushed=True)
+
+                if s_random is not None:
+                    # Fetch the qnew at first (the standard answer of this generalization)
+                    file_path_prefix = "/data/hongcezh/clause-learning/data-collect/hwmcc07-7200-result/output/tip/"
+                    file_suffix = self.filename.split('/')[-1].replace('.aag', '')
+                    inv_cnf = file_path_prefix + file_suffix + "/inv.cnf"
+                    with open(inv_cnf, 'r') as f:
+                        lines = f.readlines()
+                        f.close()
+                    lines = [(line.strip()).split() for line in lines]
+                    q_list_cnf = [str(_extract(literal)[0]).replace('v','') if _extract(literal)[1] == True else str(int(str(_extract(literal)[0]).replace('v',''))+1) for literal in original_s_4.cubeLiterals]
+                    
+                    found_subset = 0
+                    for clause in lines[1:]: #scan every clause
+                        if(all(x in q_list_cnf for x in clause)): #the clause is subset of q
+                            found_subset = 1
+                            qnew = tCube(original_s_4.t)
+                            ref_lst = [x in clause for x in q_list_cnf]
+                            qnew.cubeLiterals = [original_s_4.cubeLiterals[i] for i in range(len(original_s_4.cubeLiterals)) if ref_lst[i] == True]
+                    assert(found_subset == 1)
+                    
+                    # Find the min cost of hamming distance
+                    
+                    min_dis_cost_h = hamming([1 if i in qnew.cubeLiterals else 0 for i in original_s_4.cubeLiterals], [1 if i in s_random[0].cubeLiterals else 0 for i in original_s_4.cubeLiterals])
+                    min_dis_cost_h_index = 0
+                    for idx, s_random_tcube in enumerate(s_random):
+                        if not (collections.Counter(s_random_tcube.cubeLiterals) == collections.Counter(s.cubeLiterals)):
+                            print("Found different generalization by random ordering MIC")
+                            s_one_hot_endcode = [1 if i in s.cubeLiterals else 0 for i in original_s_4.cubeLiterals]
+                            s_random_one_hot_endcode = [1 if i in s_random_tcube.cubeLiterals else 0 for i in original_s_4.cubeLiterals]
+                            s_inv_one_hot_encode = [1 if i in qnew.cubeLiterals else 0 for i in original_s_4.cubeLiterals]
+                            dis_cost_g = hamming(s_one_hot_endcode, s_random_one_hot_endcode)
+                            dis_cost_h = hamming(s_inv_one_hot_encode, s_random_one_hot_endcode)
+                            min_fn = dis_cost_g + dis_cost_h
+                            if dis_cost_h < min_dis_cost_h: 
+                                min_dis_cost_h = dis_cost_h
+                                min_dis_cost_h_index = idx
+                    #if min_dis_cost_h_index != -1:
+                    print("Min cost h:", min_dis_cost_h, "at index:", min_dis_cost_h_index)
+                    #push this to the frame
+                    if(0<min_dis_cost_h<0.1):
+                        self.frames[s_random[min_dis_cost_h_index].t].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=False)
+                        for i in range(1, s_random[min_dis_cost_h_index].t):
+                            self.frames[i].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=True)
+
                 #-------------Append the NN-generated cube and MIC to frames------------- 
                 # else: 
                 #     print("NN-guided inductive generalization failed, begin MIC process")
@@ -773,6 +847,28 @@ class PDR:
                 if self._solveRelative(qnew) == unsat:
                     passed_single_q.append(qnew)
         return passed_single_q
+
+    def Random_MIC(self, q: tCube):
+        if self.test_mic == 0:
+            return None
+        elif self.test_mic == 1:
+            q_lst = [q.clone(), q.clone(),q.clone()]
+            for q in q_lst:
+                sz = q.true_size()
+                self.unsatcore_reduce(q, trans=self.trans.cube(), frame=self.frames[q.t-1].cube())
+                print('unsatcore', sz, ' --> ', q.true_size())
+                q.remove_true()
+                random_cubeliterals = [x for x in q.cubeLiterals]
+                random.shuffle(random_cubeliterals)
+                q.cubeLiterals = random_cubeliterals
+                for i in range(len(q.cubeLiterals)):
+                    q1 = q.delete(i)
+                    print(f'MIC try idx:{i}')
+                    if self.down(q1): 
+                        q = q1
+                q.remove_true()
+                print (q)
+            return q_lst
         
 
     def MIC(self, q: tCube): #TODO: Check the algorithm is correct or not
@@ -787,7 +883,7 @@ class PDR:
         q.remove_true()
 
         for i in range(len(q.cubeLiterals)):
-            if q.cubeLiterals[i] is True:
+            if q.cubeLiterals[i] is True: #This true does not indicate the literals are true
                 continue
             q1 = q.delete(i)
             print(f'MIC try idx:{i}')
@@ -1007,13 +1103,17 @@ class PDR:
             
             data = {} # Store ground truth, and output to .csv
             passed_minimum_q = []
+            found_subset_flag = 0
             for clause in lines[1:]: #scan every clause
                 if(all(x in q_list_cnf for x in clause)): #the clause is subset of q
+                    found_subset_flag = 1
                     qnew = tCube(q.t)
                     ref_lst = [x in clause for x in q_list_cnf]
                     qnew.cubeLiterals = [q.cubeLiterals[i] for i in range(len(q.cubeLiterals)) if ref_lst[i] == True]
                     if check_init(qnew) == unsat and self._solveRelative(qnew) == unsat:
                         passed_minimum_q.append(qnew)
+            
+            assert(found_subset_flag == 1)
                     
             #q_list_cnf = [_extract(literals)[1]==True?_extract(literals)[0]:Not(_extract(literals)[0]) for literals in q.cubeLiterals]
 
@@ -1069,7 +1169,8 @@ class PDR:
         q4unsatcore.remove_true()
 
         if self.test_IG_NN == 0:
-            pass
+            return None
+            #pass
         elif self.test_IG_NN == 1:
             # s_smt = Solver()
             # Cube = Not(
@@ -1217,7 +1318,7 @@ class PDR:
                         q_like.cubeLiterals.append(q.cubeLiterals[idx])
             
             '''
-            Check whether this answer pass the relative check
+            Check whether this answer pass the inductive relative check
             ''' 
             def check_init(c: tCube):
                     slv = Solver()
@@ -1416,14 +1517,17 @@ class PDR:
             c = tCube(tcube.t - 1)
             c.addModel(self.lMap, model, remove_input=False)  # c = sat_model, get the partial model of c
             #return c
-            print("cube size: ", len(c.cubeLiterals), end='--->')
+            prev_c_length = len(c.cubeLiterals)
+            # print("cube size: ", len(c.cubeLiterals), end='--->')
             # FIXME: check1 : c /\ T /\ F /\ Not(cubePrime) : unsat
 
             #Comment out this line to check if the cube is blocked by R[t-1]
             #self._debug_c_is_predecessor(c.cube(), self.trans.cube(), self.frames[tcube.t-1].cube(), Not(cubePrime))
             
             generalized_p = self.generalize_predecessor(c, next_cube_expr = tcube.cube(), prevF=self.frames[tcube.t-1].cube())  # c = get_predecessor(i-1, s')
-            print(len(generalized_p.cubeLiterals))
+            #print(len(generalized_p.cubeLiterals))
+            after_c_length = len(generalized_p.cubeLiterals)
+            print("cube size after generalized predecessor: ", prev_c_length, '--->', after_c_length)
             #
             # FIXME: sanity check: gp /\ T /\ F /\ Not(cubePrime)  unsat
             
@@ -1507,7 +1611,8 @@ class PDR:
             s = Solver()
             for index, literals in enumerate(tcube_cp.cubeLiterals):
                 s.assert_and_track(literals,'p'+str(index)) # -> ['p1','p2','p3']
-            s.add(prevF)
+            # prof.Zhang's suggestion
+            #s.add(prevF)
             s.add(Not(nextcube))
             assert(s.check() == unsat)
             core = s.unsat_core()

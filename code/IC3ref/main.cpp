@@ -24,6 +24,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <iostream>
 #include <string>
 #include <time.h>
+#include <z3++.h>
 
 extern "C" {
 #include "aiger.h"
@@ -50,6 +51,7 @@ extern "C" {
 // using namespace mlpack::ann;
 // using namespace ens;
 // using namespace mlpack::rl;
+using namespace z3;
 
 //using json = nlohmann::json;
 
@@ -128,9 +130,33 @@ int main(int argc, char ** argv) {
   //test_mlpack_rl();
 
   //test rapidcsv
-  rapidcsv::Document doc("test.csv");
-  std::vector<float> col = doc.GetColumn<float>("Close");
-  std::cout << "Read " << col.size() << " values." << std::endl;
+  // rapidcsv::Document doc("test.csv");
+  // std::vector<float> col = doc.GetColumn<float>("Close");
+  // std::cout << "Read " << col.size() << " values." << std::endl;
+
+  //test z3
+  /**
+   Demonstration of how Z3 can be used to prove validity of
+   De Morgan's Duality Law: {e not(x and y) <-> (not x) or ( not y) }
+  */
+  std::cout << "de-Morgan example\n";
+  context c;
+  expr x = c.bool_const("x");
+  expr y = c.bool_const("y");
+  expr conjecture = (!(x && y)) == (!x || !y);
+  solver s(c);
+  // adding the negation of the conjecture as a constraint.
+  s.add(!conjecture);
+  std::cout << s << "\n";
+  std::cout << s.to_smt2() << "\n";
+  switch (s.check()) {
+  case unsat:   std::cout << "de-Morgan is valid\n"; break;
+  case sat:     std::cout << "de-Morgan is not valid\n"; break;
+  case unknown: std::cout << "unknown\n"; break;
+  }
+
+  //extract z3's children from z3 ast
+  //Z3_mk_ast_vector(c);
 
   unsigned int propertyIndex = 0;
   bool basic = false, random = false;
@@ -158,8 +184,8 @@ int main(int argc, char ** argv) {
 
   // read AIGER model
   aiger * aig = aiger_init();
-  //freopen("./eijk.S208o.S.aag", "r", stdin);
-  freopen("./cmu.dme1.B.aag", "r", stdin);
+  freopen("./eijk.S208o.S.aag", "r", stdin);
+  //freopen("./cmu.dme1.B.aag", "r", stdin);
   //freopen("./nusmv.syncarb5^2.B.aag", "r", stdin);
   //fp = fopen("./eijk.S208o.S.aag", "r");
   const char * msg = aiger_read_from_file(aig, stdin);
@@ -167,6 +193,10 @@ int main(int argc, char ** argv) {
     cout << msg << endl;
     return 0;
   }
+
+  //parse AIGER model by z3
+  //AigParser p("./eijk.S208o.S.aag");
+
   // create the Model from the obtained aig
   Model * model = modelFromAiger(aig, propertyIndex);
   aiger_reset(aig);

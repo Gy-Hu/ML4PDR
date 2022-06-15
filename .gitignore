@@ -44,6 +44,7 @@ output.json
 output.cnf
 pydimacs/
 .history/
+z3/
 
 # ignore others
 *.o
