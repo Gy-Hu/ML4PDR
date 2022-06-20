@@ -114,6 +114,24 @@ using namespace z3;
 // 	std::cout << "Time take is  " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << std::endl;
 // }
 
+void walk(int tab, expr e)
+{
+    string blanks(tab, ' ');
+
+    if(e.is_const())
+    {
+        cout << blanks << "ARGUMENT: " << e << endl;
+    }
+    else
+    {
+        cout << blanks << "APP: " << e.decl().name() << endl;
+        for(int i = 0; i < e.num_args(); i++)
+        {
+            walk(tab + 5, e.arg(i));
+        }
+    }
+}
+
 
 int main(int argc, char ** argv) {
   //test jsoncpp
@@ -143,20 +161,21 @@ int main(int argc, char ** argv) {
   context c;
   expr x = c.bool_const("x");
   expr y = c.bool_const("y");
-  expr conjecture = (!(x && y)) == (!x || !y);
-  solver s(c);
-  // adding the negation of the conjecture as a constraint.
-  s.add(!conjecture);
-  std::cout << s << "\n";
-  std::cout << s.to_smt2() << "\n";
-  switch (s.check()) {
-  case unsat:   std::cout << "de-Morgan is valid\n"; break;
-  case sat:     std::cout << "de-Morgan is not valid\n"; break;
-  case unknown: std::cout << "unknown\n"; break;
-  }
-
-  //extract z3's children from z3 ast
-  //Z3_mk_ast_vector(c);
+  expr z = c.bool_const("z");
+  expr e = (x || !z) && (y || !z) && (!x || !y || z);
+  // expr conjecture = (!(x && y)) == (!x || !y);
+  // solver s(c);
+  // // adding the negation of the conjecture as a constraint.
+  // s.add(!conjecture);
+  // std::cout << s << "\n";
+  // std::cout << s.to_smt2() << "\n";
+  // switch (s.check()) {
+  // case unsat:   std::cout << "de-Morgan is valid\n"; break;
+  // case sat:     std::cout << "de-Morgan is not valid\n"; break;
+  // case unknown: std::cout << "unknown\n"; break;
+  // }
+  walk(0,e);
+  
 
   unsigned int propertyIndex = 0;
   bool basic = false, random = false;

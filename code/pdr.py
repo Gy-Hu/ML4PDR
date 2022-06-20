@@ -86,9 +86,18 @@ class tCube:
         ret = tCube(self.t)
         ret.cubeLiterals = self.cubeLiterals.copy()
         return ret
+    
+    def clone_and_sort(self):
+        ret = tCube(self.t)
+        ret.cubeLiterals = self.cubeLiterals.copy()
+        ret.cubeLiterals.sort(key=lambda x: str(_extract(x)[0]))
+        return ret
 
     def remove_true(self):
         self.cubeLiterals = [c for c in self.cubeLiterals if c is not True]
+    
+    def __eq__(self, other) : 
+        return self.cubeLiterals == other.cubeLiterals
 
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中 #TODO: lMap should incudes the v prime and i prime
@@ -316,6 +325,10 @@ class PDR:
         -------------- Time consuming of random MIC-------------------
         '''
         self.test_random_mic_time_sum = 0
+        '''
+        ----------------Store the history append cex ------------
+        '''
+        self.history_append_cex = []
 
         
     def check_init(self):
@@ -621,6 +634,9 @@ class PDR:
                 MIC_consuming_t = time.time() - MIC_start_time
                 self.MIC_time_sum += MIC_consuming_t
                 self.sum_MIC = self.sum_MIC + s.true_size()
+                # Append MIC to history appended clauses
+                s_sorted = s.clone_and_sort()
+                self.history_append_cex.append(s_sorted)
                 self.frames[s.t].add(Not(s.cube()), pushed=False)
                 for i in range(1, s.t):
                     self.frames[i].add(Not(s.cube()), pushed=True) #TODO: Try RL here
@@ -654,10 +670,11 @@ class PDR:
                             qnew.cubeLiterals = [original_s_4.cubeLiterals[i] for i in range(len(original_s_4.cubeLiterals)) if ref_lst[i] == True]
                     assert(found_subset == 1)
                     
-                    # Find the min cost of hamming distance
-                    
+                    # Find the min/max cost of hamming distance
                     min_dis_cost_h = hamming([1 if i in qnew.cubeLiterals else 0 for i in original_s_4.cubeLiterals], [1 if i in s_random[0].cubeLiterals else 0 for i in original_s_4.cubeLiterals])
                     min_dis_cost_h_index = 0
+                    max_dis_cost_g = hamming([1 if i in s.cubeLiterals else 0 for i in original_s_4.cubeLiterals], [1 if i in s_random[0].cubeLiterals else 0 for i in original_s_4.cubeLiterals])
+                    max_dis_cost_g_index = 0
                     for idx, s_random_tcube in enumerate(s_random):
                         if not (collections.Counter(s_random_tcube.cubeLiterals) == collections.Counter(s.cubeLiterals)):
                             print("Found different generalization by random ordering MIC")
@@ -666,17 +683,33 @@ class PDR:
                             s_inv_one_hot_encode = [1 if i in qnew.cubeLiterals else 0 for i in original_s_4.cubeLiterals]
                             dis_cost_g = hamming(s_one_hot_endcode, s_random_one_hot_endcode)
                             dis_cost_h = hamming(s_inv_one_hot_encode, s_random_one_hot_endcode)
-                            min_fn = dis_cost_g + dis_cost_h
-                            if dis_cost_h < min_dis_cost_h: 
+                            #min_fn = dis_cost_g + dis_cost_h
+                            if dis_cost_h <= min_dis_cost_h: 
                                 min_dis_cost_h = dis_cost_h
                                 min_dis_cost_h_index = idx
-                    #if min_dis_cost_h_index != -1:
+                            if dis_cost_g >= max_dis_cost_g:
+                                max_dis_cost_g = dis_cost_h
+                                max_dis_cost_g_index = idx
+                    # print the min/max distance clauses
                     print("Min cost h:", min_dis_cost_h, "at index:", min_dis_cost_h_index)
+                    print("Max cost g:", max_dis_cost_g, "at index:", max_dis_cost_g_index)
                     #push this to the frame
-                    if(0<min_dis_cost_h<0.1):
-                        self.frames[s_random[min_dis_cost_h_index].t].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=False)
-                        for i in range(1, s_random[min_dis_cost_h_index].t):
-                            self.frames[i].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=True)
+                    if(0<min_dis_cost_h<=0.1):
+                        #assert(s_random[min_dis_cost_h_index] not in self.history_append_cex)
+                        if s_random[min_dis_cost_h_index] not in self.history_append_cex:
+                            self.frames[s_random[min_dis_cost_h_index].t].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=False)
+                            for i in range(1, s_random[min_dis_cost_h_index].t):
+                                self.frames[i].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=True)
+                            s_random_min_sorted = s_random[min_dis_cost_h_index].clone_and_sort()
+                            self.history_append_cex.append(s_random_min_sorted)
+                    if(max_dis_cost_g>=0.5):
+                        #assert(s_random[max_dis_cost_g_index] not in self.history_append_cex)
+                        if s_random[max_dis_cost_g_index] not in self.history_append_cex:
+                            self.frames[s_random[max_dis_cost_g_index].t].add(Not(s_random[max_dis_cost_g_index].cube()), pushed=False)
+                            for i in range(1, s_random[max_dis_cost_g_index].t):
+                                self.frames[i].add(Not(s_random[max_dis_cost_g_index].cube()), pushed=True)
+                            s_random_max_sorted = s_random[max_dis_cost_g_index].clone_and_sort()
+                            self.history_append_cex.append(s_random_max_sorted)
 
                 #-------------Append the NN-generated cube and MIC to frames------------- 
                 # else: 
@@ -852,7 +885,7 @@ class PDR:
         if self.test_mic == 0:
             return None
         elif self.test_mic == 1:
-            q_lst = [q.clone(), q.clone(),q.clone()]
+            q_lst = [q.clone(), q.clone(),q.clone(), q.clone(), q.clone(), q.clone(), q.clone(), q.clone(), q.clone(), q.clone()]
             for q in q_lst:
                 sz = q.true_size()
                 self.unsatcore_reduce(q, trans=self.trans.cube(), frame=self.frames[q.t-1].cube())
