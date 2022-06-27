@@ -86,12 +86,12 @@ if __name__ == '__main__':
     print(lst)
     
     '''
-    args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip_aag/vis.4-arbit^1.E.aag','-c','-n','off','-a','off','-tm','off']) 
+    #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip_aag/vis.4-arbit^1.E.aag','-c','-n','off','-a','off','-tm','off']) 
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_tip/eijk.S208o.S.aag','-c','-n','off','-a','off','-tm','on']) 
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec2-and-env.aag','-c','-n','off','-a','off','-tm','off']) 
     #args = parser.parse_args(['--mode', '1' , '-t', '900' , '-p', '../dataset/aag4train/subset_0', '-c', '-r','on','-n','on','-a','on']) 
     #args = parser.parse_args(['../dataset/aag4train/subset_1/vis.emodel.E.aag','-c','-n','on','-a','on','-r','on'])
-    #args = parser.parse_args()
+    args = parser.parse_args()
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()

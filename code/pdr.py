@@ -97,7 +97,9 @@ class tCube:
         self.cubeLiterals = [c for c in self.cubeLiterals if c is not True]
     
     def __eq__(self, other) : 
-        return self.cubeLiterals == other.cubeLiterals
+        return collections.Counter(self.cubeLiterals) == collections.Counter(other.cubeLiterals)
+        #return self.cubeLiterals == other.cubeLiterals
+        # self.t == other.t
 
 #TODO: Using multiple timer to caculate which part of the code has the most time consumption
     # 解析 sat 求解出的 model, 并将其加入到当前 tCube 中 #TODO: lMap should incudes the v prime and i prime
@@ -329,6 +331,10 @@ class PDR:
         ----------------Store the history append cex ------------
         '''
         self.history_append_cex = []
+        '''
+        ----------------Store the NN attempt ------------
+        '''
+        self.NN_attempt_fail = 0
 
         
     def check_init(self):
@@ -643,12 +649,23 @@ class PDR:
 
 
                 if s_NN is not None:
+                    self.NN_attempt_fail = 0
                     print ("NN-guide method find minimum", sz,' --> ', s_NN.true_size(),  'F', s_NN.t)
                     #if not((len(s_NN.cubeLiterals) == len(s.cubeLiterals)) and (len(s_NN.cubeLiterals) == sum([1 for i, j in zip(s_NN.cubeLiterals, s.cubeLiterals) if i == j]))):
                     if not (collections.Counter(s_NN.cubeLiterals) == collections.Counter(s.cubeLiterals)):
-                        self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
-                        for i in range(1, s_NN.t):
-                            self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                        #assert(s_random[min_dis_cost_h_index] not in self.history_append_cex)
+                        if s_NN not in self.history_append_cex:
+                            self.frames[s_NN.t].add(Not(s_NN.cube()), pushed=False)
+                            for i in range(1, s_NN.t):
+                                self.frames[i].add(Not(s_NN.cube()), pushed=True)
+                            s_NN_sorted = s_NN.clone_and_sort()
+                            self.history_append_cex.append(s_NN_sorted)
+                elif s_NN is None:
+                    self.NN_attempt_fail += 1
+                    print ("NN-guide method failed")
+                    if self.NN_attempt_fail == 3 and round(self.prediction_threshold,1) > 0.5:
+                        self.prediction_threshold -= 0.1
+                        self.NN_attempt_fail -= 1
 
                 if s_random is not None:
                     # Fetch the qnew at first (the standard answer of this generalization)
@@ -701,7 +718,7 @@ class PDR:
                             for i in range(1, s_random[min_dis_cost_h_index].t):
                                 self.frames[i].add(Not(s_random[min_dis_cost_h_index].cube()), pushed=True)
                             s_random_min_sorted = s_random[min_dis_cost_h_index].clone_and_sort()
-                            self.history_append_cex.append(s_random_min_sorted)
+                            c.append(s_random_min_sorted)
                     if(max_dis_cost_g>=0.5):
                         #assert(s_random[max_dis_cost_g_index] not in self.history_append_cex)
                         if s_random[max_dis_cost_g_index] not in self.history_append_cex:
@@ -1204,7 +1221,7 @@ class PDR:
         if self.test_IG_NN == 0:
             return None
             #pass
-        elif self.test_IG_NN == 1:
+        elif self.test_IG_NN == 1 and self.NN_attempt_fail <=3:
             # s_smt = Solver()
             # Cube = Not(
             #     And(

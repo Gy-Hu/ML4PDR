@@ -29,7 +29,6 @@ class MLP(nn.Module):
     x = self.l2_dropout(x)
     x = self.f2(x)
     output = self.l3(x)
-
     return output
 
 
@@ -120,6 +119,8 @@ class NeuroPredessor(nn.Module):
         logits = var_state[0].squeeze(0)
         #TODO: update here with the correct number
         vote = self.var_vote(logits[problem['n_nodes']:,:]) # (a+b) * dim -> a * dim
+        #return the index of larger value
+        #vote = torch.argmax(vote, dim=1)
         #vote_mean = torch.mean(vote, dim=1)
         return vote.squeeze()
 
