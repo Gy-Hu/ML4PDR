@@ -228,12 +228,14 @@ class problem:
             self.filename = "../dataset/IG2graph/generalization/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
         elif mode==2:
              self.filename = "../dataset/IG2graph/generalization_no_enumerate/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
-        try:
+        # check self.file is exist or not
+        if not os.path.isfile(self.filename):
+            self.db_gt = natsorted(latch_lst)
+        elif os.path.isfile(self.filename):
             self.db_gt = pd.read_csv(self.filename) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
             self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
             self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
-        except:
-            self.db_gt = natsorted(latch_lst)
+        
         self.unpack_matrix = raw_data[0]
         self.value_table = raw_data[1]
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable

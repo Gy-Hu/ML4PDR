@@ -46,4 +46,4 @@ if __name__ == '__main__':
     for result in results:
         _, err = result.get()
         print("err: {}".format(err))
-    print("Finish all the subprocess, graph generation is ended.")
+    print("Finish all the subprocess, all the subset has been tested.")
