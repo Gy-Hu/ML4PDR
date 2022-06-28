@@ -335,7 +335,10 @@ class PDR:
         ----------------Store the NN attempt ------------
         '''
         self.NN_attempt_fail = 0
-
+        '''
+        ------------------Store the folder name of test case ----------
+        '''
+        self.folder_name = None
         
     def check_init(self):
         s = Solver()
@@ -438,7 +441,7 @@ class PDR:
                     print ('Total F', len(self.frames), ' F[-1]:', len(self.frames[-1].Lemma))
                     self._debug_print_frame(len(self.frames)-1)
 
-                    if self.record_result == 1:
+                    if self.record_result == 1 and self.folder_name is not None:
                         if self.test_IG_NN == 0 and self.NN_guide_ig_append == 0:
                             # Add info to the result recorder
                             self.record_result_dict['filename'] = self.filename
@@ -447,7 +450,7 @@ class PDR:
                             self.record_result_dict["Time Consuming"] = time.time() - self.start_time
                             print("Export the result to csv file")
                             root = '/data/guangyuh/coding_env/ML4PDR/log/'
-                            name = 'small_subset_without_NN'
+                            name = 'small_subset_without_NN' + "_" + self.folder_name
                             file_exists = os.path.isfile(root+name+".csv")
                             with open(os.path.join(root, name+".csv"), 'a+', newline='') as csvfile:
                                 fieldnames = ['filename', 'Total Frame', 'Number of clauses', 'Time Consuming']
@@ -468,7 +471,7 @@ class PDR:
                                 self.record_result_dict["Passing Ratio"] = "nan"
                             print("Export the result to csv file")
                             root = '/data/guangyuh/coding_env/ML4PDR/log/'
-                            name = 'small_subset_experiment_with_NN'
+                            name = 'small_subset_experiment_with_NN' + "_" + self.folder_name
                             file_exists = os.path.isfile(root+name+".csv")
                             with open(os.path.join(root, name+".csv"), 'a+', newline='') as csvfile:
                                 fieldnames = ['filename', 'Total Frame', 'Number of clauses', 'Time Consuming',"Time reduce INF time","Prediction Thershold","Passing Ratio"]

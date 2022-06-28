@@ -260,6 +260,8 @@ if __name__ == '__main__':
                     elif args.tm=='on':
                         solver.test_mic = 1
 
+                    solver.folder_name =  args.p.split('/')[-1]
+
                     startTime = time.time()
                     timeout = False
 
