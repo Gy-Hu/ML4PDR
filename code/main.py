@@ -91,7 +91,7 @@ if __name__ == '__main__':
     #args = parser.parse_args(['../dataset/aig_benchmark/hwmcc07_amba/spec2-and-env.aag','-c','-n','off','-a','off','-tm','off']) 
     #args = parser.parse_args(['--mode', '1' , '-t', '900' , '-p', '../dataset/aag4train/subset_0', '-c', '-r','on','-n','on','-a','on']) 
     #args = parser.parse_args(['../dataset/aag4train/subset_1/vis.emodel.E.aag','-c','-n','on','-a','on','-r','on'])
-    args = parser.parse_args()
+    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last'])
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()

@@ -221,17 +221,19 @@ class graph:
 
 
 class problem:
-    def __init__(self, raw_data, aigname, mode=1): 
+    def __init__(self, raw_data, aigname, mode=1,latch_lst=None): 
         self.raw_data = raw_data
 
         if mode==1:
             self.filename = "../dataset/IG2graph/generalization/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
         elif mode==2:
              self.filename = "../dataset/IG2graph/generalization_no_enumerate/" + (aigname.split('/')[-1]).replace('.aag', '.csv')
-        self.db_gt = pd.read_csv(self.filename) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
-        self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
-        self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
-
+        try:
+            self.db_gt = pd.read_csv(self.filename) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
+            self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
+            self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
+        except:
+            self.db_gt = natsorted(latch_lst)
         self.unpack_matrix = raw_data[0]
         self.value_table = raw_data[1]
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
@@ -244,7 +246,7 @@ class problem:
         self.refined_output = []
 
 
-def run(solver,aigname,mode=0):
+def run(solver,aigname,mode=0, latch_lst=None):
     if mode == 0: # mode == 'generalized predecessor'
         pass
     elif mode == 1: # mode == 'inductive generalization'
@@ -263,6 +265,6 @@ def run(solver,aigname,mode=0):
         edge_and_relation_pkl_list = [res.edges, res.relations, node_ref]
         q_literal_lst = res.q_lst
         raw_data = [adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list, q_literal_lst]
-        prob = problem(raw_data,aigname,mode=2)
+        prob = problem(raw_data,aigname,mode=2, latch_lst=latch_lst)
         return prob
         

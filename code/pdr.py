@@ -1311,7 +1311,9 @@ class PDR:
                         ))
                 for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
                 s_smt.add(Cube)
-                res = build_graph_online.run(s_smt,self.filename,self.test_IG_NN+1) #-> this is a list to guide which literals should be kept/throwed
+                # store the key in self.pv2next to list
+                latch_lst = [str(key).replace('_prime','') for key in self.pv2next.keys()]
+                res = build_graph_online.run(s_smt,self.filename,mode=2,latch_lst=latch_lst) #-> this is a list to guide which literals should be kept/throwed
                 # Conductive two relative check of the return q-like
                 print('restoring from: ', "../dataset/model/"+self.model_name+".pth.tar")
                 # Load model to predict
@@ -1327,8 +1329,12 @@ class PDR:
                 ig_q = res.ig_q # original q in inductive generalization
 
                 single_node_index = []  # store the index
-                var_list = list(res.db_gt)
-                var_list.pop(0)  # remove "filename_nextcube"
+                if isinstance(res.db_gt, list):
+                    var_list = res.db_gt
+                else:
+                    var_list = list(res.db_gt)
+                    var_list.pop(0)  # remove "filename_nextcube"
+                
                 tmp = res.value_table[~res.value_table.index.str.contains('m_')]
                 tmp.index = tmp.index.str.replace("n_", "")
 
@@ -1341,7 +1347,8 @@ class PDR:
                 '''
                 var_index = [] # Store the index that is in the graph and in the ground truth table
                 q_index = []
-                tmp_lst_var = list(res.db_gt)[1:]
+                #tmp_lst_var = list(res.db_gt)[1:]
+                
                 # The groud truth we need to focus on
                 #focus_gt = [e[1] for e in enumerate(tmp_lst_var) if e[0] not in single_node_index]
                 # The q that we need to focus on 
