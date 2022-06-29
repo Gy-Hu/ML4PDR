@@ -235,7 +235,6 @@ class problem:
             self.db_gt = pd.read_csv(self.filename) #ground truth of the label of literals (database) -> #TODO: refine here, only get one line for one object
             self.db_gt.drop("Unnamed: 0", axis=1, inplace=True)
             self.db_gt = self.db_gt.reindex(natsorted(self.db_gt.columns), axis=1)
-        
         self.unpack_matrix = raw_data[0]
         self.value_table = raw_data[1]
         self.n_vars = self.unpack_matrix.shape[1] - 1 #includes m and variable
@@ -246,6 +245,7 @@ class problem:
         self.edges, self.relations, self.node_ref = raw_data[2][0],raw_data[2][1],raw_data[2][2]
         self.ig_q = raw_data[3]
         self.refined_output = []
+    
 
 
 def run(solver,aigname,mode=0, latch_lst=None):

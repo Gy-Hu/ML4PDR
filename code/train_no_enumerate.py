@@ -65,7 +65,7 @@ class GraphDataset(Dataset):
         prob_main_info = {
             'n_vars' : self.samples[idx].n_vars,
             'n_nodes' : self.samples[idx].n_nodes,
-            'unpack' : (torch.from_numpy(self.samples[idx].adj_matrix.astype(np.float32).values)).to('cuda'),
+            'unpack' : (torch.from_numpy(self.samples[idx].adj_matrix.astype(np.float32).values)).to(device),
             'refined_output' : self.samples[idx].refined_output,
             'label' : self.samples[idx].label
         }
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         num_workers=0)
 
     net = NeuroPredessor(args)
-    net = net.to('cuda')  # TODO: modify to accept both CPU and GPU version
+    net = net.to(device)  # TODO: modify to accept both CPU and GPU version
     # if torch.cuda.device_count() > 1:
     #     net = torch.nn.DataParallel(net)
 
@@ -249,9 +249,9 @@ if __name__ == "__main__":
             for prob_index in range(len(prob)):
                 q_index = prob[prob_index]['refined_output']
                 outputs = net((prob[prob_index],vt_dict[prob_index]))
-                target = torch.Tensor(prob[prob_index]['label']).to('cuda').float()
+                target = torch.Tensor(prob[prob_index]['label']).to(device).float()
 
-                torch_select = torch.Tensor(q_index).to('cuda').int()
+                torch_select = torch.Tensor(q_index).to(device).int()
                 outputs = torch.index_select(outputs, 0, torch_select)
 
                 this_loss = loss_fn(outputs, target)
@@ -260,7 +260,7 @@ if __name__ == "__main__":
                 # Calulate the perfect accuracy
                 outputs = sigmoid(outputs)
                 preds = torch.where(outputs > 0.6, torch.ones(
-                outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
+                outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
                 all = all + 1
                 if target.equal(preds): perfection_rate = perfection_rate + 1
 
@@ -324,8 +324,8 @@ if __name__ == "__main__":
                 q_index = prob[0]['refined_output']
                 #optim.zero_grad()
                 outputs = net((prob[0],vt_dict[0]))
-                target = torch.Tensor(prob[0]['label']).to('cuda').float()
-                torch_select = torch.Tensor(q_index).to('cuda').int()
+                target = torch.Tensor(prob[0]['label']).to(device).float()
+                torch_select = torch.Tensor(q_index).to(device).int()
                 outputs = torch.index_select(outputs, 0, torch_select)
                 
                 this_loss = loss_fn(outputs, target)
@@ -335,7 +335,7 @@ if __name__ == "__main__":
 
                 outputs = sigmoid(outputs)
                 preds = torch.where(outputs > 0.7, torch.ones(
-                    outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
+                    outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
 
                 # Calulate the perfect accuracy
                 all = all + 1
@@ -381,8 +381,8 @@ if __name__ == "__main__":
                 q_index = prob[0]['refined_output']
                 #optim.zero_grad()
                 outputs = net((prob[0],vt_dict[0]))
-                target = torch.Tensor(prob[0]['label']).to('cuda').float()
-                torch_select = torch.Tensor(q_index).to('cuda').int()
+                target = torch.Tensor(prob[0]['label']).to(device).float()
+                torch_select = torch.Tensor(q_index).to(device).int()
                 outputs = torch.index_select(outputs, 0, torch_select)
 
                 # Calculate loss
@@ -392,7 +392,7 @@ if __name__ == "__main__":
 
                 outputs = sigmoid(outputs)
                 preds = torch.where(outputs > 0.8, torch.ones(
-                    outputs.shape).to('cuda'), torch.zeros(outputs.shape).to('cuda'))
+                    outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
 
                 # Calulate the perfect accuracy
                 all = all + 1

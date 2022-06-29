@@ -440,5 +440,47 @@ if __name__ == '__main__':
             prob = problem(filename4prb,mode=args.m)
             if prob is not None:
                 prob.dump("../dataset/IG2graph/train_no_enumerate/", filename4prb[0])
+                
+    elif args.m == 'ig_online':
+        smt2_file_list = walkFile(args.d)
+        
+        if args.s is not None:
+            smt2_file_list = [smt2_file for smt2_file in smt2_file_list if args.s in smt2_file]
+
+        for smt2_file in smt2_file_list[:]: #FIXME: Remember to change this index to generate all
+            mk_adj_matrix(smt2_file,args.m)
+        
+        
+        adj_matrix_pkl_list = walkFile("../dataset/IG2graph/tmp_no_enumerate/generalize_adj_matrix/")
+        GT_table_csv_list = walkFile("../dataset/IG2graph/generalization_no_enumerate/")
+        vt_all_node_pkl_list = walkFile("../dataset/IG2graph/tmp_no_enumerate/all_node_value_table/")
+        edge_and_relation_pkl_list = walkFile("../dataset/IG2graph/tmp_no_enumerate/edges_and_relation/")
+        
+        if args.s is not None:
+            adj_matrix_pkl_list = [adj_matrix_pkl for adj_matrix_pkl in adj_matrix_pkl_list if args.s in adj_matrix_pkl]
+            GT_table_csv_list = [GT_table_csv for GT_table_csv in GT_table_csv_list if args.s in GT_table_csv]
+            vt_all_node_pkl_list = [vt_all_node_pkl for vt_all_node_pkl in vt_all_node_pkl_list if args.s in vt_all_node_pkl]
+            edge_and_relation_pkl_list = [edge_and_relation_pkl for edge_and_relation_pkl in edge_and_relation_pkl_list if args.s in edge_and_relation_pkl]
+
+        # The number of tmp file should equal to .smt file
+        assert(len(adj_matrix_pkl_list) == len(vt_all_node_pkl_list) == len(edge_and_relation_pkl_list)==len(smt2_file_list))
+        zipped = list(zip(adj_matrix_pkl_list, vt_all_node_pkl_list, edge_and_relation_pkl_list))       
+        raw_str_lst = []
+        for raw in GT_table_csv_list:
+            raw_str = (raw.split('/')[-1]).replace(".csv","")
+            if any(raw_str in s for s in adj_matrix_pkl_list):
+                raw_str_lst.append(raw_str)
+        matching = []
+        # When zip the list, the list will be converted to tuple, so we need to convert it back to list
+        zipped_lst = list(map(lambda x: list(x), zipped))
+        for substr in raw_str_lst:
+            for item in zipped_lst:
+                if any(substr in str_ for str_ in item):
+                    item.insert(1 , "../dataset/IG2graph/generalization_no_enumerate/" + substr + ".csv")
+        matching = [s for s in zipped_lst if len(s)==4]
+        for filename4prb in matching:
+            prob = problem(filename4prb,mode=args.m)
+            if prob is not None:
+                prob.dump("../dataset/IG2graph/train_no_enumerate/", filename4prb[0])
 
 

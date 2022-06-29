@@ -5,10 +5,12 @@ import string
 from z3 import *
 import time
 import sys
+import argparse
 import csv
 import numpy as np
 import copy
 from queue import PriorityQueue
+from config import parser
 #from line_profiler import LineProfiler
 from functools import wraps
 import pandas as pd
@@ -22,7 +24,7 @@ import build_graph_online
 #from deps.pydimacs_changed.formula import CNFFormula
 import torch
 import torch.nn as nn
-import neuro_predessor
+import neuro_ig_no_enumerate
 from datetime import datetime
 from operator import itemgetter
 import deps.PyMiniSolvers.minisolvers as minisolvers
@@ -339,6 +341,10 @@ class PDR:
         ------------------Store the folder name of test case ----------
         '''
         self.folder_name = None
+        '''
+        -----------------Device to inf----------------------
+        '''
+        self.inf_device = 'gpu'
         
     def check_init(self):
         s = Solver()
@@ -1209,6 +1215,16 @@ class PDR:
             else:
                 print("The ground truth has not been found")
                 return None
+
+    def parse_prob(self,prob):
+        prob_main_info = {
+            'n_vars' : prob.n_vars,
+            'n_nodes' : prob.n_nodes,
+            'unpack' : (torch.from_numpy(prob.adj_matrix.astype(np.float32).values)).to(self.inf_device),
+            'refined_output' : prob.refined_output
+        }
+        dict_vt = dict(zip((prob.value_table).index, (prob.value_table).Value))
+        return prob_main_info, dict_vt
     
     def NN_guided_inductive_generalization(self, q: tCube, no_enumerate=False):
         '''
@@ -1271,8 +1287,11 @@ class PDR:
                 print('restoring from: ', "../dataset/model/"+self.model_name+".pth.tar")
                 # Load model to predict
                 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                device = torch.device("cuda")
-                net = neuro_predessor.NeuroPredessor()
+                if self.inf_device == 'gpu':
+                    device = torch.device("cuda")
+                elif self.inf_device == 'cpu':
+                    device = torch.device("cpu")
+                net = neuro_ig_no_enumerate.NeuroPredessor()
                 model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
@@ -1286,6 +1305,7 @@ class PDR:
                     q_index.append(tmp_lst_all_node.index('n_'+str(q_literal.children()[0])))
 
                 q_index.sort() # Fixed the bug of indexing the correct literals
+                res = self.parse_prob(res)
                 outputs = sigmoid(net(res))
                 torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
@@ -1318,8 +1338,12 @@ class PDR:
                 print('restoring from: ', "../dataset/model/"+self.model_name+".pth.tar")
                 # Load model to predict
                 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                device = torch.device("cuda")
-                net = neuro_predessor.NeuroPredessor()
+                if self.inf_device == 'gpu':
+                    device = torch.device("cuda")
+                elif self.inf_device == 'cpu':
+                    device = torch.device("cpu")
+                args = parser.parse_args(['--dim', '128', '--n_rounds', '512','--inf_dev',self.inf_device])
+                net = neuro_ig_no_enumerate.NeuroPredessor(args)
                 model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
@@ -1348,7 +1372,7 @@ class PDR:
                 var_index = [] # Store the index that is in the graph and in the ground truth table
                 q_index = []
                 #tmp_lst_var = list(res.db_gt)[1:]
-                
+
                 # The groud truth we need to focus on
                 #focus_gt = [e[1] for e in enumerate(tmp_lst_var) if e[0] not in single_node_index]
                 # The q that we need to focus on 
@@ -1363,7 +1387,8 @@ class PDR:
                 
                 #q_index = var_index
                 q_index.sort() # Fixed the bug of indexing the correct literals
-                outputs = sigmoid(net(res))
+                res,vt_dict = self.parse_prob(res)
+                outputs = sigmoid(net((res,vt_dict)))
                 torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
                 top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[:]

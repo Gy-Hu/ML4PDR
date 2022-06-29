@@ -5,11 +5,12 @@ Main function to run PDR (extract the graph as well)
 # profile = line_profiler.LineProfiler()
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from datetime import datetime
 from datetime import timedelta
 from multiprocessing import Process
 from threading import Thread
+
 from time import sleep
 import sys
 sys.path.append("..")
@@ -51,6 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('-th', type=float, help='threshold for the inductive invariant', default=0.5)
     parser.add_argument('-mn', type=str, help='model name of NN', default=None)
     parser.add_argument('-tm', type=str, help='test mic', default='off')
+    parser.add_argument('-inf_dev', type=str, help='device do inference', default='gpu')
 
     # TODO: Add abstract & craig interpolation?
     # TODO: Solve the issue on this case (cannot run in time)
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     #args = parser.parse_args(['../dataset/aag4train/subset_1/vis.emodel.E.aag','-c','-n','on','-a','on','-r','on'])
     #args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last'])
     #args = parser.parse_args(['../dataset/aag4train/cmu.dme1.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last'])
-    args = parser.parse_args()
+    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last','-inf_dev','cpu'])
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()
@@ -164,6 +166,13 @@ if __name__ == '__main__':
             solver.test_mic = 0
         elif args.tm=='on':
             solver.test_mic = 1
+
+        # switch device to do inference
+        if args.inf_dev=='cpu':
+            solver.inf_device = 'cpu'
+            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        elif args.inf_dev=='gpu':
+            solver.inf_device = 'gpu'
 
         startTime = time.time()
         # Record start time
@@ -261,6 +270,14 @@ if __name__ == '__main__':
                         solver.test_mic = 0
                     elif args.tm=='on':
                         solver.test_mic = 1
+
+
+                    # switch device to do inference
+                    if args.inf_dev=='cpu':
+                        solver.inf_device = 'cpu'
+                        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+                    elif args.inf_dev=='gpu':
+                        solver.inf_device = 'gpu'
 
                     solver.folder_name =  args.p.split('/')[-1]
 

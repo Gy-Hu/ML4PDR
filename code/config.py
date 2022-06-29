@@ -11,6 +11,7 @@ parser.add_argument('--task-name', type=str, default='neuropdr', help='task name
 parser.add_argument('--dim', type=int, default=128, help='Dimension of variable and clause embeddings')
 parser.add_argument('--n_rounds', type=int, default=26, help='Number of rounds of message passing')
 parser.add_argument('--epochs', type=int, default=10)
+parser.add_argument('--inf_dev', type=str, default='gpu')
 #
 # parser.add_argument('--n_pairs', action='store', type=int)
 # parser.add_argument('--max_nodes_per_batch', action='store', type=int)
