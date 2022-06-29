@@ -38,7 +38,7 @@ if __name__ == '__main__':
     for subset in subset_dir_lst:
         #args = shlex.split("./data2graph_no_enumerate.sh" + " " +file)
         #results.append(pool.apply_async(call_proc, ("python data_gen_no_enumerate.py -d ../dataset/IG2graph/generalize_IG_no_enumerate/ -m ig -s " + file,)))
-        results.append(pool.apply_async(call_proc, ("python main.py --mode 1 -t 18000 -p " + subset + " -c -r on -n on -a on -th 0.6 -mn neuropdr_2022-06-09_12:27:41_last",)))
+        results.append(pool.apply_async(call_proc, ("python main.py --mode 1 -t 18000 -p " + subset + " -c -r on -n on -a on -th 0.6 -mn neuropdr_2022-06-09_12:27:41_last -inf_dev cpu",)))
 
     # Close the pool and wait for each running task to complete
     pool.close()

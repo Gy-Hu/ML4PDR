@@ -1216,11 +1216,11 @@ class PDR:
                 print("The ground truth has not been found")
                 return None
 
-    def parse_prob(self,prob):
+    def parse_prob(self,prob,device):
         prob_main_info = {
             'n_vars' : prob.n_vars,
             'n_nodes' : prob.n_nodes,
-            'unpack' : (torch.from_numpy(prob.adj_matrix.astype(np.float32).values)).to(self.inf_device),
+            'unpack' : (torch.from_numpy(prob.adj_matrix.astype(np.float32).values)).to(device),
             'refined_output' : prob.refined_output
         }
         dict_vt = dict(zip((prob.value_table).index, (prob.value_table).Value))
@@ -1295,6 +1295,8 @@ class PDR:
                 model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
+                if torch.cuda.device_count >1:
+                    net = nn.DataParallel(net,device_ids=[0,1])
                 sigmoid  = nn.Sigmoid()
                 torch.no_grad()
                 #q_index = extract_q_like(res)
@@ -1387,7 +1389,7 @@ class PDR:
                 
                 #q_index = var_index
                 q_index.sort() # Fixed the bug of indexing the correct literals
-                res,vt_dict = self.parse_prob(res)
+                res,vt_dict = self.parse_prob(res,device)
                 outputs = sigmoid(net((res,vt_dict)))
                 torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
