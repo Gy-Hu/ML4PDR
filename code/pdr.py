@@ -1225,6 +1225,39 @@ class PDR:
         }
         dict_vt = dict(zip((prob.value_table).index, (prob.value_table).Value))
         return prob_main_info, dict_vt
+
+    def refine_target_and_output(problem):
+        if isinstance(problem.db_gt, list):
+            var_list = problem.db_gt
+        else:
+            var_list = list(problem.db_gt)
+            var_list.pop(0)  # remove "filename_nextcube"
+
+        tmp = problem.value_table[~problem.value_table.index.str.contains('m_')]
+        tmp.index = tmp.index.str.replace("n_", "")
+
+        single_node_index = []  # store the index
+        for i, element in enumerate(var_list):
+            if element not in tmp.index.tolist():
+                single_node_index.append(i)
+
+        problem.label = [e[1] for e in enumerate(
+            problem.label) if e[0] not in single_node_index]
+        # assert the label will not be all zero
+        assert(sum(problem.label) != 0)
+        '''
+        Finish refine the target, now try to refine the output 
+        '''
+        var_index = [] # Store the index that is in the graph and in the ground truth table
+        tmp_lst_var = list(problem.db_gt)[1:]
+        # The groud truth we need to focus on
+        focus_gt = [e[1] for e in enumerate(tmp_lst_var) if e[0] not in single_node_index]
+        # Try to fetch the index of the variable in the value table (variable in db_gt)
+        tmp_lst_all_node = problem.value_table.index.to_list()[problem.n_nodes:]
+        for element in focus_gt:
+            var_index.append(tmp_lst_all_node.index('n_'+str(element)))
+        problem.refined_output = var_index
+        assert(len(problem.refined_output) == len(problem.label))
     
     def NN_guided_inductive_generalization(self, q: tCube, no_enumerate=False):
         '''
@@ -1350,10 +1383,8 @@ class PDR:
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
                 sigmoid  = nn.Sigmoid()
-                torch.no_grad()
                 tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
                 ig_q = res.ig_q # original q in inductive generalization
-
                 single_node_index = []  # store the index
                 if isinstance(res.db_gt, list):
                     var_list = res.db_gt
@@ -1379,6 +1410,7 @@ class PDR:
                 #focus_gt = [e[1] for e in enumerate(tmp_lst_var) if e[0] not in single_node_index]
                 # The q that we need to focus on 
                 focus_q = [_extract(e[1])[0] for e in enumerate(ig_q)]
+                assert(len(focus_q) != 0)
                 # Try to fetch the index of the variable in the value table (variable in db_gt)
                 tmp_lst_all_node = res.value_table.index.to_list()[res.n_nodes:]
                 for element in focus_q:
@@ -1389,10 +1421,16 @@ class PDR:
                 
                 #q_index = var_index
                 q_index.sort() # Fixed the bug of indexing the correct literals
+                assert(all(q_index[i] <= q_index[i + 1] for i in range(len(q_index) - 1)))
+                assert(len(q_index) == len(focus_q))
                 res,vt_dict = self.parse_prob(res,device)
-                outputs = sigmoid(net((res,vt_dict)))
+                net.eval()
+                
+                with torch.no_grad():
+                    outputs = sigmoid(net((res,vt_dict)))
                 torch_select = torch.Tensor(q_index).to(device).int() 
                 outputs = torch.index_select(outputs, 0, torch_select)
+                assert(len(outputs) == len(ig_q))
                 top_k_outputs = list(sorted(enumerate(outputs.tolist()), key = itemgetter(1)))[:]
                 preds = torch.where(outputs>self.prediction_threshold, torch.ones(outputs.shape).to(device), torch.zeros(outputs.shape).to(device))
                 '''

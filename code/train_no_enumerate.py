@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from config import parser
 from neuro_ig_no_enumerate import NeuroPredessor
-from data_gen import problem, walkFile
+from data_gen_no_enumerate import problem, walkFile
 import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -51,8 +51,9 @@ class BCEFocalLoss(nn.Module):
 
 
 class GraphDataset(Dataset):
-    def __init__(self,data_root):
+    def __init__(self,data_root,mode='train'):
         self.data_root = data_root
+        self.mode = mode
         self.samples = []
         self.__init_dataset()
         self.__remove_adj_null_file()
@@ -73,10 +74,17 @@ class GraphDataset(Dataset):
         return prob_main_info, dict_vt
     
     def __init_dataset(self):
-        train_lst = walkFile(self.data_root)
-        for train_file in train_lst[:]:
-            with open(train_file, 'rb') as f:
-                self.samples.append(pickle.load(f))
+        if self.mode == 'debug':
+            train_lst = walkFile(self.data_root)
+            for train_file in train_lst[:100]:
+                with open(train_file, 'rb') as f:
+                    self.samples.append(pickle.load(f))
+        else:
+            train_lst = walkFile(self.data_root)
+            for train_file in train_lst[:]:
+                with open(train_file, 'rb') as f:
+                    self.samples.append(pickle.load(f))
+
 
     def __refine_target_and_output(self):
         for problem in self.samples:
@@ -108,6 +116,7 @@ class GraphDataset(Dataset):
             for element in focus_gt:
                 var_index.append(tmp_lst_all_node.index('n_'+str(element)))
             problem.refined_output = var_index
+            assert(all(problem.refined_output[i] <= problem.refined_output[i + 1] for i in range(len(problem.refined_output) - 1)))
             assert(len(problem.refined_output) == len(problem.label))
         #print('num of train batches: ', len(train), file=log_file, flush=True)
     
@@ -130,22 +139,23 @@ if __name__ == "__main__":
                               #'--log-dir', str(Path(__file__).parent.parent /'log/tmp/'), \
                               '--train-file', '../dataset/IG2graph/train_no_enumerate/',\
                               '--val-file', '../dataset/IG2graph/validate_no_enumerate/',\
-                              '--mode', 'test'
+                              '--mode', 'debug'
                               ])
 
     if args.mode == 'debug':
         writer = SummaryWriter('../log/tmp/tensorboard'+'-' + datetime_str.replace(' ', '_'))
-    elif args.mode == 'test':
+        args.log_dir = str(Path(__file__).parent.parent /'log/tmp/')
+    elif args.mode == 'train':
         writer = SummaryWriter('../log/tensorboard'+'-' + datetime_str.replace(' ', '_'))
 
     all_train = []
     train = []
     val = []
 
-    all_graph = GraphDataset(args.train_file)
+    all_graph = GraphDataset(args.train_file,args.mode)
 
     
-    if args.mode == 'test' or args.mode == 'debug':
+    if args.mode == 'train' or args.mode == 'debug':
         train_size = int(0.6 * len(all_graph))
         validation_size = int(0.2 * len(all_graph))
         test_size = len(all_graph) - train_size - validation_size

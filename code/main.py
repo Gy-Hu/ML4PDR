@@ -95,8 +95,8 @@ if __name__ == '__main__':
     #args = parser.parse_args(['../dataset/aag4train/subset_1/vis.emodel.E.aag','-c','-n','on','-a','on','-r','on'])
     #args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last'])
     #args = parser.parse_args(['../dataset/aag4train/cmu.dme1.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last'])
-    #args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last','-inf_dev','cpu'])
-    args = parser.parse_args()
+    args = parser.parse_args(['../dataset/aag4train/nusmv.syncarb5^2.B.aag','-c','-n','on','-a','on','-mn','neuropdr_2022-06-09_12:27:41_last','-inf_dev','cpu'])
+    #args = parser.parse_args()
     if (args.fileName is not None) and (args.mode==0):
         file = args.fileName
         m = model.Model()

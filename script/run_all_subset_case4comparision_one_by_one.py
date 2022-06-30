@@ -20,8 +20,8 @@ if __name__ == '__main__':
     pool = ThreadPool(multiprocessing.cpu_count())
     results = []
     for subset in subset_dir_lst[:]:
-        cmd = "python main.py --mode 1 -t 18000 -p " + subset + " -c -r on -n on -a on -th 0.8 -mn neuropdr_2022-06-09_12:27:41_last -inf_dev gpu"
-        subprocess.call(shlex.split(cmd))
+        cmd = "python main.py --mode 1 -t 3600 -p " + subset + " -c -r on -n on -a on -th 0.7 -mn neuropdr_2022-06-09_12:27:41_last -inf_dev gpu"
+        subprocess.Popen(shlex.split(cmd)).wait()
 
     # Close the pool and wait for each running task to complete
     print("Finish all the subprocess, all the subset has been tested.")
