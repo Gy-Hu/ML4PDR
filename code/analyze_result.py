@@ -44,7 +44,7 @@ csv_df_without_NN = csv_df_without_NN.dropna(subset = ['Total Frame'])
 
 # calculate the reduce ratio of cases that has been reduced by NN
 reduce_success = sum(row['Total Frame (without NN)'] >= row['Total Frame'] or row['Time consuming (without NN)'] >= row['Time consuming (without INF time)'] for idx, row in csv_df_without_NN.iterrows())
-reduce_frame_success = sum(row['Total Frame (without NN)'] >= row['Total Frame'] for idx, row in csv_df_without_NN.iterrows())
+reduce_frame_success = sum(row['Total Frame (without NN)'] > row['Total Frame'] for idx, row in csv_df_without_NN.iterrows())
 
 print(f"{str(reduce_success/len(csv_df_without_NN))}% of the cases have been reduced by NN")
 print(f"{str(reduce_frame_success/len(csv_df_without_NN))}% of the cases have converged earlier by applying NN")
