@@ -16,7 +16,7 @@ csv_df_without_NN = pd.concat(csv_data_without_NN_frame_lst,ignore_index=True)
 
 # update the value in the first row, make file name clear and simple
 for idx, file in enumerate(csv_df_with_NN['filename']):
-    csv_df_with_NN.at[idx,'filename'] = file.split('/')[-1].replace('.aag', '')
+    csv_df_with_NN.at[idx,'filename'] = file.split('/')[-1].replace('.aag', '') # if and only if (idx==dataframe index) is true
 for idx, file in enumerate(csv_df_without_NN['filename']):
     csv_df_without_NN.at[idx,'filename'] = file.split('/')[-1].replace('.aag', '')
 
