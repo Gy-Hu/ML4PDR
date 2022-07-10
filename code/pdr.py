@@ -475,6 +475,7 @@ class PDR:
                                 self.record_result_dict["Passing Ratio"] = str((self.NN_guide_ig_success/(self.NN_guide_ig_success + self.NN_guide_ig_fail))*100)+"%"
                             except: # Check this
                                 self.record_result_dict["Passing Ratio"] = "nan"
+                            self.record_result_dict["Passing Times"] = self.NN_guide_ig_success
                             print("Export the result to csv file")
                             root = '/data/guangyuh/coding_env/ML4PDR/log/'
                             name = 'small_subset_experiment_with_NN' + "_" + self.folder_name
