@@ -203,7 +203,8 @@ int main(int argc, char ** argv) {
 
   // read AIGER model
   aiger * aig = aiger_init();
-  freopen("./eijk.S208o.S.aag", "r", stdin);
+  //freopen("./eijk.S208o.S.aag", "r", stdin);
+  freopen("./nusmv.reactor^4.C.aag", "r", stdin);
   //freopen("./cmu.dme1.B.aag", "r", stdin);
   //freopen("./nusmv.syncarb5^2.B.aag", "r", stdin);
   //fp = fopen("./eijk.S208o.S.aag", "r");

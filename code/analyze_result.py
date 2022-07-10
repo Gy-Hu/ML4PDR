@@ -3,8 +3,8 @@ from IPython.display import display
 import os.path
 
 # Get .csv file list in log folder
-csv_file_lst_with_NN = [f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv" for i in range(11) if os.path.isfile(f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv")]
-csv_file_lst_without_NN = [f"../log/small_subset_without_NN_subset_{str(i)}.csv" for i in range(11) if os.path.isfile(f"../log/small_subset_without_NN_subset_{str(i)}.csv")]
+csv_file_lst_with_NN = [f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv" for i in range(0,22) if os.path.isfile(f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv")]
+csv_file_lst_without_NN = [f"../log/small_subset_without_NN_subset_{str(i)}.csv" for i in range(0,22) if os.path.isfile(f"../log/small_subset_without_NN_subset_{str(i)}.csv")]
 
 # walk through the csv_file_with_NN and csv_file_without_NN in ../log/
 csv_data_with_NN_frame_lst = [pd.read_csv(csv_with_NN, low_memory = False, index_col=False) for csv_with_NN in csv_file_lst_with_NN[:]]
@@ -41,13 +41,16 @@ csv_df_without_NN = csv_df_without_NN.reindex(sorted(csv_df_without_NN.columns,r
 # remove the row that is NaN in Total Frame of csv_df_without_NN
 csv_df_without_NN = csv_df_without_NN.dropna(subset = ['Total Frame'])
 
+# Optional drop those rows that are NaN in passing ratio
+csv_df_without_NN = csv_df_without_NN.dropna(subset = ['Passing Ratio'])
+
 # calculate the reduce ratio of cases that has been reduced by NN
 reduce_success = sum(row['Total Frame (without NN)'] >= row['Total Frame'] or row['Time consuming (without NN)'] >= row['Time consuming (without INF time)'] for idx, row in csv_df_without_NN.iterrows())
 reduce_frame_success = sum(row['Total Frame (without NN)'] > row['Total Frame'] for idx, row in csv_df_without_NN.iterrows())
 high_prediction_success = sum(row['Prediction Thershold']>0.5 for _,row in csv_df_without_NN.iterrows())
 
-print(f"{str(reduce_success/len(csv_df_without_NN))}% of the cases have been reduced by NN")
-print(f"{str(reduce_frame_success/len(csv_df_without_NN))}% of the cases have converged earlier by applying NN")
-print(f"{str(high_prediction_success/len(csv_df_without_NN))} % of the cases have high success rate of NN prediction")
+print(f"{str((reduce_success/len(csv_df_without_NN))*100)}% of the cases have been reduced by NN")
+print(f"{str((reduce_frame_success/len(csv_df_without_NN))*100)}% of the cases have converged earlier by applying NN")
+print(f"{str((high_prediction_success/len(csv_df_without_NN))*100)} % of the cases have high success rate of NN prediction")
 
-#display(csv_df_without_NN)
+display(csv_df_without_NN)
