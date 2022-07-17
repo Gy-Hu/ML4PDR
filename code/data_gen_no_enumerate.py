@@ -78,6 +78,7 @@ class graph:
             #len((self.bfs_queue[index]).children()) != 0
             old_length = len(self.bfs_queue)
             self.bfs_queue += list((self.bfs_queue[index]).children())
+            self.bfs_queue = remove_duplicated(self.bfs_queue)
             new_length = len(self.bfs_queue)
             if new_length == old_length and index==(len(self.bfs_queue)-1):
                 break

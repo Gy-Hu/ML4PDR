@@ -475,13 +475,16 @@ class PDR:
                                 self.record_result_dict["Passing Ratio"] = str((self.NN_guide_ig_success/(self.NN_guide_ig_success + self.NN_guide_ig_fail))*100)+"%"
                             except: # Check this
                                 self.record_result_dict["Passing Ratio"] = "nan"
-                            self.record_result_dict["Passing Times"] = self.NN_guide_ig_success
+                            try:
+                                self.record_result_dict["Passing Times"] = self.NN_guide_ig_success
+                            except:
+                                self.record_result_dict["Passing Times"] = 0
                             print("Export the result to csv file")
                             root = '/data/guangyuh/coding_env/ML4PDR/log/'
                             name = 'small_subset_experiment_with_NN' + "_" + self.folder_name
                             file_exists = os.path.isfile(root+name+".csv")
                             with open(os.path.join(root, name+".csv"), 'a+', newline='') as csvfile:
-                                fieldnames = ['filename', 'Total Frame', 'Number of clauses', 'Time Consuming',"Time reduce INF time","Prediction Thershold","Passing Ratio"]
+                                fieldnames = ['filename', 'Total Frame', 'Number of clauses', 'Time Consuming',"Time reduce INF time","Prediction Thershold","Passing Ratio","Passing Times"]
                                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                                 if not file_exists: writer.writeheader()  # file doesn't exist yet, write a header
                                 writer.writerow(self.record_result_dict)
@@ -1186,12 +1189,11 @@ class PDR:
                 '''
                 
                 s_smt = Solver()
-                Cube = Not(
-                    And(
+                Cube = And(
                         Not(q.cube()), 
                         substitute(substitute(substitute(q.cube(), self.primeMap),self.inp_map),
                         list(self.pv2next.items()))
-                        ))
+                        )
                 for index, literals in enumerate(q.cubeLiterals): s_smt.add(literals)
                 s_smt.add(Cube)
                 #assert (s_smt.check() == unsat)

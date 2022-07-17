@@ -5,7 +5,7 @@ Main function to run PDR (extract the graph as well)
 # profile = line_profiler.LineProfiler()
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 from datetime import datetime
 from datetime import timedelta
 from multiprocessing import Process

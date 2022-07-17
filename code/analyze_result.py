@@ -44,6 +44,9 @@ csv_df_without_NN = csv_df_without_NN.dropna(subset = ['Total Frame'])
 # Optional drop those rows that are NaN in passing ratio
 csv_df_without_NN = csv_df_without_NN.dropna(subset = ['Passing Ratio'])
 
+# drop rows that "Passing time" is zero
+csv_df_without_NN = csv_df_without_NN[csv_df_without_NN['Passing Times'] != 0] 
+
 # calculate the reduce ratio of cases that has been reduced by NN
 reduce_success = sum(row['Total Frame (without NN)'] >= row['Total Frame'] or row['Time consuming (without NN)'] >= row['Time consuming (without INF time)'] for idx, row in csv_df_without_NN.iterrows())
 reduce_frame_success = sum(row['Total Frame (without NN)'] > row['Total Frame'] for idx, row in csv_df_without_NN.iterrows())

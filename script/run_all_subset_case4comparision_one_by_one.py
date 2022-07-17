@@ -15,7 +15,7 @@ from multiprocessing.pool import ThreadPool
 
 if __name__ == '__main__':
     subset_dir = '/data/guangyuh/coding_env/ML4PDR/dataset/aag4train/subset_'
-    subset_dir_lst = [subset_dir+str(i) for i in range(0,6)] # non-trival
+    subset_dir_lst = [subset_dir+str(i) for i in range(1,22)] # non-trival
     
     pool = ThreadPool(multiprocessing.cpu_count())
     results = []
