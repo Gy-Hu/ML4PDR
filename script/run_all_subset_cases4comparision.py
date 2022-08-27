@@ -1,6 +1,6 @@
 
 '''
-Run this in code/ directory
+Run this in code/ directory, need large GPU memory, or ajust n_round, dimension of encoding the vector
 '''
 # get file list of IG2graph
 

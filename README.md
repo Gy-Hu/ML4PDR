@@ -49,4 +49,8 @@
     └── fetch_info_from_log.py # Generate table from logs
 ```
 
-dataset folder: /data/hongcezh/clause-learning/data-collect/hwmcc07-7200-result/output/tip/eijk.S953.S
+dataset folder (hwmcc 07): /data/hongcezh/clause-learning/data-collect/hwmcc07-7200-result/output/tip/eijk.S953.S
+
+dataset folder (hwmcc 20): /data/hongcezh/clause-learning/data-collect/hwmcc20-7200-result/output
+
+aiger size: /data/hongcezh/clause-learning/data-collect/stat/

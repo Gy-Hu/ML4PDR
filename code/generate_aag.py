@@ -58,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('-outdir', type=str, default=aag_dir, help='Export the converted aag to the directory')
     parser.add_argument('-d', type=int, default=1, help='Determin whether to divide files into subset')
     parser.add_argument('-n', type=int, default=10, help='Determin how many files to divide into subset')
-    args = parser.parse_args(['-indir','../dataset/aig_benchmark/hwmcc07_tip/','-outdir','../dataset/aag4train/','-n', '5'])
+    args = parser.parse_args(['-indir','../dataset/aig_benchmark/hwmcc20_tip/','-outdir','../dataset/aag4train/','-n', '5'])
     #args = parser.parse_args()
     if args.indir is not None:
         aig_dir = args.indir
