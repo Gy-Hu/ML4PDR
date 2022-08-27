@@ -28,8 +28,8 @@ def walkFile(dir):
     return files
 
 if __name__ == '__main__':
-    subset_dir = '/data/guangyuh/coding_env/ML4PDR/dataset/aag4train/subset_'
-    subset_dir_lst = [subset_dir+str(i) for i in range(11,22)]
+    subset_dir = '/data/guangyuh/coding_env/ML4PDR/dataset/aag4train_hwmcc20_simplified/subset_'
+    subset_dir_lst = [subset_dir+str(i) for i in range(0,10)]
     # files = walkFile(csv_dir)
     # files = [(f.split('/')[-1]).replace('.csv','') for f in files]
     
