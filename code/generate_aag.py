@@ -31,6 +31,18 @@ def remove_empty_file(list_of_file):
         if file[0] == '0': subprocess.run(["trash-put", file[1]])
     return [file for file in list_of_file if file[0] != '0']
 
+def delete_redundant_line(list_of_file):
+    for file in list_of_file:
+        # read file into list by line
+        with open(file[1], 'r') as f:
+            lines = f.readlines()
+        # remove redundant line
+        file_first_line = lines[0].split(' ')
+        index_of_last = int(file_first_line[2]) + int(file_first_line[3]) + int(file_first_line[4]) + int(file_first_line[5]) + 1
+        with open(file[1], 'w') as f:
+            f.writelines(lines[:index_of_last])
+    return list_of_file
+
 def remove_trivially_unsat_aiger(list_of_file):
     lst_trivially_unsat_removed = []
     for file in list_of_file:

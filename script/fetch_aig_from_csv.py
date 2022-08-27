@@ -5,6 +5,7 @@ Fetch aiger from Zhang's csv file, and convert it to aag
 
 # Fetch small aiger from /data/hongcezh/clause-learning/data-collect/stat/
 
+from distutils.dir_util import remove_tree
 import pandas as pd
 from ast import arg
 import subprocess
@@ -18,7 +19,34 @@ from itertools import islice
 
 # appen file path to the system path
 sys.path.append(f'{str(Path(__file__).parent.parent)}/code/')
-from generate_aag import walkFile, chunk, remove_empty_file, remove_trivially_unsat_aiger
+from generate_aag import delete_redundant_line, chunk, remove_empty_file, remove_trivially_unsat_aiger
+
+import tempfile
+
+import aiger
+#from aiger import utils
+
+
+SIMPLIFY_TEMPLATE = '&r {0}; &put; fold; write_aiger -s {0}'
+
+
+def simplify(aig_input_path, aag_output_path, verbose=False, abc_cmd='../utilis/yosys/yosys-abc', aigtoaig_cmd='../utilis/aiger_tool_util/aigtoaig'):
+    aig_name = aig_input_path.split('/')[-1]
+    # avoids confusion and guarantees deletion on exit
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmpdir = Path(tmpdirname)
+        # copy the aig to the temporary directory
+        shutil.copy(aig_input_path, tmpdir / aig_name)
+        aig_path = tmpdir / str(aig_name)     
+
+        command = [
+            abc_cmd,
+            '-c',
+            SIMPLIFY_TEMPLATE.format(aig_path)
+        ]
+
+        subprocess.call(command) if verbose else subprocess.call(command, stdout=subprocess.PIPE)
+        subprocess.call([aigtoaig_cmd, aig_path, aag_output_path+str(aig_name.replace('.aig','.aag'))])
 
 def fetch_aig_from_csv(csv_file):
     # Read this csv file into dataframe
@@ -37,7 +65,7 @@ def fetch_aig_from_csv(csv_file):
     return aag_list
 
 if __name__ == '__main__':
-    aag_dir = f'{str(Path(__file__).parent.parent)}/dataset/aag4train_hwmcc20/'
+    aag_dir = f'{str(Path(__file__).parent.parent)}/dataset/aag4train_hwmcc20_simplified/'
     parser = argparse.ArgumentParser(description="Convert aig to aag automatically")
     parser.add_argument('-outdir', type=str, default=aag_dir, help='Export the converted aag to the directory')
     parser.add_argument('-d', type=int, default=1, help='Determin whether to divide files into subset')
@@ -47,27 +75,33 @@ if __name__ == '__main__':
     --------------------Get the aig list (and their path)-------------------
     '''
     csv_file = "/data/hongcezh/clause-learning/data-collect/stat/size20.csv"
-    aag_list = fetch_aig_from_csv(csv_file)
+    aig_list = fetch_aig_from_csv(csv_file)
 
-    for file in aag_list:
+    for file in aig_list:
         # TODO: Use repr for this, make this command can be ran on Linux and Windows -> avoid Escape Character when use str
         # For instance, str(abc\ndef) will throw exception, using r'xxx' or repr() can avoid this problem
-        cmd = [str(Path(__file__).parent.parent/'code/aiger_tools/aigtoaig'), file, '-a']
-        with open(args.outdir + file.split('/')[-1].replace('.aig','.aag'), "w") as outfile:
-            subprocess.run(cmd, stdout=outfile)
+        '''
+        --------------------Convert aiger1.9 to aiger1.0 --------------------
+        '''
+        simplify(file, aag_dir)
+
+        # cmd = [str(Path(__file__).parent.parent/'code/aiger_tools/aigtoaig'), file, '-a']
+        # with open(args.outdir + file.split('/')[-1].replace('.aig','.aag'), "w") as outfile:
+        #     subprocess.run(cmd, stdout=outfile)
 
     '''
     -------------------sort the file by size and split into chunks-------------------
     '''
     if args.d != 0:
-        sp = subprocess.Popen("du -b ../dataset/aag4train_hwmcc20/* | sort -n", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        sp = subprocess.Popen("du -b ../dataset/aag4train_hwmcc20_simplified/* | sort -n", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         lst = [line.decode("utf-8").strip('\n').split('\t') for line in sp.stdout.readlines()]
         list_removed_empty = remove_empty_file(lst)
+        list_removed_empty = delete_redundant_line(lst)
         list_removed_trivial_unsat = remove_trivially_unsat_aiger(list_removed_empty)
         list_chunks = list(chunk(list_removed_trivial_unsat, args.n))
         for i_tuple in range(len(list_chunks)):
-            if not os.path.isdir(f"../dataset/aag4train_hwmcc20/subset_{str(i_tuple)}"): 
-                os.makedirs(f"../dataset/aag4train_hwmcc20/subset_{str(i_tuple)}")
+            if not os.path.isdir(f"../dataset/aag4train_hwmcc20_simplified/subset_{str(i_tuple)}"): 
+                os.makedirs(f"../dataset/aag4train_hwmcc20_simplified/subset_{str(i_tuple)}")
             for i_file in range(len(list_chunks[i_tuple])): 
-                shutil.copy(list_chunks[i_tuple][i_file][1], f"../dataset/aag4train_hwmcc20/subset_{str(i_tuple)}")
+                shutil.copy(list_chunks[i_tuple][i_file][1], f"../dataset/aag4train_hwmcc20_simplified/subset_{str(i_tuple)}")
 

@@ -14,11 +14,25 @@ csv_data_without_NN_frame_lst = [pd.read_csv(csv_without_NN, low_memory = False,
 csv_df_with_NN = pd.concat(csv_data_with_NN_frame_lst,ignore_index=True)
 csv_df_without_NN = pd.concat(csv_data_without_NN_frame_lst,ignore_index=True)
 
+# add a new column to the dataframe to indicate where the data come from
+csv_df_with_NN['benchmark'] = "UNKNOWN"
+
 # update the value in the first row, make file name clear and simple
 for idx, file in enumerate(csv_df_with_NN['filename']):
     csv_df_with_NN.at[idx,'filename'] = file.split('/')[-1].replace('.aag', '') # if and only if (idx==dataframe index) is true
+    # if file contains "hwmcc20", then add "hwmcc20" to the row
+    if "hwmcc20" in file:
+        csv_df_with_NN.at[idx,'benchmark'] = "hwmcc20"
+    else:
+        csv_df_with_NN.at[idx,'benchmark'] = "hwmcc07"
+
 for idx, file in enumerate(csv_df_without_NN['filename']):
     csv_df_without_NN.at[idx,'filename'] = file.split('/')[-1].replace('.aag', '')
+    # if file contains "hwmcc20", then add "hwmcc20" to the row
+    if "hwmcc20" in file:
+        csv_df_with_NN.at[idx,'benchmark'] = "hwmcc20"
+    else:
+        csv_df_with_NN.at[idx,'benchmark'] = "hwmcc07"
 
 # round the csv_df and replace the original csv_df
 csv_df_with_NN = csv_df_with_NN.round(5)

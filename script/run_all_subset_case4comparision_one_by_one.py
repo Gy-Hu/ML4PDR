@@ -14,7 +14,7 @@ import shlex
 from multiprocessing.pool import ThreadPool
 
 if __name__ == '__main__':
-    subset_dir = '/data/guangyuh/coding_env/ML4PDR/dataset/aag4train_hmcc20/subset_'
+    subset_dir = '/data/guangyuh/coding_env/ML4PDR/dataset/aag4train_hwmcc20/subset_'
     subset_dir_lst = [subset_dir+str(i) for i in range(0,5)] # non-trival
     
     pool = ThreadPool(multiprocessing.cpu_count())
