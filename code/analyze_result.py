@@ -1,6 +1,11 @@
+import imp
+import shutil
 import pandas as pd
 from IPython.display import display
 import os.path
+import tempfile
+import time
+
 
 # Get .csv file list in log folder
 csv_file_lst_with_NN = [f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv" for i in range(0,22) if os.path.isfile(f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv")]
@@ -40,6 +45,7 @@ csv_df_without_NN = csv_df_without_NN.round(5)
 
 # remove duplicate in the csv_df_with_NN, sorting the row by the number of total frame and time reduced
 csv_df_with_NN = csv_df_with_NN.sort_values(['Total Frame','Time reduce INF time'], ascending = True).drop_duplicates(subset = 'filename', keep = 'first').reset_index(drop=True)
+csv_df_without_NN = csv_df_without_NN.sort_values(['Total Frame','Time Consuming'], ascending = True).drop_duplicates(subset = 'filename', keep = 'first').reset_index(drop=True)
 
 # remove the last row in the csv_df_with_NN -> only for testing
 # csv_df_with_NN.drop(csv_df_with_NN.tail(1).index,inplace=True)
@@ -69,5 +75,27 @@ high_prediction_success = sum(row['Prediction Thershold']>0.5 for _,row in csv_d
 print(f"{str((reduce_success/len(csv_df_without_NN))*100)}% of the cases have been reduced by NN")
 print(f"{str((reduce_frame_success/len(csv_df_without_NN))*100)}% of the cases have converged earlier by applying NN")
 print(f"{str((high_prediction_success/len(csv_df_without_NN))*100)} % of the cases have high success rate of NN prediction")
+
+
+
+# Get sum of Total Frame (without NN) and Total Frame
+print(f"Total Frame without NN: {csv_df_without_NN['Total Frame (without NN)'].sum()}")
+print(f"Total Frame: {csv_df_without_NN['Total Frame'].sum()}")
+print(f"Total Frame reduce: {csv_df_without_NN['Total Frame (without NN)'].sum() - csv_df_without_NN['Total Frame'].sum()}")
+print(f"Total Frame reduce percentage: {((csv_df_without_NN['Total Frame (without NN)'].sum() - csv_df_without_NN['Total Frame'].sum())/csv_df_without_NN['Total Frame (without NN)'].sum())*100}%")
+
+# Get sum of Time consuming (without NN) and Time consuming (without INF time)
+print(f"Time consuming (without NN): {csv_df_without_NN['Time consuming (without NN)'].sum()}")
+print(f"Time consuming (without INF time): {csv_df_without_NN['Time consuming (without INF time)'].sum()}")
+print(f"Time consuming reduce: {csv_df_without_NN['Time consuming (without NN)'].sum() - csv_df_without_NN['Time consuming (without INF time)'].sum()}")
+print(f"Time consuming reduce percentage: {((csv_df_without_NN['Time consuming (without NN)'].sum() - csv_df_without_NN['Time consuming (without INF time)'].sum())/csv_df_without_NN['Time consuming (without NN)'].sum())*100}%")
+
+# export to temporary csv file
+with tempfile.TemporaryDirectory() as tmpdirname:
+    print('created temporary directory', tmpdirname)
+    csv_df_without_NN.to_csv(os.path.join(tmpdirname, 'result.csv'), index = False)
+    print('exported to csv file')
+    # copy the csv file to log directory with time stamp
+    shutil.copy(os.path.join(tmpdirname, 'result.csv'), os.path.join("../log/", f'result_{time.strftime("%Y%m%d-%H%M%S")}.csv'))
 
 display(csv_df_without_NN)

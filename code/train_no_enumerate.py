@@ -64,8 +64,8 @@ class GraphDataset(Dataset):
 
     def __getitem__(self, idx):
         prob_main_info = {
-            'n_vars' : self.samples[idx].n_vars,
-            'n_nodes' : self.samples[idx].n_nodes,
+            'n_vars' : self.samples[idx].n_vars, #include m and variable (all node)
+            'n_nodes' : self.samples[idx].n_nodes, #node exclude input, input_prime, variable
             'unpack' : (torch.from_numpy(self.samples[idx].adj_matrix.astype(np.float32).values)).to(device),
             'refined_output' : self.samples[idx].refined_output,
             'label' : self.samples[idx].label
