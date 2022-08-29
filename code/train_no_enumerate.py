@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from config import parser
-from neuro_ig_no_enumerate import NeuroPredessor
+from neuro_ig_no_enumerate import NeuroInductiveGeneralization
 from data_gen_no_enumerate import problem, walkFile
 import pandas as pd
 from pathlib import Path
@@ -190,7 +190,7 @@ if __name__ == "__main__":
         collate_fn=collate_wrapper,
         num_workers=0)
 
-    net = NeuroPredessor(args)
+    net = NeuroInductiveGeneralization(args)
     net = net.to(device)  # TODO: modify to accept both CPU and GPU version
     # if torch.cuda.device_count() > 1:
     #     net = torch.nn.DataParallel(net)

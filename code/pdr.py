@@ -1296,7 +1296,7 @@ class PDR:
             # print('restoring from: ', "../dataset/model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
             # # Load model to predict
             # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            # net = neuro_predessor.NeuroPredessor()
+            # net = neuro_predessor.NeuroInductiveGeneralization()
             # model = torch.load("../model/neuropdr_2022-06-07_06:31:22_last_copy.pth.tar")
             # net.load_state_dict(model['state_dict'])
             # net = net.to(device)
@@ -1327,7 +1327,7 @@ class PDR:
                     device = torch.device("cuda")
                 elif self.inf_device == 'cpu':
                     device = torch.device("cpu")
-                net = neuro_ig_no_enumerate.NeuroPredessor()
+                net = neuro_ig_no_enumerate.NeuroInductiveGeneralization()
                 model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)
@@ -1381,7 +1381,7 @@ class PDR:
                 elif self.inf_device == 'cpu':
                     device = torch.device("cpu")
                 args = parser.parse_args(['--dim', '128', '--n_rounds', '512','--inf_dev',self.inf_device])
-                net = neuro_ig_no_enumerate.NeuroPredessor(args)
+                net = neuro_ig_no_enumerate.NeuroInductiveGeneralization(args)
                 model = torch.load("../model/"+self.model_name+".pth.tar",map_location=device)
                 net.load_state_dict(model['state_dict'])
                 net = net.to(device)

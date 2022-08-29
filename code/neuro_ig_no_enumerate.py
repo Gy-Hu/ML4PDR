@@ -33,9 +33,9 @@ class MLP(nn.Module):
 
 
 
-class NeuroPredessor(nn.Module):
+class NeuroInductiveGeneralization(nn.Module):
     def __init__(self,args = None):
-        super(NeuroPredessor, self).__init__()
+        super(NeuroInductiveGeneralization, self).__init__()
         self.args = args
         if args!=None:
             self.n_rounds = args.n_rounds
