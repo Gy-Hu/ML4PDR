@@ -18,7 +18,7 @@ import os, os.path, shutil
 from itertools import islice
 
 # appen file path to the system path
-sys.path.append(f'{str(Path(__file__).parent.parent)}/code/')
+sys.path.append(f'{str(Path(__file__).parent.parent)}/code-python_version/')
 from generate_aag import delete_redundant_line, chunk, remove_empty_file, remove_trivially_unsat_aiger
 
 import tempfile
