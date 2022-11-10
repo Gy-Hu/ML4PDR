@@ -354,7 +354,7 @@ class PDR:
         if res1 == sat:
             return False
         s = Solver()
-        s.add(self.init.cube())
+        s.add(self.init.cube()) # init & T -> post'
         s.add(self.trans.cube())
         s.add(substitute(substitute(Not(self.post.cube()), self.primeMap),self.inp_map))
         res2 = s.check()
@@ -365,7 +365,7 @@ class PDR:
     #@profile
     def run(self, agent=None):
 
-        if not self.check_init():
+        if not self.check_init(): # return true
             print("Found trace ending in bad state")
             return False
 
