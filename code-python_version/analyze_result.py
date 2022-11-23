@@ -133,6 +133,10 @@ print(f"Time consuming (without INF time): {final_result['Time consuming (withou
 print(f"Time consuming reduce: {final_result['Time consuming (without NN)'].sum() - final_result['Time consuming (without INF time)'].sum()}")
 print(f"Time consuming reduce percentage: {((final_result['Time consuming (without NN)'].sum() - final_result['Time consuming (without INF time)'].sum())/final_result['Time consuming (without NN)'].sum())*100}%")
 
+# only consider benchmark that is 'hwmcc20'
+print(f"hwmcc 20 time consuming reduce percentage: {((final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum() - final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without INF time)'].sum())/final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum())*100}%")
+print(f"hwmcc 20 time consuming reduce: {final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum() - final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without INF time)'].sum()}")
+
 # export to temporary csv file
 with tempfile.TemporaryDirectory() as tmpdirname:
     print('created temporary directory', tmpdirname)

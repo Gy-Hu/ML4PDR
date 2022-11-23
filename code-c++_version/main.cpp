@@ -227,66 +227,66 @@ int main(int argc, char ** argv) {
   // }
   //walk(0,e);
 
-  z3::context ctx;
-  auto&& opt = z3::optimize(ctx);
-  Z3_ast_vector b = Z3_parse_smtlib2_file(ctx, "nusmv.syncarb5^2.B_0.smt2", 0, 0, 0, 0, 0, 0);
+  // z3::context ctx;
+  // z3::optimize opt(ctx);
+  // Z3_ast_vector b = Z3_parse_smtlib2_file(ctx, "nusmv.syncarb5^2.B_0.smt2", 0, 0, 0, 0, 0, 0);
   
-  // Get all the constriants
-  // Z3_ast* args = new Z3_ast[Z3_ast_vector_size(ctx, b)];
-  // for (unsigned i = 0; i < Z3_ast_vector_size(ctx, b); ++i) { //execute from 0 to size of b
-  //     args[i] = Z3_ast_vector_get(ctx, b, i);
+  // // Get all the constriants
+  // // Z3_ast* args = new Z3_ast[Z3_ast_vector_size(ctx, b)];
+  // // for (unsigned i = 0; i < Z3_ast_vector_size(ctx, b); ++i) { //execute from 0 to size of b
+  // //     args[i] = Z3_ast_vector_get(ctx, b, i);
+  // // }
+  // // z3::ast result(ctx, Z3_mk_and(ctx, Z3_ast_vector_size(ctx, b), args));
+
+  // // Get only the last constriant
+  // // Z3_ast* args = new Z3_ast[1];
+  // // unsigned i = Z3_ast_vector_size(ctx, b)-1;
+  // // cout<<"i: "<<int(i)<<endl;
+  // // args[0] = Z3_ast_vector_get(ctx, b, i);
+  // // z3::ast result(ctx, Z3_mk_and(ctx, 1, args));
+
+  // // fetch the last constriant - one line method
+  // Z3_ast result = Z3_ast_vector_get(ctx, b, Z3_ast_vector_size(ctx, b)-1);
+  
+  // ctx.check_error();
+  // //walk(0,ctx);
+  // //z3.toExpr(result);
+  // expr k(ctx, result); 
+  // opt.add(k);
+
+  // auto res = opt.check();
+  // switch (res) {
+  //     case z3::sat: std::cout << "Sat" << std::endl;break;
+  //     case z3::unsat: std::cout << "Unsat" << std::endl;break;
+  //     case z3::unknown: std::cout << "Unknown" << std::endl;break;
   // }
-  // z3::ast result(ctx, Z3_mk_and(ctx, Z3_ast_vector_size(ctx, b), args));
-
-  // Get only the last constriant
-  // Z3_ast* args = new Z3_ast[1];
-  // unsigned i = Z3_ast_vector_size(ctx, b)-1;
-  // cout<<"i: "<<int(i)<<endl;
-  // args[0] = Z3_ast_vector_get(ctx, b, i);
-  // z3::ast result(ctx, Z3_mk_and(ctx, 1, args));
-
-  // fetch the last constriant - one line method
-  Z3_ast result = Z3_ast_vector_get(ctx, b, Z3_ast_vector_size(ctx, b)-1);
-  
-  ctx.check_error();
-  //walk(0,ctx);
-  //z3.toExpr(result);
-  expr k(ctx, result); 
-  opt.add(k);
-
-  auto&& res = opt.check();
-  switch (res) {
-      case z3::sat: std::cout << "Sat" << std::endl;break;
-      case z3::unsat: std::cout << "Unsat" << std::endl;break;
-      case z3::unknown: std::cout << "Unknown" << std::endl;break;
-  }
-  vector<expr> bfs_queue;
-  walk(0,k, bfs_queue);
-  //visit(k);
-  cout<<"bfs_queue size: "<<bfs_queue.size()<<endl;
-  map<expr,int,cmpByZ3ExprID> map_expr;
-  //map_expr.insert(make_pair(bfs_queue[0],0));
-  set<pair<int, int>> set_expr;
-  for(int i = 0; i < bfs_queue.size(); i++)
-  {
-    int node_id = get_nid(bfs_queue[i], map_expr);
-    //cout<<bfs_queue[i].decl().name()<<endl;
-    for(int j = 0; j < bfs_queue[i].num_args(); j++)
-    {
-      int children_nid = get_nid(bfs_queue[i].arg(j),map_expr);
-      //self.edges.add((node_id, children_nid))
-      set_expr.insert(make_pair(node_id, children_nid));
-    }
-  }
-  cout<<"map_expr size: "<<map_expr.size()<<endl;
-  cout<<"set_expr size: "<<set_expr.size()<<endl;
-  //print all edge in the set set_expr
-  cout<<"ready to print all edge in the set set_expr"<<endl;
-  set<pair<int, int>>::iterator it;
-  for(it=set_expr.begin();it!=set_expr.end();it++)
-  {
-      printf("%d %d\n",it->first,it->second);
-  }
+  // vector<expr> bfs_queue;
+  // walk(0,k, bfs_queue);
+  // //visit(k);
+  // cout<<"bfs_queue size: "<<bfs_queue.size()<<endl;
+  // map<expr,int,cmpByZ3ExprID> map_expr;
+  // //map_expr.insert(make_pair(bfs_queue[0],0));
+  // set<pair<int, int>> set_expr;
+  // for(int i = 0; i < bfs_queue.size(); i++)
+  // {
+  //   int node_id = get_nid(bfs_queue[i], map_expr);
+  //   //cout<<bfs_queue[i].decl().name()<<endl;
+  //   for(int j = 0; j < bfs_queue[i].num_args(); j++)
+  //   {
+  //     int children_nid = get_nid(bfs_queue[i].arg(j),map_expr);
+  //     //self.edges.add((node_id, children_nid))
+  //     set_expr.insert(make_pair(node_id, children_nid));
+  //   }
+  // }
+  // cout<<"map_expr size: "<<map_expr.size()<<endl;
+  // cout<<"set_expr size: "<<set_expr.size()<<endl;
+  // //print all edge in the set set_expr
+  // cout<<"ready to print all edge in the set set_expr"<<endl;
+  // set<pair<int, int>>::iterator it;
+  // for(it=set_expr.begin();it!=set_expr.end();it++)
+  // {
+  //     printf("%d %d\n",it->first,it->second);
+  // }
 
   // z3::context ctx;
   // Z3_ast_vector v = Z3_parse_smtlib2_file(ctx, "nusmv.syncarb5^2.B_0.smt2", 0, 0, 0, 0, 0, 0);
@@ -318,6 +318,7 @@ int main(int argc, char ** argv) {
   //AigParser p("palu.aag");
   cout<<"begin to parse the aiger file"<<endl;
   AigParser p("nusmv.syncarb5^2.B.aag");
+  //std::unique_ptr<KripkeStructure> kripke = p.to_kripke(aps);
 
   // real main function
 
@@ -368,7 +369,11 @@ int main(int argc, char ** argv) {
 
   // model check it
   //verbose = 2; //open verbose mode
+  //bool rv = IC3::check(*model, verbose, basic, random);
+  
+  //pass the AigParser p to IC3::check
   bool rv = IC3::check(*model, verbose, basic, random);
+
   // print 0/1 according to AIGER standard
   cout << !rv << endl;
 
