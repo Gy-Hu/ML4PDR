@@ -21,6 +21,7 @@ public:
 
     explicit AigParser(const std::string& aig_path);
     const std::unordered_map<AigMetadata, size_t, std::hash<size_t>>& get_aig_metadata();
+    ~AigParser();
 
 private:
     void extract_metadata(const std::string& first_aag_line);

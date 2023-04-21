@@ -238,6 +238,12 @@ AigParser::AigParser(const std::string &aig_path)
     std::cout<<"Finished calculating transition relation formula"<<std::endl;
 }
 
+AigParser::~AigParser()
+{
+    std::cout<<"AigParser destructor called"<<std::endl;
+
+}
+
 
 void AigParser::extract_metadata(const std::string &first_aag_line)
 {
@@ -404,8 +410,13 @@ void AigParser::calculate_tr_formula(const std::unordered_map<size_t, z3::expr> 
     //     std::cout<<std::endl;
     // }
     //print _tr_formula
-    const z3::expr& raw_formula = _tr_formula->get_raw_formula().simplify();
-    std::cout << "transition relation formula: " << raw_formula << std::endl;
+    const z3::expr& raw_formula = _tr_formula->get_raw_formula();
+    std::cout << "transition relation formula before simplification: \n" << raw_formula << std::endl;
+    
+    const z3::expr& raw_formula_after_simplification = _tr_formula->get_raw_formula().simplify();
+    //const z3::expr& raw_formula = _tr_formula->get_raw_formula();
+    std::cout << "transition relation formula after simplication: \n" << raw_formula_after_simplification << std::endl;
+    //
 }
 
 void AigParser::generate_new_names(std::vector<std::reference_wrapper<std::vector<z3::expr>>> &vec_of_vecs, size_t &start_from,

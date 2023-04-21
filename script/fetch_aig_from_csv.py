@@ -53,7 +53,7 @@ def fetch_aig_from_csv(csv_file):
     df = pd.read_csv(csv_file)
 
     # Then sort the dataframe by 'Res' and 'N_clauses'
-    df = df[df["res"] == "unsat"].sort_values(['res','n_clause'], ascending = True).head(50)
+    # df = df[df["res"] == "unsat"].sort_values(['res','n_clause'], ascending = True).head(50)
 
     # Export the aag_name column to a list
     aag_list = df["aag_name"].tolist()
@@ -65,7 +65,7 @@ def fetch_aig_from_csv(csv_file):
     return aag_list
 
 if __name__ == '__main__':
-    aag_dir = f'{str(Path(__file__).parent.parent)}/dataset/aag4train_hwmcc20_simplified/'
+    aag_dir = f'{str(Path(__file__).parent.parent)}/dataset/aag4train_hwmcc20_all/'
     parser = argparse.ArgumentParser(description="Convert aig to aag automatically")
     parser.add_argument('-outdir', type=str, default=aag_dir, help='Export the converted aag to the directory')
     parser.add_argument('-d', type=int, default=1, help='Determin whether to divide files into subset')
@@ -93,15 +93,15 @@ if __name__ == '__main__':
     -------------------sort the file by size and split into chunks-------------------
     '''
     if args.d != 0:
-        sp = subprocess.Popen("du -b ../dataset/aag4train_hwmcc20_simplified/* | sort -n", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        sp = subprocess.Popen("du -b ../dataset/aag4train_hwmcc20_all/* | sort -n", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         lst = [line.decode("utf-8").strip('\n').split('\t') for line in sp.stdout.readlines()]
         list_removed_empty = remove_empty_file(lst)
         list_removed_empty = delete_redundant_line(lst)
         list_removed_trivial_unsat = remove_trivially_unsat_aiger(list_removed_empty)
         list_chunks = list(chunk(list_removed_trivial_unsat, args.n))
         for i_tuple in range(len(list_chunks)):
-            if not os.path.isdir(f"../dataset/aag4train_hwmcc20_simplified/subset_{str(i_tuple)}"): 
-                os.makedirs(f"../dataset/aag4train_hwmcc20_simplified/subset_{str(i_tuple)}")
+            if not os.path.isdir(f"../dataset/aag4train_hwmcc20_all/subset_{str(i_tuple)}"): 
+                os.makedirs(f"../dataset/aag4train_hwmcc20_all/subset_{str(i_tuple)}")
             for i_file in range(len(list_chunks[i_tuple])): 
-                shutil.copy(list_chunks[i_tuple][i_file][1], f"../dataset/aag4train_hwmcc20_simplified/subset_{str(i_tuple)}")
+                shutil.copy(list_chunks[i_tuple][i_file][1], f"../dataset/aag4train_hwmcc20_all/subset_{str(i_tuple)}")
 

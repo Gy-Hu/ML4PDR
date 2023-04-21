@@ -33,6 +33,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "json.hpp"
 #include <climits>
 
+#include "aig_simple_parser.h"
+
 using json = nlohmann::json;
 
 // A reference implementation of IC3, i.e., one that is meant to be
