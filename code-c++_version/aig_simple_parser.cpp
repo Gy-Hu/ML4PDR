@@ -238,6 +238,12 @@ AigParser::AigParser(const std::string &aig_path)
     std::cout<<"Finished calculating transition relation formula"<<std::endl;
 }
 
+AigParser::~AigParser()
+{
+    std::cout<<"AigParser destructor called"<<std::endl;
+
+}
+
 
 void AigParser::extract_metadata(const std::string &first_aag_line)
 {
@@ -405,6 +411,7 @@ void AigParser::calculate_tr_formula(const std::unordered_map<size_t, z3::expr> 
     // }
     //print _tr_formula
     const z3::expr& raw_formula = _tr_formula->get_raw_formula().simplify();
+    //const z3::expr& raw_formula = _tr_formula->get_raw_formula();
     std::cout << "transition relation formula: " << raw_formula << std::endl;
 }
 
