@@ -9,6 +9,8 @@ import time
 from datetime import datetime
 import numpy as np
 
+pd.set_option('display.max_columns', None)
+
 # Get .csv file list in log folder
 csv_file_lst_with_NN = [f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv" for i in range(0,22) if os.path.isfile(f"../log/small_subset_experiment_with_NN_subset_{str(i)}.csv")]
 csv_file_lst_without_NN = [f"../log/small_subset_without_NN_subset_{str(i)}.csv" for i in range(0,22) if os.path.isfile(f"../log/small_subset_without_NN_subset_{str(i)}.csv")]
@@ -110,7 +112,38 @@ final_result = final_result.dropna(subset = ['Total Frame'])
 final_result = final_result.dropna(subset = ['Passing Ratio'])
 
 # drop rows that "Passing time" is zero
-final_result = final_result[final_result['Passing Times'] != 0] 
+#final_result = final_result[final_result['Passing Times'] != 0] 
+
+# add one column to indicate the aiger size
+size07 = pd.read_csv('/data/guangyuh/coding_env/AIG2INV/AIG2INV_main/clause-learning/data-collect/stat/size07.csv')
+size20 = pd.read_csv('/data/guangyuh/coding_env/AIG2INV/AIG2INV_main/clause-learning/data-collect/stat/size20.csv')
+
+# Remove the prefix from the aag_name
+size07['aag_name'] = size07['aag_name'].apply(lambda x: x.split('/')[-1])
+size20['aag_name'] = size20['aag_name'].apply(lambda x: x.split('/')[-1])
+
+# Add a 'benchmark' column to indicate 07 or 20
+size07['benchmark'] = 'hwmcc07'
+size20['benchmark'] = 'hwmcc20'
+
+# Concatenate size07 and size20
+size_data = pd.concat([size07, size20])
+
+# Rename 'filename' to 'aag_name' in final_result for merging
+final_result.rename(columns={'filename': 'aag_name'}, inplace=True)
+
+# Merge final_result with size_data based on 'aag_name' and 'benchmark'
+final_result = pd.merge(final_result, size_data[['aag_name', 'M', 'benchmark']], on=['aag_name', 'benchmark'], how='left')
+
+# Rename 'M' column to 'aiger size', and rename 'aag_name' back to 'filename'
+final_result.rename(columns={'M': 'aiger size'}, inplace=True)
+final_result.rename(columns={'aag_name': 'filename'}, inplace=True)
+
+# divide columns 'aiger size' by 2 if it is even, -1 and divide by 2 if it is odd
+final_result['aiger size'] = final_result['aiger size'].apply(lambda x: (x-1)/2 if x%2 == 1 else x/2)
+
+# drop rows that are NaN in 'aiger size'
+final_result = final_result.dropna(subset = ['aiger size'])
 
 # calculate the reduce ratio of cases that has been reduced by NN
 reduce_success = sum(row['Total Frame (without NN)'] >= row['Total Frame'] or row['Time consuming (without NN)'] >= row['Time consuming (without INF time)'] for idx, row in final_result.iterrows())
@@ -171,11 +204,11 @@ final_result_latex = final_result.copy()
 # drop the columns that are not needed
 final_result_latex = final_result_latex.drop(columns = [ 
                                                         'Prediction Thershold',
-                                                        'Time consuming (without NN)',
-                                                         'Time Consuming', 
-                                                         'Time consuming (without INF time)',
+                                                        #'Time consuming (without NN)',
+                                                        # 'Time Consuming', 
+                                                        # 'Time consuming (without INF time)',
                                                          'Passing Times',
-                                                         'Passing Ratio',
+                                                       #  'Passing Ratio',
                                                          'Total Frame (without NN)',
                                                          'Total Frame',
                                                          'clauses',
@@ -191,19 +224,30 @@ final_result_latex = final_result_latex[(final_result_latex['Clauses changed'] !
 #final_result_latex['clauses'] = final_result_latex['clauses'].astype(int)
 
 # fix the sequence of columns
-final_result_latex = final_result_latex[['filename', 'benchmark', 'Clauses changed', 'Frames changed', 'Time reduce']]
+#final_result_latex = final_result_latex[['filename', 'benchmark', 'Clauses changed', 'Frames changed', 'Time reduce']]
+final_result_latex = final_result_latex[['filename', 'benchmark', 'Passing Ratio', 'aiger size', 'Time consuming (without NN)','Time consuming (without INF time)']]
 
 # convert the string to int (in 'Clauses changed' and 'Frames changed')
-final_result_latex['Clauses changed'] = final_result_latex['Clauses changed'].astype(int)
-final_result_latex['Frames changed'] = final_result_latex['Frames changed'].astype(int)
+#final_result_latex['Clauses changed'] = final_result_latex['Clauses changed'].astype(int)
+#final_result_latex['Frames changed'] = final_result_latex['Frames changed'].astype(int)
 
 # sort the dataframe by 'benchmark' and 'filename'
 final_result_latex = final_result_latex.sort_values(by=['benchmark', 'filename'])
+final_result_latex = final_result_latex.round(2)
+# first remove the % sign from the "Passing Ratio" column
+final_result_latex['Passing Ratio'] = final_result_latex['Passing Ratio'].str.rstrip('%')
+# then convert the "Passing Ratio" column to floats
+final_result_latex['Passing Ratio'] = final_result_latex['Passing Ratio'].astype('float')
+# now round to 2 decimal places
+final_result_latex['Passing Ratio'] = final_result_latex['Passing Ratio'].round(2)
+# if you want to keep the format as percentage
+final_result_latex['Passing Ratio'] = final_result_latex['Passing Ratio'].apply(lambda x: f'{x}%')
 
 # add '+' to the postive value in 'Clauses changed' and 'Frames changed'
-final_result_latex['Clauses changed'] = final_result_latex['Clauses changed'].apply(lambda x: f'+{x}' if x > 0 else x)
-final_result_latex['Frames changed'] = final_result_latex['Frames changed'].apply(lambda x: f'+{x}' if x > 0 else x)
-
+#final_result_latex['Clauses changed'] = final_result_latex['Clauses changed'].apply(lambda x: f'+{x}' if x > 0 else x)
+#final_result_latex['Frames changed'] = final_result_latex['Frames changed'].apply(lambda x: f'+{x}' if x > 0 else x)
+final_result_latex = final_result_latex[['filename','benchmark', 'aiger size', 'Time consuming (without NN)','Time consuming (without INF time)']]
 print(final_result_latex.to_latex(index=False))
-
-display(final_result)
+# reindex the dataframe
+final_result_latex = final_result_latex.reset_index(drop=True)
+display(final_result_latex)
