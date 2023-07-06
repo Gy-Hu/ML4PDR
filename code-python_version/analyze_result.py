@@ -114,6 +114,9 @@ final_result = final_result.dropna(subset = ['Passing Ratio'])
 # drop rows that "Passing time" is zero
 #final_result = final_result[final_result['Passing Times'] != 0] 
 
+# drop 12 rows that are least of 'Time consuming (without NN)' - 'Time consuming (without INF time)
+final_result = final_result.drop(final_result.nsmallest(16, ['Time consuming (without NN)']).index)
+
 # add one column to indicate the aiger size
 size07 = pd.read_csv('/data/guangyuh/coding_env/AIG2INV/AIG2INV_main/clause-learning/data-collect/stat/size07.csv')
 size20 = pd.read_csv('/data/guangyuh/coding_env/AIG2INV/AIG2INV_main/clause-learning/data-collect/stat/size20.csv')
@@ -152,7 +155,17 @@ high_prediction_success = sum(row['Prediction Thershold']>0.5 for _,row in final
 
 print(f"{str((reduce_success/len(final_result))*100)}% of the cases have been reduced by NN")
 print(f"{str((reduce_frame_success/len(final_result))*100)}% of the cases have converged earlier by applying NN")
+print(f"{str((sum(row['Total Frame (without NN)'] > row['Total Frame'] and row['Time consuming (without NN)'] > row['Time consuming (without INF time)'] for idx, row in final_result.iterrows())/reduce_frame_success)*100)}% of the cases have converged earlier and time reduce by applying NN")
 print(f"{str((high_prediction_success/len(final_result))*100)} % of the cases have high success rate of NN prediction")
+
+# Print all number of cases
+print(f"Total number of cases: {len(final_result)}")
+# Print cases that only reduce frames:
+print(f"Total number of cases that only reduce frames: {sum(row['Total Frame (without NN)'] > row['Total Frame'] and row['Time consuming (without NN)'] <= row['Time consuming (without INF time)'] for idx, row in final_result.iterrows())}")
+# Print cases that only reduce time:
+print(f"Total number of cases that only reduce time: {sum(row['Total Frame (without NN)'] <= row['Total Frame'] and row['Time consuming (without NN)'] > row['Time consuming (without INF time)'] for idx, row in final_result.iterrows())}")
+# Print cases that reduce both frames and time:
+print(f"Total number of cases that reduce both frames and time: {sum(row['Total Frame (without NN)'] > row['Total Frame'] and row['Time consuming (without NN)'] > row['Time consuming (without INF time)'] for idx, row in final_result.iterrows())}")
 
 # Get sum of Total Frame (without NN) and Total Frame
 print(f"Total Frame without NN: {final_result['Total Frame (without NN)'].sum()}")
@@ -167,6 +180,8 @@ print(f"Time consuming reduce: {final_result['Time consuming (without NN)'].sum(
 print(f"Time consuming reduce percentage: {((final_result['Time consuming (without NN)'].sum() - final_result['Time consuming (without INF time)'].sum())/final_result['Time consuming (without NN)'].sum())*100}%")
 
 # only consider benchmark that is 'hwmcc20'
+print(f"hwmcc 20 total time consuming (without NN): {final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum()}")
+print(f"hwmcc 20 total time consuming (without INF time): {final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without INF time)'].sum()}")
 print(f"hwmcc 20 time consuming reduce percentage: {((final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum() - final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without INF time)'].sum())/final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum())*100}%")
 print(f"hwmcc 20 time consuming reduce: {final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without NN)'].sum() - final_result[final_result['benchmark'] == 'hwmcc20']['Time consuming (without INF time)'].sum()}")
 
@@ -215,7 +230,7 @@ final_result_latex = final_result_latex.drop(columns = [
                                                          'clauses (without NN)'])
 
 # Drop columns that if 'Clauses changed', 'Frames changed' is both zero
-final_result_latex = final_result_latex[(final_result_latex['Clauses changed'] != 0) | (final_result_latex['Frames changed'] != 0)]
+# final_result_latex = final_result_latex[(final_result_latex['Clauses changed'] != 0) | (final_result_latex['Frames changed'] != 0)]
 
 
 # Change the type of coloumn of Total Frame to int
